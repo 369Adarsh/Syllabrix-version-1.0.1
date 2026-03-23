@@ -1,0 +1,26 @@
+import api from '../api-client';
+
+export const prepAPI = {
+  getCategories: () => api.get('/prep/categories'),
+  getCategoryBySlug: (slug) => api.get(`/prep/categories/${slug}`),
+  getExams: (params) => api.get('/prep/exams', { params }),
+  getExamBySlug: (slug) => api.get(`/prep/exams/${slug}`),
+  getExamSyllabus: (slug) => api.get(`/prep/exams/${slug}/syllabus`),
+  getExamDates: (slug) => api.get(`/prep/exams/${slug}/dates`),
+  subscribeExam: (slug, data) => api.post(`/prep/exams/${slug}/subscribe`, data),
+  unsubscribeExam: (examId) => api.delete(`/prep/exams/${examId}/subscribe`),
+  getMyExams: () => api.get('/prep/exams/my-exams'),
+  getTodayAffairs: () => api.get('/prep/current-affairs/today'),
+  getAffairsByDate: (date) => api.get(`/prep/current-affairs/date/${date}`),
+  getWeeklyAffairs: () => api.get('/prep/current-affairs/weekly'),
+  getDailyQuiz: (date) => api.get('/prep/quizzes/daily', { params: { date } }),
+  submitQuiz: (id, data) => api.post(`/prep/quizzes/${id}/submit`, data),
+  getQuizResults: (id) => api.get(`/prep/quizzes/${id}/results`),
+  getQuizLeaderboard: (id) => api.get(`/prep/quizzes/${id}/leaderboard`),
+  getMyQuizStats: () => api.get('/prep/quizzes/my-stats'),
+  getSyllabusProgress: (examId) => api.get(`/prep/syllabus/progress/${examId}`),
+  updateProgress: (syllabusId, data) => api.put(`/prep/syllabus/progress/${syllabusId}`, data),
+  addBookmark: (data) => api.post('/prep/bookmarks', data),
+  getBookmarks: (params) => api.get('/prep/bookmarks', { params }),
+  removeBookmark: (id) => api.delete(`/prep/bookmarks/${id}`),
+};

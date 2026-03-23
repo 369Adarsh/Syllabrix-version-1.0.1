@@ -1,0 +1,11 @@
+CREATE TABLE user_streaks (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id INT UNSIGNED NOT NULL,
+    current_streak INT UNSIGNED NOT NULL DEFAULT 0,
+    longest_streak INT UNSIGNED NOT NULL DEFAULT 0,
+    last_active_date DATE NULL,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_us_user (user_id),
+    CONSTRAINT fk_us_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -1,0 +1,54 @@
+// ============================================================
+// Syllabrix Server Entry Point
+// HTTP server + Socket.io initialization
+// ============================================================
+
+const http = require('http');
+const app = require('./app');
+const config = require('./config/env');
+const { testConnection } = require('./database/connection');
+const { initializeSocket } = require('./socket/index');
+
+const server = http.createServer(app);
+
+// Initialize Socket.io
+initializeSocket(server);
+
+const startServer = async () => {
+  console.log('');
+  console.log('========================================');
+  console.log('  Syllabrix API Server');
+  console.log('========================================');
+  console.log('');
+
+  // Test database connection
+  const dbConnected = await testConnection();
+  if (!dbConnected) {
+    console.error('  WARNING: Database not connected. Some features will not work.');
+  }
+
+  server.listen(config.SERVER_PORT, () => {
+    console.log('');
+    console.log(`  Server running on port ${config.SERVER_PORT}`);
+    console.log(`  Environment: ${config.NODE_ENV}`);
+    console.log(`  Client URL: ${config.CLIENT_URL}`);
+    console.log(`  Health: http://localhost:${config.SERVER_PORT}/api/health`);
+    console.log('');
+    console.log('  Ready to accept requests.');
+    console.log('');
+  });
+};
+
+// Handle unhandled rejections
+process.on('unhandledRejection', (err) => {
+  console.error('UNHANDLED REJECTION:', err.message);
+  server.close(() => process.exit(1));
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION:', err.message);
+  server.close(() => process.exit(1));
+});
+
+startServer();

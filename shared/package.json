@@ -1,0 +1,6 @@
+{
+  "name": "@syllabrix/shared",
+  "version": "1.0.0",
+  "description": "Shared constants, validation, and utilities",
+  "main": "index.js"
+}

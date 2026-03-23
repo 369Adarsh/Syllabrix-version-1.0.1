@@ -1,0 +1,21 @@
+const PROFESSION_SECTORS = [
+  { id: 1, name: 'Technology & IT', emoji: '\u{1F4BB}', count: '150+' },
+  { id: 2, name: 'Healthcare & Medicine', emoji: '\u{1F3E5}', count: '100+' },
+  { id: 3, name: 'Engineering', emoji: '\u{2699}\u{FE0F}', count: '120+' },
+  { id: 4, name: 'Arts & Creative', emoji: '\u{1F3A8}', count: '100+' },
+  { id: 5, name: 'Business & Management', emoji: '\u{1F4CA}', count: '100+' },
+  { id: 6, name: 'Law & Governance', emoji: '\u{2696}\u{FE0F}', count: '60+' },
+  { id: 7, name: 'Education & Research', emoji: '\u{1F4DA}', count: '60+' },
+  { id: 8, name: 'Agriculture & Environment', emoji: '\u{1F331}', count: '50+' },
+  { id: 9, name: 'Space & Defense', emoji: '\u{1F680}', count: '40+' },
+  { id: 10, name: 'Sports & Fitness', emoji: '\u{26BD}', count: '50+' },
+  { id: 11, name: 'Media & Communication', emoji: '\u{1F4F0}', count: '60+' },
+  { id: 12, name: 'Hospitality & Tourism', emoji: '\u{2708}\u{FE0F}', count: '50+' },
+  { id: 13, name: 'Skilled Trades', emoji: '\u{1F527}', count: '50+' },
+  { id: 14, name: 'Retail & E-commerce', emoji: '\u{1F6D2}', count: '40+' },
+  { id: 15, name: 'Logistics & Transport', emoji: '\u{1F69B}', count: '30+' },
+  { id: 16, name: 'Social Work & NGO', emoji: '\u{1F91D}', count: '30+' },
+  { id: 17, name: 'Data & Analytics', emoji: '\u{1F4C8}', count: '30+' },
+  { id: 18, name: 'Pure Sciences', emoji: '\u{1F52C}', count: '30+' },
+];
+module.exports = { PROFESSION_SECTORS };

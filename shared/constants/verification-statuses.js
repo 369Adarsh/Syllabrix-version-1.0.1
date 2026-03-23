@@ -1,0 +1,5 @@
+const VERIFICATION_STATUSES = {
+  UNVERIFIED: 'unverified', PENDING: 'pending', VERIFIED: 'verified', REJECTED: 'rejected',
+};
+const VERIFICATION_STATUS_LIST = Object.values(VERIFICATION_STATUSES);
+module.exports = { VERIFICATION_STATUSES, VERIFICATION_STATUS_LIST };

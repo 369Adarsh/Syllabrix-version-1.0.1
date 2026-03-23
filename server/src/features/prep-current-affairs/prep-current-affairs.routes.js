@@ -1,0 +1,12 @@
+const express = require('express');
+const router = express.Router();
+const ctrl = require('./prep-current-affairs.controller');
+const { authenticate } = require('../../middleware/auth.middleware');
+router.get('/today', authenticate, ctrl.getToday);
+router.get('/weekly', authenticate, ctrl.getWeekly);
+router.get('/monthly/:month', authenticate, ctrl.getMonthly);
+router.get('/category/:category', authenticate, ctrl.getByCategory);
+router.get('/date/:date', authenticate, ctrl.getByDate);
+router.get('/:id', authenticate, ctrl.getById);
+router.post('/', authenticate, ctrl.create);
+module.exports = router;

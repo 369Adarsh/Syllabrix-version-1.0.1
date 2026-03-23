@@ -1,0 +1,16 @@
+const express = require('express');
+const router = express.Router();
+const ctrl = require('./prep-exams.controller');
+const { authenticate } = require('../../middleware/auth.middleware');
+const { validate } = require('../../middleware/validate.middleware');
+const { createExamValidation, addDateValidation } = require('./prep-exams.validation');
+router.get('/my-exams', authenticate, ctrl.getMyExams);
+router.get('/', authenticate, ctrl.list);
+router.get('/:slug', authenticate, ctrl.getBySlug);
+router.get('/:slug/syllabus', authenticate, ctrl.getSyllabus);
+router.get('/:slug/dates', authenticate, ctrl.getDates);
+router.post('/', authenticate, createExamValidation, validate, ctrl.create);
+router.post('/:examId/dates', authenticate, addDateValidation, validate, ctrl.addDate);
+router.post('/:slug/subscribe', authenticate, ctrl.subscribe);
+router.delete('/:examId/subscribe', authenticate, ctrl.unsubscribe);
+module.exports = router;

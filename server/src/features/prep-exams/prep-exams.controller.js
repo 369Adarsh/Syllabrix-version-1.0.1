@@ -1,0 +1,13 @@
+const svc = require('./prep-exams.service');
+const { sendSuccess, sendCreated } = require('../../utils/api-response');
+const { asyncHandler } = require('../../utils/async-handler');
+const list = asyncHandler(async (req, res) => { const r = await svc.list({ category_id: req.query.category_id, search: req.query.search }, req.query); res.json({ success:true, data:r.exams, pagination:r.pagination }); });
+const getBySlug = asyncHandler(async (req, res) => { sendSuccess(res, await svc.getBySlug(req.params.slug)); });
+const getSyllabus = asyncHandler(async (req, res) => { sendSuccess(res, await svc.getSyllabus(req.params.slug)); });
+const getDates = asyncHandler(async (req, res) => { sendSuccess(res, await svc.getDates(req.params.slug)); });
+const create = asyncHandler(async (req, res) => { sendCreated(res, await svc.create(req.body)); });
+const addDate = asyncHandler(async (req, res) => { sendCreated(res, await svc.addDate(parseInt(req.params.examId), req.body)); });
+const subscribe = asyncHandler(async (req, res) => { sendSuccess(res, await svc.subscribe(req.user.id, req.params.slug, req.body.target_year)); });
+const unsubscribe = asyncHandler(async (req, res) => { sendSuccess(res, await svc.unsubscribe(req.user.id, parseInt(req.params.examId))); });
+const getMyExams = asyncHandler(async (req, res) => { sendSuccess(res, await svc.getMyExams(req.user.id)); });
+module.exports = { list, getBySlug, getSyllabus, getDates, create, addDate, subscribe, unsubscribe, getMyExams };

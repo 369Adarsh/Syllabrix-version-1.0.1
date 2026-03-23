@@ -1,0 +1,10 @@
+const express = require('express');
+const router = express.Router();
+const ctrl = require('./experience-teams.controller');
+const { authenticate } = require('../../middleware/auth.middleware');
+router.post('/', authenticate, ctrl.create);
+router.get('/:teamId', authenticate, ctrl.getById);
+router.post('/:teamId/join', authenticate, ctrl.join);
+router.post('/:teamId/leave', authenticate, ctrl.leave);
+router.put('/:teamId/roles/:userId', authenticate, ctrl.assignRole);
+module.exports = router;

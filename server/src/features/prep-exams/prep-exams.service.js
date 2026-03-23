@@ -1,0 +1,14 @@
+const { ApiError } = require('../../utils/api-error');
+const q = require('./prep-exams.queries');
+const { slugify } = require('../../../../shared/utils/slugify');
+const { getPagination, getPaginationMeta } = require('../../utils/pagination');
+const list = async (filters, query) => { const { page, limit, offset } = getPagination(query); const { exams, total } = await q.list(filters, limit, offset); return { exams, pagination: getPaginationMeta(total, page, limit) }; };
+const getBySlug = async (slug) => { const exam = await q.getBySlug(slug); if (!exam) throw ApiError.notFound('Exam not found.'); const dates = await q.getDates(exam.id); return { ...exam, upcoming_dates: dates }; };
+const getSyllabus = async (slug) => { const exam = await q.getBySlug(slug); if (!exam) throw ApiError.notFound('Exam not found.'); return { exam_id: exam.id, exam_name: exam.name, syllabus: await q.getSyllabus(exam.id) }; };
+const getDates = async (slug) => { const exam = await q.getBySlug(slug); if (!exam) throw ApiError.notFound('Exam not found.'); return q.getDates(exam.id); };
+const create = async (data) => { const slug = data.slug || slugify(data.name); const id = await q.create({ ...data, slug }); return { id, slug }; };
+const addDate = async (examId, data) => { if (!(await q.getById(examId))) throw ApiError.notFound('Exam not found.'); return q.addDate({ exam_id: examId, ...data }); };
+const subscribe = async (userId, slug, year) => { const e = await q.getBySlug(slug); if (!e) throw ApiError.notFound('Exam not found.'); await q.subscribe(userId, e.id, year); return { message: 'Subscribed to '+e.name }; };
+const unsubscribe = async (userId, examId) => { await q.unsubscribe(userId, examId); return { message: 'Unsubscribed.' }; };
+const getMyExams = async (userId) => q.getUserExams(userId);
+module.exports = { list, getBySlug, getSyllabus, getDates, create, addDate, subscribe, unsubscribe, getMyExams };

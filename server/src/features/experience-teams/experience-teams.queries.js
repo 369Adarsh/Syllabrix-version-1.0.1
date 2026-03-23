@@ -1,0 +1,8 @@
+const { pool } = require('../../database/connection');
+const create = async (d) => { const [r] = await pool.query('INSERT INTO experience_teams (name,activity_id,profession_id,creator_id,max_members) VALUES (?,?,?,?,?)', [d.name,d.activity_id||null,d.profession_id,d.creator_id,d.max_members||5]); return r.insertId; };
+const getById = async (id) => { const [r] = await pool.query('SELECT et.*, p.name as profession_name FROM experience_teams et JOIN professions p ON et.profession_id = p.id WHERE et.id = ? AND et.is_active = 1', [id]); return r[0]||null; };
+const getMembers = async (teamId) => { const [r] = await pool.query('SELECT etm.*, u.username, u.profile_photo_url FROM experience_team_members etm JOIN users u ON etm.user_id = u.id WHERE etm.team_id = ?', [teamId]); return r; };
+const addMember = async (teamId, userId, role) => { await pool.query('INSERT IGNORE INTO experience_team_members (team_id,user_id,role_title) VALUES (?,?,?)', [teamId,userId,role||'Member']); await pool.query('UPDATE experience_teams SET member_count = member_count + 1 WHERE id = ?', [teamId]); };
+const removeMember = async (teamId, userId) => { const [r] = await pool.query('DELETE FROM experience_team_members WHERE team_id = ? AND user_id = ?', [teamId,userId]); if (r.affectedRows>0) await pool.query('UPDATE experience_teams SET member_count = GREATEST(member_count-1,0) WHERE id = ?', [teamId]); };
+const updateRole = async (teamId, userId, role) => { await pool.query('UPDATE experience_team_members SET role_title = ? WHERE team_id = ? AND user_id = ?', [role,teamId,userId]); };
+module.exports = { create, getById, getMembers, addMember, removeMember, updateRole };

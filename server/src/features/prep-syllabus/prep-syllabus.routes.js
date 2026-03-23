@@ -1,0 +1,10 @@
+const express = require('express');
+const router = express.Router();
+const ctrl = require('./prep-syllabus.controller');
+const { authenticate } = require('../../middleware/auth.middleware');
+router.get('/topic/:topicId', authenticate, ctrl.getTopic);
+router.post('/', authenticate, ctrl.create);
+router.put('/:topicId', authenticate, ctrl.update);
+router.get('/progress/:examId', authenticate, ctrl.getProgress);
+router.put('/progress/:syllabusId', authenticate, ctrl.updateProgress);
+module.exports = router;

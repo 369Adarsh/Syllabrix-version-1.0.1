@@ -1,0 +1,23 @@
+CREATE TABLE professions (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    sector_id INT UNSIGNED NOT NULL,
+    name VARCHAR(200) NOT NULL,
+    slug VARCHAR(200) NOT NULL,
+    description TEXT NULL,
+    day_in_life TEXT NULL,
+    tools_used JSON NULL,
+    skills_required JSON NULL,
+    age_group_min ENUM('5-7','8-10','11-13','14-15','16-17') NOT NULL DEFAULT '8-10',
+    difficulty ENUM('beginner','intermediate','advanced') NOT NULL DEFAULT 'beginner',
+    activity_count INT UNSIGNED NOT NULL DEFAULT 0,
+    participant_count INT UNSIGNED NOT NULL DEFAULT 0,
+    icon_emoji VARCHAR(10) NULL,
+    image_url VARCHAR(500) NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_prof_slug (slug),
+    INDEX idx_prof_sector (sector_id),
+    INDEX idx_prof_age (age_group_min),
+    CONSTRAINT fk_prof_sector FOREIGN KEY (sector_id) REFERENCES profession_sectors(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

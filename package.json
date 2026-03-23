@@ -1,0 +1,21 @@
+{
+  "name": "syllabrix",
+  "version": "1.0.0",
+  "description": "Syllabrix — Education Revolution Platform",
+  "private": true,
+  "scripts": {
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "install:all": "cd shared && npm install && cd ../server && npm install && cd ../client && npm install",
+    "migrate:dev": "cd server && node src/database/migrate.js",
+    "seed:qa": "cd server && node src/database/seed.js",
+    "lint": "cd server && npm run lint && cd ../client && npm run lint"
+  },
+  "keywords": ["education", "platform", "syllabrix"],
+  "author": "Syllabrix Team",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

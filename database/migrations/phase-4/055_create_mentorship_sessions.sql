@@ -1,0 +1,22 @@
+CREATE TABLE mentorship_sessions (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    mentor_id INT UNSIGNED NOT NULL,
+    student_id INT UNSIGNED NOT NULL,
+    application_id INT UNSIGNED NULL,
+    title VARCHAR(200) NOT NULL,
+    scheduled_at DATETIME NOT NULL,
+    duration_minutes INT UNSIGNED NOT NULL DEFAULT 30,
+    status ENUM('scheduled','completed','cancelled','no_show') NOT NULL DEFAULT 'scheduled',
+    mentor_notes TEXT NULL,
+    student_notes TEXT NULL,
+    student_feedback TEXT NULL,
+    student_rating TINYINT UNSIGNED NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    INDEX idx_ms_mentor (mentor_id),
+    INDEX idx_ms_student (student_id),
+    INDEX idx_ms_scheduled (scheduled_at),
+    CONSTRAINT fk_ms_mentor FOREIGN KEY (mentor_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_ms_student FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_ms_app FOREIGN KEY (application_id) REFERENCES mentorship_applications(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

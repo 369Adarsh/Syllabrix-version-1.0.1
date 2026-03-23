@@ -1,0 +1,23 @@
+CREATE TABLE experience_activities (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    profession_id INT UNSIGNED NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    description TEXT NOT NULL,
+    instructions TEXT NOT NULL,
+    activity_type ENUM('simulation','project','quiz','writing','design','team','scenario','tool_practice') NOT NULL,
+    difficulty_level ENUM('easy','medium','hard') NOT NULL DEFAULT 'easy',
+    age_group_min ENUM('5-7','8-10','11-13','14-15','16-17') NOT NULL DEFAULT '8-10',
+    estimated_minutes INT UNSIGNED NOT NULL DEFAULT 30,
+    xp_reward INT UNSIGNED NOT NULL DEFAULT 10,
+    badge_reward_id INT UNSIGNED NULL,
+    tool_type VARCHAR(100) NULL,
+    sequence_order INT UNSIGNED NOT NULL DEFAULT 0,
+    is_team_activity TINYINT(1) NOT NULL DEFAULT 0,
+    completion_count INT UNSIGNED NOT NULL DEFAULT 0,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    INDEX idx_ea_profession (profession_id, sequence_order),
+    INDEX idx_ea_type (activity_type),
+    CONSTRAINT fk_ea_profession FOREIGN KEY (profession_id) REFERENCES professions(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
