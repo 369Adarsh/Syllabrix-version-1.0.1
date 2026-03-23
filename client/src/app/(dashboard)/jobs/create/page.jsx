@@ -14,7 +14,7 @@ export default function Page() {
   return (
     <div className="max-w-2xl mx-auto space-y-5">
       <div className="flex items-center gap-3">
-        <Link href="/jobs" className="p-2 rounded-lg hover:bg-gray-100 transition-colors"><ArrowLeft size=16 className="text-gray-500" /></Link>
+        <Link href="/jobs" className="p-2 rounded-lg hover:bg-gray-100 transition-colors"><ArrowLeft size={16} className="text-gray-500" /></Link>
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-sm"><Briefcase size={20} className="text-white" /></div>
         <h1 className="font-bold text-lg text-gray-800">Create Job</h1>
       </div>
