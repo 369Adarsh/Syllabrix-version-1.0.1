@@ -14,3 +14,4 @@ Thumbs.db
 .idea/
 coverage/
 tmp/
+server/.env.ai-keys-to-add.txt
