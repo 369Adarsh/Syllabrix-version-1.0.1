@@ -62,20 +62,24 @@ const generateSyllabrixId = async (user_type, username, phone, date_of_birth) =>
 // ======================== REGISTER ========================
 
 const register = async (userData) => {
-  const { username, email, password, user_type, date_of_birth, gender, city, state, phone } = userData;
+  const { username: fullName, email, password, user_type, date_of_birth, gender, city, state, phone } = userData;
+
+  // Auto-generate a clean username from the full name (frontend sends full name in the username field)
+  const firstName = (fullName || 'user').trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z0-9]/g, '') || 'user';
+  let username = firstName + Math.floor(1000 + Math.random() * 9000);
+  // Ensure uniqueness
+  const existingAuto = await queries.findUserByUsername(username);
+  if (existingAuto) username = firstName + Math.floor(1000 + Math.random() * 9000);
 
   const existingEmail = await queries.findUserByEmail(email);
   if (existingEmail) throw ApiError.conflict('An account with this email already exists.');
-
-  const existingUsername = await queries.findUserByUsername(username);
-  if (existingUsername) throw ApiError.conflict('This username is already taken.');
 
   const age = calculateAge(date_of_birth);
   if (age !== null && age < 5) throw ApiError.badRequest('Users must be at least 5 years old to register.');
 
   const age_group = age !== null ? getAgeGroup(age) : '18+';
   const password_hash = await hashPassword(password);
-  const syllabrix_id = await generateSyllabrixId(user_type, username, phone, date_of_birth);
+  const syllabrix_id = await generateSyllabrixId(user_type, fullName, phone, date_of_birth);
 
   const userId = await queries.createUser({
     username, email, password_hash, user_type, age_group,
@@ -90,7 +94,7 @@ const register = async (userData) => {
     const verificationUrl = `${CLIENT_URL}/verify-email?token=${verificationToken}`;
     await sendVerificationEmail({
       to: email,
-      username,
+      username: fullName,
       verificationUrl,
     });
   } catch (emailErr) {
