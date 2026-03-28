@@ -37,7 +37,7 @@ const findUserById = async (id) => {
     // Fallback if syllabrix_id column doesn't exist yet (migration not run)
     if (e.message.includes('syllabrix_id')) {
       const [rows] = await pool.query(
-        `SELECT id, username, email, user_type, age_group, date_of_birth, phone,
+        `SELECT id, syllabrix_id, username, full_name, email, user_type, age_group, date_of_birth, phone,
                 profile_photo_url, cover_photo_url, bio, gender, city, state, country,
                 is_verified, is_active, is_profile_complete, is_banned, strike_count,
                 last_login_at, email_verified_at, created_at, updated_at

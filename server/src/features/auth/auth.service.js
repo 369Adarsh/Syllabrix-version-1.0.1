@@ -455,11 +455,12 @@ const completeProfile = async (userId, userType, profileData) => {
       throw ApiError.badRequest('Invalid user type.');
   }
 
-  // Update bio, city, state if provided
+  // Backfill users table with profile data (including full_name for users who registered before the fix)
   const userUpdates = {};
+  if (profileData.full_name) userUpdates.full_name = profileData.full_name;
   if (profileData.bio) userUpdates.bio = profileData.bio;
-  if (profileData.city) userUpdates.city = profileData.city;
-  if (profileData.state) userUpdates.state = profileData.state;
+  if (profileData.city || profileData.address_city) userUpdates.city = profileData.city || profileData.address_city;
+  if (profileData.state || profileData.address_state) userUpdates.state = profileData.state || profileData.address_state;
   if (profileData.phone) userUpdates.phone = profileData.phone;
 
   if (Object.keys(userUpdates).length > 0) {

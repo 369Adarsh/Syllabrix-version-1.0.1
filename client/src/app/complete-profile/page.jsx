@@ -147,11 +147,19 @@ export default function CompleteProfilePage() {
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
   // Once user loads, pre-fill full_name
+  // Priority: stored full_name (new registrations) → derived from username (pre-fix users)
   useEffect(() => {
-    if (user?.full_name) {
+    if (!user) return;
+    if (user.full_name) {
+      // Stored at registration — use it and lock the field
       setForm(p => ({ ...p, full_name: user.full_name }));
+    } else if (user.username) {
+      // Derive first name from auto-generated username (e.g. "krishna9849" → "Krishna")
+      const derived = user.username.replace(/\d+$/, '');
+      const hint = derived.charAt(0).toUpperCase() + derived.slice(1);
+      setForm(p => ({ ...p, full_name: hint }));
     }
-  }, [user?.full_name]);
+  }, [user?.full_name, user?.username]);
 
   useEffect(() => {
     if (!user) router.push('/sign-in');
