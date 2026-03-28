@@ -23,7 +23,11 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Only force-redirect to sign-in for session expiry (not for auth endpoints themselves,
+    // which return 401 as a normal "wrong credentials" response)
+    const url = error.config?.url || '';
+    const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/register') || url.includes('/auth/google');
+    if (error.response?.status === 401 && !isAuthEndpoint) {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('syllabrix_token');
         localStorage.removeItem('syllabrix_user');

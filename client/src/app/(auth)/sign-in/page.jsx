@@ -1,19 +1,28 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { Loader2, Eye, EyeOff, Mail, Lock, ArrowRight, MailWarning } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 
 export default function SignInPage() {
-  const { login } = useAuth();
+  const { login, user, loading: authLoading } = useAuth();
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState(null);
   const [resending, setResending] = useState(false);
+
+  // Redirect already-authenticated users away from sign-in
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.push(user.is_profile_complete ? '/home' : '/complete-profile');
+    }
+  }, [user, authLoading, router]);
 
   const handleResend = async () => {
     setResending(true);
@@ -32,10 +41,9 @@ export default function SignInPage() {
     setUnverifiedEmail(null);
     setLoading(true);
     try {
-      const user = await login(email, password);
+      const loggedInUser = await login(email, password);
       toast.success('Welcome back!');
-      if (!user.is_profile_complete) window.location.href = '/complete-profile';
-      else window.location.href = '/home';
+      router.push(loggedInUser.is_profile_complete ? '/home' : '/complete-profile');
     } catch (err) {
       const msg = err.response?.data?.message || 'Invalid email or password';
       if (msg.toLowerCase().includes('verify your email')) {
