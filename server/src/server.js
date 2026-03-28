@@ -27,12 +27,12 @@ const startServer = async () => {
     console.error('  WARNING: Database not connected. Some features will not work.');
   }
 
-  server.listen(config.SERVER_PORT, () => {
+  server.listen(config.SERVER_PORT, '0.0.0.0', () => {
     console.log('');
-    console.log(`  Server running on port ${config.SERVER_PORT}`);
+    console.log(`  Server running on 0.0.0.0:${config.SERVER_PORT}`);
     console.log(`  Environment: ${config.NODE_ENV}`);
     console.log(`  Client URL: ${config.CLIENT_URL}`);
-    console.log(`  Health: http://localhost:${config.SERVER_PORT}/api/health`);
+    console.log(`  Health: http://0.0.0.0:${config.SERVER_PORT}/api/health`);
     console.log('');
     console.log('  Ready to accept requests.');
     console.log('');
