@@ -127,7 +127,7 @@ const completeInstituteProfileValidation = [
 
   body('city').optional().trim().isLength({ max: 100 }),
   body('state').optional().trim().isLength({ max: 100 }),
-  body('website').optional().trim().isURL().withMessage('Invalid website URL'),
+  body('website').optional({ checkFalsy: true }).trim().isURL().withMessage('Invalid website URL'),
 ];
 
 const completeParentProfileValidation = [
@@ -138,7 +138,8 @@ const completeParentProfileValidation = [
 
   body('relationship')
     .notEmpty().withMessage('Relationship is required')
-    .isIn(['mother', 'father', 'guardian', 'other']),
+    .customSanitizer(v => (typeof v === 'string' ? v.toLowerCase() : v))
+    .isIn(['mother', 'father', 'guardian', 'other']).withMessage('Invalid relationship'),
 
   body('notification_email')
     .optional()
@@ -151,10 +152,12 @@ const completeOrganizationProfileValidation = [
     .notEmpty().withMessage('Company name is required')
     .isLength({ min: 2, max: 200 }),
   body('industry').optional().trim().isLength({ max: 100 }),
-  body('company_size').optional()
-    .isIn(['1-50','51-200','201-500','501-2000','2001-10000','10000+']),
-  body('website').optional().trim().isURL().withMessage('Invalid website URL'),
-  body('linkedin_url').optional().trim().isURL().withMessage('Invalid LinkedIn URL'),
+  body('company_size').optional({ checkFalsy: true })
+    .isIn(['1-50','51-200','201-500','501-2000','2001-10000','10000+',
+           '1-50 (Startup)','51-200 (Small)','201-500 (Mid-market)',
+           '501-2000 (Enterprise)','2001-10000 (Large Enterprise)','10000+ (Global Enterprise)']),
+  body('website').optional({ checkFalsy: true }).trim().isURL().withMessage('Invalid website URL'),
+  body('linkedin_url').optional({ checkFalsy: true }).trim().isURL().withMessage('Invalid LinkedIn URL'),
   body('founded_year').optional().isInt({ min: 1800, max: new Date().getFullYear() }),
 ];
 
@@ -168,7 +171,12 @@ const completeProfessionalLearnerProfileValidation = [
   body('current_company').optional().trim().isLength({ max: 200 }),
   body('designation').optional().trim().isLength({ max: 150 }),
   body('experience_years').optional().isInt({ min: 0, max: 60 }),
-  body('education_level').optional()
+  body('education_level').optional({ checkFalsy: true })
+    .customSanitizer(v => {
+      // Normalize display labels → DB values
+      const map = { 'High School':'high_school','Graduation':'graduation','Post Graduation':'post_graduation','Doctorate':'doctorate','Other':'other' };
+      return map[v] || v;
+    })
     .isIn(['high_school', 'graduation', 'post_graduation', 'doctorate', 'other']),
   body('skills').optional().isArray(),
   body('learning_goals').optional().isArray(),

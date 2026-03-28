@@ -25,7 +25,7 @@ const findUserByUsername = async (username) => {
 const findUserById = async (id) => {
   try {
     const [rows] = await pool.query(
-      `SELECT id, syllabrix_id, username, email, user_type, age_group, date_of_birth, phone,
+      `SELECT id, syllabrix_id, username, full_name, email, user_type, age_group, date_of_birth, phone,
               profile_photo_url, cover_photo_url, bio, gender, city, state, country,
               is_verified, is_active, is_profile_complete, is_banned, strike_count,
               last_login_at, email_verified_at, created_at, updated_at
@@ -70,17 +70,17 @@ const findUserBySyllabrixId = async (syllabrixId) => {
 
 const createUser = async (userData) => {
   const {
-    username, email, password_hash, user_type, age_group,
+    username, full_name, email, password_hash, user_type, age_group,
     date_of_birth, gender, city, state, country, syllabrix_id, google_id
   } = userData;
 
   const { phone } = userData;
   try {
     const [result] = await pool.query(
-      `INSERT INTO users (syllabrix_id, username, email, password_hash, user_type, age_group,
+      `INSERT INTO users (syllabrix_id, username, full_name, email, password_hash, user_type, age_group,
                           date_of_birth, gender, city, state, country, google_id, phone, is_active)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-      [syllabrix_id || null, username, email, password_hash, user_type, age_group,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+      [syllabrix_id || null, username, full_name || null, email, password_hash, user_type, age_group,
        date_of_birth || null, gender || null, city || null, state || null, country || 'India', google_id || null, phone || null]
     );
     return result.insertId;
@@ -94,6 +94,7 @@ const createUser = async (userData) => {
         [username, email, password_hash, user_type, age_group,
          date_of_birth || null, gender || null, city || null, state || null, country || 'India']
       );
+      // Note: full_name column may not exist in fallback scenario — acceptable
       return result.insertId;
     }
     throw e;

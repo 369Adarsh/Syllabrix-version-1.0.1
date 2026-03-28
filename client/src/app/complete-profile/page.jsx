@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { authAPI } from '@/lib/api/auth.api';
 import Image from 'next/image';
-import { Loader2, ArrowRight, CheckCircle, Plus, X } from 'lucide-react';
+import { Loader2, ArrowRight, CheckCircle, Plus, X, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // ─── Static data ───────────────────────────────────────────────────────────
@@ -38,9 +38,19 @@ const lbl = 'block text-[11px] font-bold uppercase tracking-wider text-gray-500 
 const Field = ({ label, required, children }) => (
   <div><label className={lbl}>{label}{required && <span className="text-red-400 ml-0.5">*</span>}</label>{children}</div>
 );
-const Inp = ({ label, name, form, set, required, placeholder, type = 'text' }) => (
+const Inp = ({ label, name, form, set, required, placeholder, type = 'text', readOnly }) => (
   <Field label={label} required={required}>
-    <input type={type} value={form[name] || ''} onChange={e => set(name, e.target.value)} placeholder={placeholder} className={inp} />
+    <div className="relative">
+      <input
+        type={type}
+        value={form[name] || ''}
+        onChange={readOnly ? undefined : e => set(name, e.target.value)}
+        readOnly={readOnly}
+        placeholder={placeholder}
+        className={inp + (readOnly ? ' bg-gray-100 text-gray-500 cursor-not-allowed pr-9' : '')}
+      />
+      {readOnly && <Lock size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />}
+    </div>
   </Field>
 );
 const Sel = ({ label, name, form, set, options, required, placeholder }) => (
@@ -132,8 +142,16 @@ export default function CompleteProfilePage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({});
+  // Pre-populate full_name from user record (stored at registration)
+  const [form, setForm] = useState(() => ({ full_name: '' }));
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  // Once user loads, pre-fill full_name
+  useEffect(() => {
+    if (user?.full_name) {
+      setForm(p => ({ ...p, full_name: user.full_name }));
+    }
+  }, [user?.full_name]);
 
   useEffect(() => {
     if (!user) router.push('/sign-in');
@@ -238,6 +256,16 @@ export default function CompleteProfilePage() {
         <div className="text-center mb-5">
           <Image src="/images/logo/syllabrix-logo.png" alt="Syllabrix" width={180} height={50} className="h-9 w-auto mx-auto" priority />
           <p className="text-[12px] text-gray-400 mt-1">Complete your profile to get started</p>
+          {/* Syllabrix ID badge — always visible, non-editable */}
+          {user?.syllabrix_id && (
+            <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-full">
+              <Lock size={10} className="text-blue-400" />
+              <span className="text-[11px] font-bold text-blue-700 tracking-wider">{user.syllabrix_id}</span>
+            </div>
+          )}
+          {user?.full_name && (
+            <p className="text-[12px] font-semibold text-gray-700 mt-1">{user.full_name}</p>
+          )}
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-lg p-6 sm:p-8">
@@ -247,7 +275,7 @@ export default function CompleteProfilePage() {
           {type === 'student' && step === 1 && (
             <div className="space-y-4">
               <h2 className="text-[17px] font-extrabold text-gray-900">Basic Information</h2>
-              <Inp label="Full Name" name="full_name" form={form} set={set} required placeholder="Your full name" />
+              <Inp label="Full Name" name="full_name" form={form} set={set} required placeholder="Your full name" readOnly={!!user?.full_name} />
               <Inp label="Phone Number" name="phone" form={form} set={set} placeholder="+91 XXXXX XXXXX" type="tel" />
               <Sel label="Gender" name="gender" form={form} set={set} options={['Male','Female','Other','Prefer not to say']} />
               <div className="grid grid-cols-2 gap-3">
@@ -369,7 +397,7 @@ export default function CompleteProfilePage() {
           {type === 'teacher' && step === 1 && (
             <div className="space-y-4">
               <h2 className="text-[17px] font-extrabold text-gray-900">Basic Information</h2>
-              <Inp label="Full Name" name="full_name" form={form} set={set} required placeholder="Your full name" />
+              <Inp label="Full Name" name="full_name" form={form} set={set} required placeholder="Your full name" readOnly={!!user?.full_name} />
               <Inp label="Phone Number" name="phone" form={form} set={set} placeholder="+91 XXXXX XXXXX" type="tel" />
               <Sel label="Gender" name="gender" form={form} set={set} options={['Male','Female','Other','Prefer not to say']} />
               <div className="grid grid-cols-2 gap-3">
@@ -507,7 +535,7 @@ export default function CompleteProfilePage() {
           {type === 'parent' && step === 1 && (
             <div className="space-y-4">
               <h2 className="text-[17px] font-extrabold text-gray-900">Basic Information</h2>
-              <Inp label="Full Name" name="full_name" form={form} set={set} required placeholder="Your full name" />
+              <Inp label="Full Name" name="full_name" form={form} set={set} required placeholder="Your full name" readOnly={!!user?.full_name} />
               <Inp label="Phone Number" name="phone" form={form} set={set} placeholder="+91 XXXXX XXXXX" type="tel" />
               <Sel label="Gender" name="gender" form={form} set={set} options={['Male','Female','Other','Prefer not to say']} />
               <div className="grid grid-cols-2 gap-3">
@@ -542,7 +570,7 @@ export default function CompleteProfilePage() {
           {type === 'professional_learner' && step === 1 && (
             <div className="space-y-4">
               <h2 className="text-[17px] font-extrabold text-gray-900">Basic Information</h2>
-              <Inp label="Full Name" name="full_name" form={form} set={set} required placeholder="Your full name" />
+              <Inp label="Full Name" name="full_name" form={form} set={set} required placeholder="Your full name" readOnly={!!user?.full_name} />
               <Inp label="Phone Number" name="phone" form={form} set={set} placeholder="+91 XXXXX XXXXX" type="tel" />
               <Sel label="Gender" name="gender" form={form} set={set} options={['Male','Female','Other','Prefer not to say']} />
               <div className="grid grid-cols-2 gap-3">

@@ -82,7 +82,7 @@ const register = async (userData) => {
   const syllabrix_id = await generateSyllabrixId(user_type, fullName, phone, date_of_birth);
 
   const userId = await queries.createUser({
-    username, email, password_hash, user_type, age_group,
+    username, full_name: fullName, email, password_hash, user_type, age_group,
     date_of_birth, gender, city, state, country: 'India', syllabrix_id, phone,
   });
 
