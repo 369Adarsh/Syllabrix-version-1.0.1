@@ -20,7 +20,9 @@ const routes = require('./routes/index');
 
 const app = express();
 
-// ======================== CORS — must be first, before helmet ========================
+// ======================== CORS — absolute first middleware ========================
+// Manually set headers as a safety net in case Railway's edge proxy strips them.
+// This runs before cors(), helmet(), rate-limiter — everything.
 const ALLOWED_ORIGINS = [
   'https://syllabrix.com',
   'https://www.syllabrix.com',
@@ -29,25 +31,27 @@ const ALLOWED_ORIGINS = [
   config.CLIENT_URL,
 ].filter(Boolean);
 
-const corsOptions = {
-  origin: (origin, callback) => {
-    // No origin = mobile app / Postman / server-to-server — allow
-    if (!origin) return callback(null, true);
-    // Vercel preview deployments
-    if (origin.endsWith('.vercel.app')) return callback(null, true);
-    if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
-    // Deny — return false (not an Error) so Express sends a clean 403, not a 500
-    return callback(null, false);
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  optionsSuccessStatus: 200, // Some browsers (IE11) choke on 204
-};
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  const allowed =
+    !origin ||
+    ALLOWED_ORIGINS.includes(origin) ||
+    origin.endsWith('.vercel.app');
 
-// Handle preflight for ALL routes before any other middleware
-app.options('*', cors(corsOptions));
-app.use(cors(corsOptions));
+  if (allowed) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+  }
+
+  // Respond immediately to preflight — no other middleware needed
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+
+  next();
+});
 
 // ======================== SECURITY ========================
 app.use(helmet({
