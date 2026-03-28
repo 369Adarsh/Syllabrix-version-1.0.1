@@ -22,7 +22,7 @@ if (missing.length > 0 && NODE_ENV === 'production') {
 
 module.exports = {
   NODE_ENV,
-  SERVER_PORT: parseInt(process.env.SERVER_PORT || '5000', 10),
+  SERVER_PORT: parseInt(process.env.PORT || process.env.SERVER_PORT || '5000', 10),
   CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:3000',
   DB: {
     HOST: process.env.DB_HOST || 'localhost',
@@ -30,7 +30,7 @@ module.exports = {
     NAME: process.env.DB_NAME || 'syllabrix_dev',
     USER: process.env.DB_USER || 'root',
     PASSWORD: process.env.DB_PASSWORD || '',
-    CONNECTION_LIMIT: parseInt(process.env.DB_CONNECTION_LIMIT || '10', 10),
+    CONNECTION_LIMIT: parseInt(process.env.DB_CONNECTION_LIMIT || '5', 10),
     SSL: process.env.DB_SSL === 'true',
   },
   JWT: {
