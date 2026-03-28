@@ -20,28 +20,38 @@ const routes = require('./routes/index');
 
 const app = express();
 
-// ======================== SECURITY ========================
-app.use(helmet());
-
-// ======================== CORS ========================
+// ======================== CORS — must be first, before helmet ========================
 const ALLOWED_ORIGINS = [
   'https://syllabrix.com',
   'https://www.syllabrix.com',
-  config.CLIENT_URL,                     // from Railway env var (Vercel URL)
+  'http://localhost:3000',
+  'http://localhost:3001',
+  config.CLIENT_URL,
 ].filter(Boolean);
 
-app.use(cors({
+const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, Postman, server-to-server)
+    // No origin = mobile app / Postman / server-to-server — allow
     if (!origin) return callback(null, true);
-    // Allow any Vercel preview deployment for this project
+    // Vercel preview deployments
     if (origin.endsWith('.vercel.app')) return callback(null, true);
     if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
-    callback(new Error(`CORS: origin ${origin} not allowed`));
+    // Deny — return false (not an Error) so Express sends a clean 403, not a 500
+    return callback(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 200, // Some browsers (IE11) choke on 204
+};
+
+// Handle preflight for ALL routes before any other middleware
+app.options('*', cors(corsOptions));
+app.use(cors(corsOptions));
+
+// ======================== SECURITY ========================
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
 
 // ======================== BODY PARSING ========================
