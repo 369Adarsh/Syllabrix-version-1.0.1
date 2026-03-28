@@ -24,8 +24,21 @@ const app = express();
 app.use(helmet());
 
 // ======================== CORS ========================
+const ALLOWED_ORIGINS = [
+  'https://syllabrix.com',
+  'https://www.syllabrix.com',
+  config.CLIENT_URL,                     // from Railway env var (Vercel URL)
+].filter(Boolean);
+
 app.use(cors({
-  origin: config.CLIENT_URL,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, server-to-server)
+    if (!origin) return callback(null, true);
+    // Allow any Vercel preview deployment for this project
+    if (origin.endsWith('.vercel.app')) return callback(null, true);
+    if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
