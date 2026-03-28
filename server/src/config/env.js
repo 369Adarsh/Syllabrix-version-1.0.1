@@ -43,4 +43,8 @@ module.exports = {
     API_SECRET: process.env.CLOUDINARY_API_SECRET || '',
     FOLDER: process.env.CLOUDINARY_FOLDER || 'dev',
   },
+  EMAIL: {
+    RESEND_API_KEY: process.env.RESEND_API_KEY || '',
+    FROM: process.env.EMAIL_FROM || 'support@syllabrix.com',
+  },
 };

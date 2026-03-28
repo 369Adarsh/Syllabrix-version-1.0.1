@@ -25,10 +25,10 @@ const registerValidation = [
 
   body('user_type')
     .notEmpty().withMessage('User type is required')
-    .isIn(['student', 'teacher', 'institute', 'parent']).withMessage('Invalid user type'),
+    .isIn(['student', 'teacher', 'institute', 'parent', 'professional_learner', 'organization']).withMessage('Invalid user type'),
 
   body('date_of_birth')
-    .notEmpty().withMessage('Date of birth is required')
+    .optional({ nullable: true, checkFalsy: true })
     .isISO8601().withMessage('Invalid date format (use YYYY-MM-DD)'),
 
   body('gender')
@@ -145,6 +145,37 @@ const completeParentProfileValidation = [
     .isEmail().withMessage('Invalid notification email'),
 ];
 
+const completeOrganizationProfileValidation = [
+  body('official_company_name')
+    .trim()
+    .notEmpty().withMessage('Company name is required')
+    .isLength({ min: 2, max: 200 }),
+  body('industry').optional().trim().isLength({ max: 100 }),
+  body('company_size').optional()
+    .isIn(['1-50','51-200','201-500','501-2000','2001-10000','10000+']),
+  body('website').optional().trim().isURL().withMessage('Invalid website URL'),
+  body('linkedin_url').optional().trim().isURL().withMessage('Invalid LinkedIn URL'),
+  body('founded_year').optional().isInt({ min: 1800, max: new Date().getFullYear() }),
+];
+
+const completeProfessionalLearnerProfileValidation = [
+  body('full_name')
+    .trim()
+    .notEmpty().withMessage('Full name is required')
+    .isLength({ min: 2, max: 100 }),
+
+  body('industry').optional().trim().isLength({ max: 100 }),
+  body('current_company').optional().trim().isLength({ max: 200 }),
+  body('designation').optional().trim().isLength({ max: 150 }),
+  body('experience_years').optional().isInt({ min: 0, max: 60 }),
+  body('education_level').optional()
+    .isIn(['high_school', 'graduation', 'post_graduation', 'doctorate', 'other']),
+  body('skills').optional().isArray(),
+  body('learning_goals').optional().isArray(),
+  body('hobby').optional().isArray(),
+  body('mandatory_courses').optional().isObject(),
+];
+
 module.exports = {
   registerValidation,
   loginValidation,
@@ -154,4 +185,6 @@ module.exports = {
   completeTeacherProfileValidation,
   completeInstituteProfileValidation,
   completeParentProfileValidation,
+  completeProfessionalLearnerProfileValidation,
+  completeOrganizationProfileValidation,
 };

@@ -9,4 +9,7 @@ export const authAPI = {
   completeProfile: (type, data) => api.post(`/auth/complete-profile/${type}`, data),
   forgotPassword: (data) => api.post('/auth/forgot-password', data),
   resetPassword: (data) => api.post('/auth/reset-password', data),
+  verifyEmail: (token) => api.get(`/auth/verify-email?token=${encodeURIComponent(token)}`),
+  resendVerification: (email) => api.post('/auth/resend-verification', { email }),
+  applyMentor: (data) => api.post('/auth/apply-mentor', data),
 };

@@ -19,6 +19,8 @@ const {
   completeTeacherProfileValidation,
   completeInstituteProfileValidation,
   completeParentProfileValidation,
+  completeProfessionalLearnerProfileValidation,
+  completeOrganizationProfileValidation,
 } = require('./auth.validation');
 
 // ======================== PUBLIC ROUTES ========================
@@ -49,9 +51,6 @@ router.post('/forgot-password',
   authController.forgotPassword
 );
 
-// POST /api/auth/google — Google OAuth login
-router.post('/google', authLimiter, authController.googleLogin);
-
 // POST /api/auth/reset-password
 router.post('/reset-password',
   authLimiter,
@@ -59,6 +58,12 @@ router.post('/reset-password',
   validate,
   authController.resetPassword
 );
+
+// GET /api/auth/verify-email?token=xxx
+router.get('/verify-email', authController.verifyEmail);
+
+// POST /api/auth/resend-verification
+router.post('/resend-verification', authLimiter, authController.resendVerification);
 
 // ======================== PROTECTED ROUTES ========================
 
@@ -101,5 +106,24 @@ router.post('/complete-profile/parent',
   validate,
   authController.completeProfile
 );
+
+router.post('/complete-profile/professional_learner',
+  authenticate,
+  sanitizeBody,
+  completeProfessionalLearnerProfileValidation,
+  validate,
+  authController.completeProfile
+);
+
+router.post('/complete-profile/organization',
+  authenticate,
+  sanitizeBody,
+  completeOrganizationProfileValidation,
+  validate,
+  authController.completeProfile
+);
+
+// POST /api/auth/apply-mentor — Existing users applying to become a mentor
+router.post('/apply-mentor', authenticate, sanitizeBody, authController.applyMentor);
 
 module.exports = router;

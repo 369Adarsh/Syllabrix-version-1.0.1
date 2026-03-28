@@ -8,13 +8,13 @@ const { asyncHandler } = require('../../utils/async-handler');
 
 // POST /api/auth/register
 const register = asyncHandler(async (req, res) => {
-  const { username, email, password, user_type, date_of_birth, gender, city, state } = req.body;
+  const { username, email, password, user_type, date_of_birth, gender, city, state, phone } = req.body;
 
   const result = await authService.register({
-    username, email, password, user_type, date_of_birth, gender, city, state,
+    username, email, password, user_type, date_of_birth, gender, city, state, phone,
   });
 
-  sendCreated(res, result, 'Registration successful! Please complete your profile.');
+  sendCreated(res, result, 'Account created! Please check your email to verify your account.');
 });
 
 // POST /api/auth/login
@@ -78,7 +78,30 @@ const googleLogin = asyncHandler(async (req, res) => {
   sendSuccess(res, result, 'Google login successful!');
 });
 
+// GET /api/auth/verify-email?token=xxx
+const verifyEmail = asyncHandler(async (req, res) => {
+  const { token } = req.query;
+  if (!token) throw new Error('Verification token is required');
+  const result = await authService.verifyEmail(token);
+  sendSuccess(res, result, result.message);
+});
+
+// POST /api/auth/resend-verification
+const resendVerification = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  if (!email) throw new Error('Email is required');
+  const result = await authService.resendVerificationEmail(email);
+  sendSuccess(res, result, result.message);
+});
+
+// POST /api/auth/apply-mentor
+const applyMentor = asyncHandler(async (req, res) => {
+  const result = await authService.applyMentor(req.user.id, req.body);
+  sendSuccess(res, result, result.message);
+});
+
 module.exports = {
   register, login, logout, getMe, googleLogin,
   completeProfile, forgotPassword, resetPassword,
+  verifyEmail, resendVerification, applyMentor,
 };

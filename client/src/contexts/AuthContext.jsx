@@ -35,20 +35,18 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const res = await authAPI.login({ email, password });
-    const { token, user: userData } = res.data.data;
-    localStorage.setItem('syllabrix_token', token);
-    localStorage.setItem('syllabrix_user', JSON.stringify(userData));
-    setUser(userData);
-    return userData;
+    const { token, user: userData, requiresProfileCompletion } = res.data.data;
+localStorage.setItem('syllabrix_token', token);
+localStorage.setItem('syllabrix_user', JSON.stringify(userData));
+setUser(userData);
+return { ...userData, requiresProfileCompletion };
   };
 
   const register = async (data) => {
     const res = await authAPI.register(data);
-    const { token, user: userData } = res.data.data;
-    localStorage.setItem('syllabrix_token', token);
-    localStorage.setItem('syllabrix_user', JSON.stringify(userData));
-    setUser(userData);
-    return userData;
+    const { requiresEmailVerification } = res.data.data;
+    // Email verification required — don't store token or set user
+    return { requiresEmailVerification };
   };
 
   const logout = async () => {

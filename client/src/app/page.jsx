@@ -48,7 +48,7 @@ export default function LandingPage() {
               <a href="#who" className="hover:text-blue-700 transition-colors">Who It&apos;s For</a>
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
-              <Link href="/sign-in" className="hidden sm:inline-flex px-4 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-all">Sign In</Link>
+              <Link href="/sign-in" className="inline-flex px-4 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-all">Sign In</Link>
               <Link href="/sign-up" className="px-4 sm:px-5 py-2.5 rounded-xl text-sm font-bold bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-200/40 hover:from-blue-700 transition-all flex items-center gap-1.5">
                 Get Started <ArrowRight size={14} />
               </Link>
