@@ -9,6 +9,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   const loadUser = useCallback(async () => {
+    if (typeof window === 'undefined') { setLoading(false); return; }
     try {
       const token = localStorage.getItem('syllabrix_token');
       if (!token) { setLoading(false); return; }

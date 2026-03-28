@@ -1,6 +1,4 @@
-'use client';
-import { Sparkles } from 'lucide-react';
-
+// Server component — no 'use client' needed (no hooks, no browser APIs)
 export default function AuthLayout({ children }) {
   return (
     <div className="min-h-screen flex">

@@ -15,9 +15,11 @@ dotenv.config({ path: path.resolve(__dirname, '..', '..', '.env') });
 
 const required = ['DB_HOST', 'DB_NAME', 'DB_USER', 'JWT_SECRET'];
 const missing = required.filter((key) => !process.env[key]);
-if (missing.length > 0 && NODE_ENV === 'production') {
-  console.error('FATAL: Missing required env vars:', missing.join(', '));
-  process.exit(1);
+if (missing.length > 0) {
+  // Warn but do NOT exit — server must start so Railway health check can respond.
+  // Set these variables in Railway Dashboard → Variables tab.
+  console.warn('WARNING: Missing env vars:', missing.join(', '));
+  console.warn('Set them in Railway Dashboard → your service → Variables tab.');
 }
 
 module.exports = {
