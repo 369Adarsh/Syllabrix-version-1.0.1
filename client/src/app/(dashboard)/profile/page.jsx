@@ -1150,25 +1150,25 @@ export default function MyProfilePage() {
   const hasResume = !['institute','organization','parent'].includes(type);
 
   return (
-    <div className="min-h-screen bg-[#F3F4F6]">
-
-      {/* ── 1. COVER BANNER ─────────────────────────────────────────── */}
-      <div className="relative h-40 md:h-56 w-full group">
-        {user.cover_photo_url
-          ? <img src={user.cover_photo_url} alt="Cover" className="w-full h-full object-cover" />
-          : <div className={`w-full h-full bg-gradient-to-r ${cfg.cover}`} />}
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
-        <button type="button" onClick={() => !coverLoading && coverRef.current?.click()}
-          className="absolute top-3 right-4 flex items-center gap-1.5 px-3 py-1.5 bg-black/40 text-white text-[12px] font-semibold rounded-lg opacity-0 group-hover:opacity-100 transition-all hover:bg-black/60 backdrop-blur-sm">
-          {coverLoading ? <Loader2 size={12} className="animate-spin" /> : <Camera size={12} />}
-          {coverLoading ? 'Uploading…' : 'Change Cover'}
-        </button>
-        <input ref={coverRef} type="file" accept="image/*" className="hidden" onChange={handleCover} />
-      </div>
-
-      {/* ── 2. PROFILE IDENTITY CARD ─────────────────────────────────── */}
+    <div className="min-h-screen bg-[#F3F4F6] py-6">
       <div className="max-w-5xl mx-auto px-4 md:px-6">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm relative pb-6 mb-4">
+
+        {/* ── 1. COVER BANNER ─────────────────────────────────────────── */}
+        <div className="relative h-40 md:h-56 w-full rounded-2xl overflow-hidden border border-gray-200 shadow-sm group">
+          {user.cover_photo_url
+            ? <img src={user.cover_photo_url} alt="Cover" className="w-full h-full object-cover" />
+            : <div className={`w-full h-full bg-gradient-to-r ${cfg.cover}`} />}
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+          <button type="button" onClick={() => !coverLoading && coverRef.current?.click()}
+            className="absolute top-3 right-4 flex items-center gap-1.5 px-3 py-1.5 bg-black/40 text-white text-[12px] font-semibold rounded-lg opacity-0 group-hover:opacity-100 transition-all hover:bg-black/60 backdrop-blur-sm">
+            {coverLoading ? <Loader2 size={12} className="animate-spin" /> : <Camera size={12} />}
+            {coverLoading ? 'Uploading…' : 'Change Cover'}
+          </button>
+          <input ref={coverRef} type="file" accept="image/*" className="hidden" onChange={handleCover} />
+        </div>
+
+        {/* ── 2. PROFILE IDENTITY CARD ─────────────────────────────────── */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm relative pt-4 pb-6 mb-4 -mt-6 overflow-visible">
 
           {/* Edit Profile button — absolute top-right */}
           <div className="absolute top-4 right-4">
