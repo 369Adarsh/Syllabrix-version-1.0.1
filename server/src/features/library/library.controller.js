@@ -2,6 +2,8 @@ const service = require('./library.service');
 const aiLibraryService = require('../../services/ai-library.service');
 const { sendSuccess } = require('../../utils/api-response');
 
+// ─── School Library ───────────────────────────────────────────────────────────
+
 const getBoards = async (req, res, next) => {
   try {
     const boards = await service.getBoards();
@@ -26,7 +28,6 @@ const getSyllabusVersions = async (req, res, next) => {
 
 const getClasses = async (req, res, next) => {
   try {
-    // Optional: filter by ?syllabusVersionId=X or default to current
     const { syllabusVersionId } = req.query;
     const classes = await service.getClasses(req.params.boardCode, syllabusVersionId ? Number(syllabusVersionId) : null);
     res.json({ success: true, data: classes });
@@ -61,6 +62,68 @@ const getTopics = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// ─── Competitive Exams ───────────────────────────────────────────────────────
+
+const getExams = async (req, res, next) => {
+  try {
+    const exams = await service.getExams();
+    res.json({ success: true, data: exams });
+  } catch (err) { next(err); }
+};
+
+const getExamByCode = async (req, res, next) => {
+  try {
+    const exam = await service.getExamByCode(req.params.examCode);
+    if (!exam) return res.status(404).json({ success: false, message: 'Exam not found' });
+    res.json({ success: true, data: exam });
+  } catch (err) { next(err); }
+};
+
+const getExamSubjects = async (req, res, next) => {
+  try {
+    const subjects = await service.getExamSubjects(req.params.examCode);
+    res.json({ success: true, data: subjects });
+  } catch (err) { next(err); }
+};
+
+const getExamBooks = async (req, res, next) => {
+  try {
+    const { priority } = req.query;
+    const books = await service.getExamBooks(req.params.examCode, priority ? Number(priority) : null);
+    res.json({ success: true, data: books });
+  } catch (err) { next(err); }
+};
+
+// ─── Publishers ───────────────────────────────────────────────────────────────
+
+const getPublishers = async (req, res, next) => {
+  try {
+    const publishers = await service.getPublishers();
+    res.json({ success: true, data: publishers });
+  } catch (err) { next(err); }
+};
+
+const getPublisherBooks = async (req, res, next) => {
+  try {
+    const books = await service.getPublisherBooks(Number(req.params.id));
+    res.json({ success: true, data: books });
+  } catch (err) { next(err); }
+};
+
+// ─── Smart Recommendation ─────────────────────────────────────────────────────
+
+const recommendBooks = async (req, res, next) => {
+  try {
+    const { examCode, subject, subCategory, classLevel } = req.query;
+    if (!examCode) return res.status(400).json({ success: false, message: 'examCode is required' });
+
+    const books = await service.getRecommendedBooks({ examCode, subject, subCategory, classLevel });
+    res.json({ success: true, data: books });
+  } catch (err) { next(err); }
+};
+
+// ─── AI Ask ──────────────────────────────────────────────────────────────────
+
 const askAI = async (req, res, next) => {
   try {
     const {
@@ -70,21 +133,26 @@ const askAI = async (req, res, next) => {
       subjectId,
       chapterId,
       topicId,
+      examCode,
       studentQuery,
       studentClass,
     } = req.body;
 
-    if (!studentQuery || !subjectId) {
-      return res.status(400).json({ success: false, message: 'studentQuery and subjectId are required' });
+    if (!studentQuery || (!subjectId && !examCode)) {
+      return res.status(400).json({
+        success: false,
+        message: 'studentQuery and either subjectId or examCode are required',
+      });
     }
 
     const result = await aiLibraryService.ask({
       boardCode,
       syllabusVersionId: syllabusVersionId ? Number(syllabusVersionId) : null,
-      grade: grade ? Number(grade) : null,
-      subjectId: Number(subjectId),
+      grade:     grade     ? Number(grade)     : null,
+      subjectId: subjectId ? Number(subjectId) : null,
       chapterId: chapterId ? Number(chapterId) : null,
-      topicId: topicId ? Number(topicId) : null,
+      topicId:   topicId   ? Number(topicId)   : null,
+      examCode,
       studentQuery,
       studentClass,
       userId: req.user?.id,
@@ -94,4 +162,11 @@ const askAI = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-module.exports = { getBoards, getBoardByCode, getSyllabusVersions, getClasses, getSubjects, getBooks, getChapters, getTopics, askAI };
+module.exports = {
+  getBoards, getBoardByCode, getSyllabusVersions, getClasses, getSubjects,
+  getBooks, getChapters, getTopics,
+  getExams, getExamByCode, getExamSubjects, getExamBooks,
+  getPublishers, getPublisherBooks,
+  recommendBooks,
+  askAI,
+};

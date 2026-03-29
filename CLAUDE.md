@@ -76,293 +76,488 @@ Syllabrix ID format: S-XXXXXXXXXX (10 chars after dash = first3+lastInitial+phon
 - professional_learner: P-  (e.g. P-PRIN554492)
 - organization: O-  (e.g. O-TECI567824)
 
-## Current Status (22-Point Spec)
-### Working: Auth, Feed, AI Buddy, Mind Map, Career Explorer, Newsroom, Virtual Lab, Mock Interview, Debate Arena, Arcade (4 games), Clips
-### Needs Polish: Experience Lab, PrepSmart, Jobs, Code Lab, Mentorship
-### Not Built: Requirements Marketplace, Animated Videos, SAP/Fitness, Library, Real Classroom (WebRTC)
+need to start form here 
 
-## Post Go-Live Enhancement Status
-### COMPLETED
-- Sign-in/sign-up pages fully redesigned (no Google, no QA buttons)
-- Email verification flow (Resend API → check-email → verify-email → sign-in)
-- Login blocked until email verified; unverified banner with resend on sign-in page
-- Syllabrix ID system: S/T/I/G/P/O-XXXXXXXXXX (10 chars, collision-safe, deterministic)
-- Sign-up: 5 user types (student/teacher/institute/professional_learner/organization)
-- Sign-up: Terms & Privacy checkbox (required), company email domain block for org
-- Sign-up: Company Name field shown for organization type
-- Landing page Sign In button visible on mobile
-- All old QA users wiped; fresh start
-- Profile wizard: Student (6 steps) — school/college/coaching/specialization, ambition, hobby, sports mandatory, guardian required for under-13, 2 tech + 2 functional courses
-- Profile wizard: Teacher (5 steps) — teaching details, qualifications, self-as-learner, 2 courses
-- Profile wizard: Institute (3 steps) — handler, boards, how_use_platform, parent involvement
-- Profile wizard: Parent (3 steps) — relationship, hobby/sports involvement
-- Profile wizard: Professional Learner (5 steps) — company, skills, previous companies, looking_for_job, hobby/courses
-- Profile wizard: Organization (3 steps) — admin contact, company identity, platform usage
-- Mentor apply page (/mentor-apply) + become_mentor_requests table
-- DB migrations 066–075 applied
 
-### PENDING / DEFERRED
-- Phone OTP verification — intentionally skipped (phone stored but not OTP verified)
-- 10,000+ schools/colleges database dropdown — deferred (too large for now)
-- Mentor qualification test + training completion requirement — future feature
-- Parent "dual account" creation (parent registers → auto-creates child student ID) — future feature
-- Organization company logo upload in profile wizard — future feature
+Build the complete competitive exam + private publisher database 
+for Syllabrix AI Library. No shortcuts, fully dynamic, production-ready.
 
-## What NOT to do
-- NEVER overwrite `tailwind.config.js` or `globals.css` entirely
-- NEVER change the auth pattern (useAuth hook)
-- NEVER use `npx create-next-app` — the client/ folder exists
-- NEVER remove existing API endpoints — only add new ones
-- NEVER change database column names on existing tables — only ADD columns
-- NEVER mention any AI provider name (Gemini, Groq, etc.) on the frontend
+═══════════════════════════════════════════════════
+STEP 1: MIGRATION FILES
+═══════════════════════════════════════════════════
+Create in database/migrations/phase-session2/ 
+continuing from 087 (next is 088):
 
-Start from here the build vision . 
+── 088_create_publishers.sql ──
+CREATE TABLE publishers (
+  id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name                VARCHAR(200) NOT NULL,
+  short_name          VARCHAR(50),           -- 'S.Chand', 'Arihant'
+  focus_area          VARCHAR(300),          -- 'School + Competitive'
+  website             VARCHAR(300),
+  amazon_search_url   VARCHAR(500),          -- for affiliate links
+  flipkart_search_url VARCHAR(500),
+  partnership_status  ENUM('none','contacted','licensed') DEFAULT 'none',
+  is_active           TINYINT(1) DEFAULT 1,
+  created_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-You are helping me build the first version of AI Study Table in my Next.js + React app (Syllabrix).
-Goal of this task:
-Build the AI Study Table page layout and components.
-Add a “Learner Profile Questionnaire” flow that the AI tutor depends on.
-Make the AI tutor avatar gently ask for profile completion when missing.
-Tech stack (do NOT change):
-Next.js App Router
-React
-Tailwind CSS
-Existing dashboard layout at client/src/app/(dashboard)/layout.jsx
-Auth context already exists (useAuth)
-Use JavaScript or TypeScript consistent with repo.
-────────────────────────────────────────
-PART A — ROUTE & TOP-LEVEL STRUCTURE
-────────────────────────────────────────
-Create a new page:
-client/src/app/(dashboard)/ai-study-table/page.jsx
-It should use the existing (dashboard)/layout.jsx, so just export the page component.
-Page responsibilities:
-Read the current user (via useAuth).
-Detect if the user has completed the Learner Profile Questionnaire (we’ll fake this with a boolean for now).
-If NOT completed:
-Show a friendly blocking overlay with cartoon AI tutor asking them to complete the questionnaire.
-Provide a button that opens the questionnaire in a modal or navigates to a wizard inside this page.
-If completed:
-Render the full AI Study Table layout.
-For this step, store the “profileCompleted” flag in local state with a TODO comment to wire it to real backend later.
-────────────────────────────────────────
-PART B — LEARNER PROFILE QUESTIONNAIRE
-────────────────────────────────────────
-Create a multi-step wizard component. 
-client/src/components/study-table/LearnerProfileWizard.jsx
-It can render as:
-A centered modal overlay inside AI Study Table page, OR
-A full-screen card inside the page.
-Design goals:
-4–5 short steps, progress bar (“Step 2 of 5”).
-Mostly multiple choice + very short answers.
-Friendly, teen/kid-safe wording.
-Works for any user type (5-year child to 50-year adult). Parents may fill for small kids.
-Collect these categories:
-Basic profile
-Learning history & fear
-Skill & confidence
-Habits & learning style
-Goals, accessibility & sharing
-Use the following exact question list, adapted to UI:
-1. Basic profile (all users)
-Role
-Student (school)
-Student (college)
-Working professional
-Parent
-Other
-If student: Class/Year (free text or dropdown).
-Board / Curriculum (CBSE, ICSE, State, Other).
-Main subjects currently studying (multi-select chips).
-2. Learning history & fear
-Which subjects do you enjoy the most? (multi-select + optional “Why do you enjoy them?” short text)
-Which subjects or topics do you find difficult or scary? (multi-select + optional “What makes them scary?” short text)
-When you think about studies, which feeling is closest?
-Very afraid
-A bit nervous
-Okay
-Excited / happy
-Have you ever felt embarrassed or scolded by a teacher about studies?
-Yes / No
-(If yes) “You can tell me more (optional)” — short text
-3. Current skill & confidence
-Reading comfort (in preferred language)
-I struggle to read basic words
-I can read slowly with help
-I read okay but big texts scare me
-I read comfortably
-Writing comfort:
-I find writing very hard
-I can write but make many mistakes
-I write okay but slowly
-I write confidently
-Maths comfort:
-I find even simple sums difficult
-I’m okay with basic sums, scared of word problems
-I’m comfortable with most topics
-I enjoy maths
-English / second language comfort:
-I struggle with basic words and sentences
-I can read but not understand fully
-I understand but fear grammar/writing
-I’m comfortable
-4. Study habits & learning style
-How many days a week do you usually study seriously (outside school)? (0–7 slider or options)
-How long can you focus in one sitting before you feel tired?
-5–10 minutes
-15–25 minutes
-30–45 minutes
-More than 45 minutes
-Where do you usually study?
-Home (quiet)
-Home (noisy)
-Library / tuition center
-Other
-Do you usually study alone or with others?
-Alone
-With family
-With friends / classmates
-When someone explains, what helps you most? (multi-select)
-Pictures and diagrams
-Real life examples and stories
-Step-by-step instructions
-Short videos / animations
-Practice questions
-What language should the AI tutor use to explain?
-English
-Hindi
-Hinglish (mix of Hindi + English)
-Other (text input)
-Do you like explanations to be:
-Very short
-Medium
-Detailed with many examples
-5. Goals, accessibility & sharing
-What is your main goal right now?
-Pass my class
-Score high marks in board exams
-Improve reading and writing
-Prepare for entrance exams
-Learn for career/personal growth
-For this year, what result would make you feel proud? (short text)
-Accessibility / support tools:
-Do you use any support while studying?
-Bigger text / glasses
-Text-to-speech (listening instead of reading)
-Someone reads to me
-None / Not sure
-Is it okay if the AI tutor suggests a short break or simple breathing exercise when you seem stressed or stuck for long?
-Yes / No
-Who should be able to see your progress reports?
-Only me
-Me + my parent
-Me + my teacher 
-Me + both
-If the AI tutor sees you are struggling again and again in a topic, can it suggest you talk to a real teacher or parent about it?
-Yes / No
-Is there anything you want the AI tutor to never do? (optional text, e.g. “Don’t compare me with others”, “Don’t scold me”, etc.)
-Wizard behaviour:
-Each step validates required fields before moving forward.
-Show a progress bar at the top.
-Final step has “Finish & Start My Study Table” button.
-On finish:
-For now, just store data in local state or context (useState) and call a callback onComplete(profileData).
-In ai-study-table/page.jsx, set profileCompleted = true and pass key pieces (like fears, preferences) to the Study Table layout.
-────────────────────────────────────────
-PART C — “COMPLETE YOUR PROFILE” FRIENDLY GATE
-────────────────────────────────────────
-If profileCompleted is false when the page loads:
-Render a semi-transparent overlay over the main page.
-Show a centered card with:
-Cartoon AI tutor avatar.
-Message along these lines (polite, sensitive): “To teach you properly, I need to know a little about how you study and what scares you.
-This will take just 2–3 minutes and will help me explain things in the best way for YOU.”
-Buttons:
-Primary: “Complete my study profile” → opens LearnerProfileWizard.
-Secondary: “Maybe later” → OPTIONAL; if you allow skipping, then:
-Let user see a very limited generic Study Table.
-Keep a small reminder banner at top asking to complete the profile.
-For now, it’s okay if ‘Maybe later’ just closes the overlay.
-Ensure tone is kind, never blaming.
-────────────────────────────────────────
-PART D — AI STUDY TABLE LAYOUT (UI ONLY)
-────────────────────────────────────────
-After profile is completed (or if we fake it as true), show the full layout as previously specified.
-Create these components under client/src/components/study-table/:
-StudyHeader.jsx
-StudySidebarLeft.jsx
-StudyWorkspace.jsx
-StudySidebarRight.jsx
-BlackboardDiagram.jsx
-SmartNotesPanel.jsx
-PracticePanel.jsx
-RevisePanel.jsx
-High-level grid in page.jsx:
-jsx
-<div className="min-h-[calc(100vh-64px)] bg-[#F3F4F6] py-4">
-  <div className="max-w-6xl mx-auto px-3 md:px-4 lg:px-6 space-y-3">
-    <StudyHeader ... />
-    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.75fr)_minmax(0,1.7fr)_minmax(0,0.8fr)] gap-3">
-      <StudySidebarLeft ... />
-      <StudyWorkspace ... />
-      <StudySidebarRight ... />
-    </div>
-  </div>
-</div>
-Use the earlier instructions you already have from me for:
-StudyHeader: avatar greeting, subject/topic selectors, focus timer, today’s goal.
-StudySidebarLeft: Today’s Plan, Timetable, Homework & Tasks, Books & Resources.
-StudyWorkspace: tabs (Learn / Practice / Revise), explanation + BlackboardDiagram + SmartNotes, PracticePanel, RevisePanel.
-StudySidebarRight: AI Tutor chat mini, Progress & Mood, Streaks & Badges.
-Important behaviour:
-Pass key pieces of profile data into StudyHeader and StudySidebarRight, e.g.:
-learner’s name
-main fear subject/topic
-preferred language
-preferred explanation style
-Use them to adjust placeholder text, e.g.:
-“You once told me maths word problems feel scary. Today, we’ll take them slowly.”
-“Explaining in Hinglish, as you chose.”
-No real AI calls yet; just show how personalization will work.
-────────────────────────────────────────
-PART E — DIAGRAM SUPPORT (STUB)
-────────────────────────────────────────
-In BlackboardDiagram.jsx:
-Accept a prop diagram with this commented type:
-ts
-// type Point = { x: number; y: number }; // 0–100
-// type DrawStep =
-//   | { type: 'line'; from: Point; to: Point; color?: string; width?: number }
-//   | { type: 'rect'; topLeft: Point; width: number; height: number; fill?: string; stroke?: string; strokeWidth?: number }
-//   | { type: 'circle'; center: Point; radius: number; fill?: string; stroke?: string; strokeWidth?: number }
-//   | { type: 'arrow'; from: Point; to: Point; color?: string; width?: number }
-//   | { type: 'text'; at: Point; text: string; size?: number; color?: string; align?: 'left'|'center'|'right' }
-//   | { type: 'pause'; ms: number };
-// type DiagramPayload = { title: string; description: string; steps: DrawStep[] };
-For now, hard-code one DiagramPayload for fractions (1/4 = 2/8) and render it using SVG or canvas (even without animation).
-Add TODO comments indicating where AI-generated diagrams will be plugged later.
-────────────────────────────────────────
-PART F — RESPONSIVE BEHAVIOUR
-────────────────────────────────────────
-On desktop (lg+): three-column layout as above.
-On mobile:
-Stack vertically: Header → Tabs → Center Workspace → Right sidebar (coach) → Left sidebar (Plan & Tasks).
-Wrap left sidebar in an Accordion titled “Plan & Tasks”.
-Ensure no horizontal scrolling, appropriate text-sm sizes.
-AI Tutor chat can either be:
-A small card in the scroll, OR
-Expandable full-screen when tapped.
-────────────────────────────────────────
-GENERAL IMPLEMENTATION NOTES
-────────────────────────────────────────
-Keep all state local for now (no API calls), but structure props and callbacks clearly so we can wire real APIs later.
-Use clear, warm copy in all user-facing text.
-Add comments where:
-Learner profile will be fetched/saved from backend.
-AI tutor (Gemini) will be called for explanations, diagrams, notes, and questions.
-At the end, print a concise summary:
-Files created/updated
-How the questionnaire flow works
-How the AI Study Table layout behaves on desktop vs mobile.
-END OF PROMPT
+── 089_create_exam_categories.sql ──
+CREATE TABLE exam_categories (
+  id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  code          VARCHAR(50) UNIQUE NOT NULL,  -- 'UPSC','JEE','NEET','SSC','BANKING','NDA'
+  name          VARCHAR(200) NOT NULL,
+  type          ENUM('school','engineering','medical',
+                     'civil_services','banking','ssc',
+                     'defence','state_psc','other') NOT NULL,
+  level         ENUM('national','state') DEFAULT 'national',
+  state         VARCHAR(100) NULL,            -- for state PSC only
+  conducting_body VARCHAR(200),              -- 'UPSC', 'NTA', 'SSC Board'
+  official_website VARCHAR(300),
+  is_active     TINYINT(1) DEFAULT 1,
+  created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+── 090_create_competitive_subjects.sql ──
+CREATE TABLE competitive_subjects (
+  id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  exam_category_id INT UNSIGNED NOT NULL,
+  name            VARCHAR(200) NOT NULL,      -- 'Modern History', 'Physical Geography'
+  parent_subject  VARCHAR(100),              -- 'History', 'Geography', 'Physics'
+  sub_category    VARCHAR(100),              -- 'Ancient', 'Medieval', 'Modern'
+  description     TEXT,
+  syllabus_url    VARCHAR(300),              -- official exam syllabus link
+  weightage_percent DECIMAL(5,2),            -- % in that exam
+  is_active       TINYINT(1) DEFAULT 1,
+  FOREIGN KEY (exam_category_id) REFERENCES exam_categories(id) ON DELETE CASCADE
+);
+
+── 091_create_competitive_books.sql ──
+CREATE TABLE competitive_books (
+  id                    INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  publisher_id          INT UNSIGNED NOT NULL,
+  competitive_subject_id INT UNSIGNED NULL,   -- NULL = general/multi-subject
+  title                 VARCHAR(500) NOT NULL,
+  author                VARCHAR(300),
+  edition               VARCHAR(50),
+  publication_year      YEAR,
+  is_copyrighted        TINYINT(1) DEFAULT 1,
+  is_available_free     TINYINT(1) DEFAULT 0,
+  google_books_id       VARCHAR(100),
+  open_library_id       VARCHAR(100),
+  amazon_affiliate_url  VARCHAR(500),
+  flipkart_affiliate_url VARCHAR(500),
+  google_books_preview_url VARCHAR(300),
+  cover_image_url       VARCHAR(300),
+  priority_rank         TINYINT UNSIGNED DEFAULT 1, -- 1=must read, 2=recommended, 3=optional
+  usage_tip             TEXT,               -- "Read after NCERT", "Only for advanced"
+  is_active             TINYINT(1) DEFAULT 1,
+  created_at            TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (publisher_id) REFERENCES publishers(id),
+  FOREIGN KEY (competitive_subject_id) REFERENCES competitive_subjects(id)
+);
+
+── 092_create_book_exam_links.sql ──
+-- Many-to-many: one book can serve multiple exams
+CREATE TABLE book_exam_links (
+  id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  competitive_book_id INT UNSIGNED NOT NULL,
+  exam_category_id  INT UNSIGNED NOT NULL,
+  relevance         ENUM('primary','secondary','supplementary') DEFAULT 'primary',
+  FOREIGN KEY (competitive_book_id) REFERENCES competitive_books(id) ON DELETE CASCADE,
+  FOREIGN KEY (exam_category_id) REFERENCES exam_categories(id) ON DELETE CASCADE,
+  UNIQUE KEY unique_book_exam (competitive_book_id, exam_category_id)
+);
+
+── 093_alter_books_add_competitive_fields.sql ──
+-- Extend existing school books table for competitive context
+ALTER TABLE books 
+  ADD COLUMN publisher_id INT UNSIGNED NULL,
+  ADD COLUMN exam_category_id INT UNSIGNED NULL,
+  ADD COLUMN priority_rank TINYINT UNSIGNED DEFAULT 1,
+  ADD COLUMN affiliate_link VARCHAR(500) NULL,
+  ADD COLUMN google_books_preview_url VARCHAR(300) NULL,
+  ADD FOREIGN KEY (publisher_id) REFERENCES publishers(id),
+  ADD FOREIGN KEY (exam_category_id) REFERENCES exam_categories(id);
+
+═══════════════════════════════════════════════════
+STEP 2: SEED FILES
+═══════════════════════════════════════════════════
+Create in server/src/database/seeds/
+
+── publishers.seed.js ──
+Seed ALL publishers below (INSERT IGNORE, idempotent):
+
+SCHOOL PUBLISHERS:
+1.  S. Chand & Company — focus: School + Competitive — website: schandpublishing.com
+2.  R.S. Aggarwal (S. Chand) — focus: Mathematics + Reasoning
+3.  R.D. Sharma (Dhanpat Rai) — focus: School Mathematics
+4.  Wren & Martin (S. Chand) — focus: English Grammar
+5.  Sumita Arora (Dhanpat Rai) — focus: Computer Science
+6.  Lakhmir Singh (S. Chand) — focus: School Science
+7.  Trueman's (Trueman Publication) — focus: Biology
+
+COMPETITIVE PUBLISHERS:
+8.  Arihant Publications — focus: All competitive exams — website: arihantbooks.com
+9.  Disha Publications — focus: UPSC + State PSC + Banking
+10. MTG Learning Media — focus: NEET + JEE + Olympiad
+11. Cengage Learning India — focus: JEE Advanced
+12. DC Pandey (Arihant) — focus: Physics (JEE/NEET)
+13. HC Verma (Bharati Bhawan) — focus: Physics Concepts
+14. Bharati Bhawan — focus: School + Competitive
+15. Lucent Publications — focus: GK + SSC + Banking
+16. Kiran Prakashan — focus: SSC + Banking
+17. Rakesh Yadav Readers — focus: SSC Mathematics
+18. Spectrum Books — focus: Modern History (UPSC)
+19. Shankar IAS Academy — focus: Environment + UPSC
+20. Vision IAS — focus: UPSC Current Affairs + GS
+21. Insights IAS — focus: UPSC
+22. Unique Publications — focus: GPSC + Gujarat State PSC
+23. Target Publications — focus: MPSC + Maharashtra
+24. Sura Books — focus: TNPSC + Tamil Nadu
+25. Sapna Book House — focus: KPSC + Karnataka
+26. GC Leong (ELBS/Longman) — focus: Geography
+27. Orient BlackSwan — focus: History + Social Science
+28. TMH (Tata McGraw Hill) — focus: UPSC General Studies
+29. Vajiram & Ravi — focus: UPSC coaching notes
+30. Pathfinder Academy — focus: NDA + CDS
+
+── exam_categories.seed.js ──
+Seed ALL exam categories:
+
+ENGINEERING:
+- JEE_MAIN: Joint Entrance Examination Main — national — NTA
+- JEE_ADV: Joint Entrance Examination Advanced — national — IIT
+- BITSAT: BITS Admission Test — national — BITS Pilani
+- VITEEE: VIT Engineering Entrance — national
+- MHT_CET: Maharashtra CET Engineering — state — Maharashtra
+
+MEDICAL:
+- NEET_UG: National Eligibility cum Entrance Test UG — national — NTA
+- AIIMS: AIIMS MBBS (now merged with NEET) — national
+- JIPMER: JIPMER MBBS — national
+
+CIVIL SERVICES:
+- UPSC_IAS: UPSC Civil Services (IAS/IPS/IFS) — national — UPSC
+- UPSC_CDS: Combined Defence Services — national — UPSC
+- UPSC_CAPF: Central Armed Police Forces — national — UPSC
+
+STATE PSC:
+- GPSC: Gujarat Public Service Commission — state — Gujarat
+- MPSC: Maharashtra Public Service Commission — state — Maharashtra
+- UPPSC: Uttar Pradesh PSC — state — Uttar Pradesh
+- TNPSC: Tamil Nadu PSC — state — Tamil Nadu
+- KPSC: Karnataka PSC — state — Karnataka
+- RPSC: Rajasthan PSC — state — Rajasthan
+- BPSC: Bihar PSC — state — Bihar
+- MPPSC: Madhya Pradesh PSC — state — Madhya Pradesh
+- WBPSC: West Bengal PSC — state — West Bengal
+- HPSC: Haryana PSC — state — Haryana
+- PPSC: Punjab PSC — state — Punjab
+- APPSC: Andhra Pradesh PSC — state — Andhra Pradesh
+- TSPSC: Telangana PSC — state — Telangana
+
+BANKING:
+- SBI_PO: SBI Probationary Officer — national — SBI
+- IBPS_PO: IBPS PO — national — IBPS
+- IBPS_CLERK: IBPS Clerk — national — IBPS
+- RBI_GRADE_B: RBI Grade B Officer — national — RBI
+- NABARD: NABARD Grade A — national
+
+SSC:
+- SSC_CGL: SSC Combined Graduate Level — national — SSC
+- SSC_CHSL: SSC Combined Higher Secondary Level — national — SSC
+- SSC_GD: SSC GD Constable — national — SSC
+- SSC_CPO: SSC Central Police Organisation — national — SSC
+
+DEFENCE:
+- NDA: National Defence Academy — national — UPSC
+- CDS: Combined Defence Services — national — UPSC
+- AFCAT: Air Force Common Admission Test — national — IAF
+- MNS: Military Nursing Service — national
+
+── competitive_subjects.seed.js ──
+Seed ALL subjects for ALL exam categories:
+
+FOR UPSC_IAS — seed these subjects:
+1.  History → Ancient India (sub_category: ancient, weightage: 8%)
+2.  History → Medieval India (sub_category: medieval, weightage: 6%)
+3.  History → Modern India (sub_category: modern, weightage: 12%)
+4.  History → World History (sub_category: world, weightage: 5%)
+5.  History → Art & Culture (sub_category: culture, weightage: 8%)
+6.  Geography → Indian Geography (sub_category: indian, weightage: 10%)
+7.  Geography → World Geography (sub_category: world, weightage: 6%)
+8.  Geography → Physical Geography (sub_category: physical, weightage: 5%)
+9.  Geography → Human & Economic Geography (sub_category: human, weightage: 4%)
+10. Polity → Indian Constitution & Governance (weightage: 15%)
+11. Polity → Parliamentary System (weightage: 5%)
+12. Economy → Indian Economy (weightage: 12%)
+13. Economy → Economic Survey & Budget (weightage: 5%)
+14. Environment → Environment & Ecology (weightage: 8%)
+15. Science → Science & Technology (weightage: 6%)
+16. Ethics → Ethics, Integrity & Aptitude (weightage: 10%)
+17. Current Affairs → National & International Events (weightage: 15%)
+18. Disaster Management → (weightage: 3%)
+19. Internal Security → (weightage: 4%)
+20. Social Issues → Social Justice & Welfare (weightage: 5%)
+
+FOR JEE_MAIN + JEE_ADV — seed:
+1. Physics → Mechanics (weightage: 25%)
+2. Physics → Thermodynamics (weightage: 10%)
+3. Physics → Electromagnetism (weightage: 20%)
+4. Physics → Optics & Modern Physics (weightage: 15%)
+5. Chemistry → Physical Chemistry (weightage: 35%)
+6. Chemistry → Organic Chemistry (weightage: 35%)
+7. Chemistry → Inorganic Chemistry (weightage: 30%)
+8. Mathematics → Algebra (weightage: 30%)
+9. Mathematics → Calculus (weightage: 25%)
+10. Mathematics → Coordinate Geometry (weightage: 20%)
+11. Mathematics → Trigonometry & Vectors (weightage: 15%)
+
+FOR NEET_UG — seed:
+1. Physics → full NEET Physics (weightage: 25%)
+2. Chemistry → Physical Chemistry (weightage: 12%)
+3. Chemistry → Organic Chemistry (weightage: 15%)
+4. Chemistry → Inorganic Chemistry (weightage: 8%)
+5. Biology → Botany (weightage: 25%)
+6. Biology → Zoology (weightage: 25%)
+
+FOR SSC_CGL — seed:
+1. Quantitative Aptitude → (weightage: 25%)
+2. Reasoning → Verbal & Non-Verbal (weightage: 25%)
+3. English → Comprehension & Grammar (weightage: 25%)
+4. General Awareness → History, Geography, Polity, Science (weightage: 25%)
+
+FOR BANKING (SBI_PO, IBPS_PO) — seed:
+1. Quantitative Aptitude → (weightage: 20%)
+2. Reasoning → Logical & Verbal (weightage: 20%)
+3. English → (weightage: 20%)
+4. General Awareness → Banking + Current Affairs (weightage: 20%)
+5. Computer Awareness → (weightage: 10%)
+6. Data Interpretation → (weightage: 10%)
+
+FOR NDA/CDS — seed:
+1. Mathematics → (weightage: 30%)
+2. General Ability → English (weightage: 20%)
+3. General Ability → Physics (weightage: 10%)
+4. General Ability → Chemistry (weightage: 8%)
+5. General Ability → History & Polity (weightage: 12%)
+6. General Ability → Geography (weightage: 10%)
+7. General Ability → Current Affairs (weightage: 10%)
+
+FOR ALL STATE PSCs (GPSC, MPSC, UPPSC, TNPSC, KPSC, RPSC, BPSC) — seed:
+1. General Studies → History (national + state specific)
+2. General Studies → Geography (national + state specific)
+3. General Studies → Polity
+4. General Studies → Economy
+5. General Studies → Science & Tech
+6. General Studies → Current Affairs
+7. State Specific → State History (name dynamically per state)
+8. State Specific → State Geography
+9. State Specific → State Culture & Heritage
+10. State Specific → State Economy & Development
+
+── competitive_books.seed.js ──
+Seed ALL books mapped to correct publisher + subject:
+
+PHYSICS BOOKS:
+1. "Concepts of Physics Vol 1" — HC Verma — Bharati Bhawan
+   → priority_rank: 1, exams: JEE_MAIN, JEE_ADV, NEET_UG
+   → usage_tip: "Bible of Physics. Read cover to cover before any other book."
+2. "Concepts of Physics Vol 2" — HC Verma — Bharati Bhawan
+   → priority_rank: 1, exams: JEE_MAIN, JEE_ADV, NEET_UG
+3. "DC Pandey Physics Series" — DC Pandey — Arihant
+   → priority_rank: 2, exams: JEE_MAIN, JEE_ADV, NEET_UG
+4. "Lakhmir Singh Physics Class 9" — Lakhmir Singh — S.Chand
+   → priority_rank: 1, exams: SCHOOL_CBSE
+5. "Lakhmir Singh Physics Class 10" — Lakhmir Singh — S.Chand
+   → priority_rank: 1, exams: SCHOOL_CBSE
+6. "Problems in General Physics" — IE Irodov — Mir Publishers
+   → priority_rank: 3, exams: JEE_ADV
+   → usage_tip: "Only for JEE Advanced aspirants. Very challenging."
+
+CHEMISTRY BOOKS:
+7.  "Physical Chemistry" — P Bahadur — GRB Publishers
+    → priority_rank: 2, exams: JEE_MAIN, JEE_ADV
+8.  "Organic Chemistry" — MS Chauhan — Balaji Publications
+    → priority_rank: 1, exams: JEE_MAIN, JEE_ADV, NEET_UG
+9.  "Concise Inorganic Chemistry" — JD Lee — Wiley
+    → priority_rank: 2, exams: JEE_ADV
+10. "O.P. Tandon Physical Chemistry" — O.P. Tandon — GRB
+    → priority_rank: 2, exams: JEE_MAIN, NEET_UG
+11. "Lakhmir Singh Chemistry" — Lakhmir Singh — S.Chand
+    → priority_rank: 1, exams: SCHOOL_CBSE
+
+MATHEMATICS BOOKS:
+12. "Mathematics Class 9" — R.D. Sharma — Dhanpat Rai
+    → priority_rank: 1, exams: SCHOOL_CBSE
+13. "Mathematics Class 10" — R.D. Sharma — Dhanpat Rai
+    → priority_rank: 1, exams: SCHOOL_CBSE
+14. "Quantitative Aptitude" — R.S. Aggarwal — S.Chand
+    → priority_rank: 1, exams: SSC_CGL, SBI_PO, IBPS_PO, NDA
+    → usage_tip: "Standard book for all aptitude exams. Start here."
+15. "Fast Track Objective Arithmetic" — Rajesh Verma — Arihant
+    → priority_rank: 2, exams: SSC_CGL, SSC_CHSL
+16. "Advance Maths" — Rakesh Yadav — Rakesh Yadav Readers
+    → priority_rank: 1, exams: SSC_CGL
+    → usage_tip: "Best for SSC CGL Tier 2 Mathematics."
+
+BIOLOGY BOOKS:
+17. "Trueman's Elementary Biology Vol 1" — Trueman — Trueman Publication
+    → priority_rank: 1, exams: NEET_UG, SCHOOL_CBSE
+18. "Trueman's Elementary Biology Vol 2" — Trueman — Trueman Publication
+    → priority_rank: 1, exams: NEET_UG
+19. "MTG Fingertips Biology" — MTG — MTG Learning Media
+    → priority_rank: 2, exams: NEET_UG
+    → usage_tip: "Best for quick revision and MCQ practice."
+
+HISTORY BOOKS (UPSC):
+20. "India's Struggle for Independence" — Bipin Chandra — Penguin
+    → priority_rank: 1, subject: Modern India, exams: UPSC_IAS, GPSC, MPSC
+    → usage_tip: "Must read for Modern History. Non-negotiable."
+21. "Spectrum Modern History" — Rajiv Ahir — Spectrum
+    → priority_rank: 1, subject: Modern India, exams: UPSC_IAS, all State PSC
+    → usage_tip: "Best single book for Modern History revision."
+22. "Medieval India" — Satish Chandra — NCERT/McGraw Hill
+    → priority_rank: 1, subject: Medieval India, exams: UPSC_IAS
+23. "Ancient India" — R.S. Sharma — NCERT Old
+    → priority_rank: 1, subject: Ancient India, exams: UPSC_IAS
+24. "Indian Art & Culture" — Nitin Singhania — McGraw Hill
+    → priority_rank: 1, subject: Art & Culture, exams: UPSC_IAS, all State PSC
+    → usage_tip: "Only dedicated Art & Culture book for UPSC. Must read."
+25. "World History" — Jain & Mathur — New Age International
+    → priority_rank: 1, subject: World History, exams: UPSC_IAS
+
+GEOGRAPHY BOOKS (UPSC):
+26. "Certificate Physical & Human Geography" — GC Leong — Oxford
+    → priority_rank: 1, subject: World Geography, exams: UPSC_IAS, all State PSC
+    → usage_tip: "Bible of Geography. Read fully before anything else."
+27. "Indian Geography" — Majid Husain — McGraw Hill
+    → priority_rank: 1, subject: Indian Geography, exams: UPSC_IAS
+28. "Geography of India" — Majid Husain — McGraw Hill
+    → priority_rank: 1, subject: Indian Geography, exams: UPSC_IAS, GPSC, MPSC
+
+POLITY BOOKS (UPSC):
+29. "Indian Polity" — M. Laxmikanth — McGraw Hill
+    → priority_rank: 1, subject: Indian Polity, exams: UPSC_IAS, all State PSC
+    → usage_tip: "THE Bible of Indian Polity. Read at least twice."
+30. "Introduction to Constitution of India" — DD Basu — LexisNexis
+    → priority_rank: 2, subject: Indian Polity, exams: UPSC_IAS
+31. "Our Parliament" — Subhash Kashyap — NBT
+    → priority_rank: 2, subject: Parliamentary System, exams: UPSC_IAS
+
+ECONOMY BOOKS (UPSC):
+32. "Indian Economy" — Ramesh Singh — McGraw Hill
+    → priority_rank: 1, subject: Indian Economy, exams: UPSC_IAS, all State PSC
+    → usage_tip: "Most comprehensive economy book for UPSC."
+33. "Indian Economy" — Sanjiv Verma — Unique Publications
+    → priority_rank: 2, subject: Indian Economy, exams: UPSC_IAS, GPSC
+
+ENVIRONMENT BOOKS (UPSC):
+34. "Environment" — Shankar IAS Academy — Shankar IAS
+    → priority_rank: 1, subject: Environment, exams: UPSC_IAS, all State PSC
+    → usage_tip: "Most popular environment book. Covers everything for UPSC."
+
+SCIENCE & TECH (UPSC):
+35. "Science & Technology" — Ravi Agrahari — McGraw Hill
+    → priority_rank: 1, subject: Science & Technology, exams: UPSC_IAS
+
+ETHICS (UPSC):
+36. "Lexicon for Ethics" — Chronicle Publications
+    → priority_rank: 1, subject: Ethics, exams: UPSC_IAS
+37. "Ethics in Governance" — ARC Report
+    → priority_rank: 2, subject: Ethics, exams: UPSC_IAS
+
+REASONING BOOKS:
+38. "A Modern Approach to Verbal & Non-Verbal Reasoning" — RS Aggarwal — S.Chand
+    → priority_rank: 1, exams: SSC_CGL, SBI_PO, IBPS_PO, NDA, CDS
+    → usage_tip: "Standard reasoning book. Cover fully."
+39. "Analytical Reasoning" — MK Pandey — BSC Publishing
+    → priority_rank: 2, exams: SBI_PO, IBPS_PO
+
+ENGLISH BOOKS:
+40. "High School English Grammar & Composition" — Wren & Martin — S.Chand
+    → priority_rank: 1, exams: SSC_CGL, SBI_PO, SCHOOL_CBSE
+    → usage_tip: "Standard English grammar reference. Keep handy."
+41. "Objective General English" — SP Bakshi — Arihant
+    → priority_rank: 1, exams: SSC_CGL, SBI_PO, IBPS_PO, UPSC_IAS
+    → usage_tip: "Best for competitive exam English preparation."
+
+GENERAL AWARENESS:
+42. "Lucent's General Knowledge" — Lucent — Lucent Publications
+    → priority_rank: 1, exams: SSC_CGL, SSC_CHSL, SBI_PO, NDA
+    → usage_tip: "Most popular GK book. Must for any competitive exam."
+
+COMPUTER SCIENCE (School):
+43. "Computer Science with Python" — Sumita Arora — Dhanpat Rai
+    → priority_rank: 1, exams: SCHOOL_CBSE
+
+DEFENCE BOOKS:
+44. "Pathfinder NDA & NA Entrance Examination" — Pathfinder — Arihant
+    → priority_rank: 1, exams: NDA
+45. "CDS Pathfinder" — Pathfinder — Arihant
+    → priority_rank: 1, exams: CDS
+
+STATE PSC SPECIFIC:
+46. "GPSC Exam Guide" — Unique Publications
+    → priority_rank: 1, exams: GPSC
+47. "MPSC Rajyaseva Guide" — Target Publications
+    → priority_rank: 1, exams: MPSC
+48. "TNPSC Group Exam Guide" — Sura Books
+    → priority_rank: 1, exams: TNPSC
+
+═══════════════════════════════════════════════════
+STEP 3: API ROUTES
+═══════════════════════════════════════════════════
+Add to server/src/features/library/library.routes.js:
+
+GET /api/library/exams                        → all exam categories grouped by type
+GET /api/library/exams/:examCode              → single exam details
+GET /api/library/exams/:examCode/subjects     → all subjects for that exam
+GET /api/library/exams/:examCode/books        → all books for that exam (with priority)
+GET /api/library/publishers                   → all publishers
+GET /api/library/publishers/:id/books         → all books by publisher
+GET /api/library/subjects/:subjectId/books    → best books for competitive subject
+GET /api/library/books/recommend              → smart book recommendation
+  Query params: ?examCode=UPSC_IAS&subject=History&subCategory=Modern&classLevel=beginner
+
+Add to library.service.js — all DB queries for above routes.
+
+GET /api/library/books/recommend logic:
+  1. Accept examCode + subject + subCategory + classLevel
+  2. Query competitive_books joined with book_exam_links
+  3. Filter by exam + subject
+  4. Order by priority_rank ASC
+  5. Return books with: title, author, publisher, 
+     usage_tip, priority_rank, affiliate_link, google_books_preview_url
+
+═══════════════════════════════════════════════════
+STEP 4: UPDATE AI PROMPT BUILDER
+═══════════════════════════════════════════════════
+Update server/src/services/ai-prompt-builder.service.js
+
+Add dynamic book reference injection:
+1. When building prompt, call 
+   getRecommendedBooks(examCode, subject, subCategory) from library.service.js
+2. Inject into SECTION 4 of prompt dynamically from DB
+   (not from static config — 100% DB driven)
+3. Format as:
+   "Recommended books for this topic:
+    1. [Book Title] by [Author] — [usage_tip]
+    2. ..."
+
+═══════════════════════════════════════════════════
+IMPORTANT NOTES:
+═══════════════════════════════════════════════════
+- All seed files: INSERT IGNORE (idempotent, safe to re-run)
+- Follow existing pool/connection pattern from database/connection.js
+- Follow existing API response format: { success: true, data: ... }
+- Add all new routes to src/routes/index.js under /library
+- Migrations numbered 088-093 in phase-session2 folder
+- Run order: publishers → exam_categories → competitive_subjects 
+  → competitive_books → book_exam_links
+- Seed order: publishers.seed.js → exam_categories.seed.js 
+  → competitive_subjects.seed.js → competitive_books.seed.js
+- console.log('[SEED]') prefix on all seed operations for tracking
+
+Execute all steps completely. Start with Step 1 migrations.
