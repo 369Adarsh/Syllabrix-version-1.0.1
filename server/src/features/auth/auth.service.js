@@ -565,8 +565,73 @@ const applyMentor = async (userId, applicationData) => {
   return { message: 'Your mentor application has been submitted successfully. We will review and get back to you.' };
 };
 
+// ======================== SKIP PROFILE ========================
+
+const skipProfile = async (userId) => {
+  await queries.markProfileComplete(userId);
+  return { message: 'Profile skipped.' };
+};
+
+// ======================== UPDATE PROFILE (post-completion edits) ========================
+
+const JSON_PROFILE_FIELDS = new Set([
+  'hobby', 'skills', 'learning_goals', 'sports', 'subjects_additional',
+  'board_experience', 'qualifications', 'past_institutes',
+  'learning_interests', 'mandatory_courses', 'loved_professions',
+  'specialization_courses', 'previous_companies', 'boards_offered', 'facilities',
+]);
+
+const PROFILE_TABLE_MAP = {
+  student: 'student_profiles',
+  teacher: 'teacher_profiles',
+  institute: 'institute_profiles',
+  parent: 'parent_profiles',
+  professional_learner: 'professional_learner_profiles',
+  organization: 'organization_profiles',
+};
+
+// Fields that live on the users table (not the type-specific profile table)
+const USER_TABLE_FIELDS = new Set(['phone', 'gender', 'bio', 'city', 'state']);
+
+const updateProfile = async (userId, userType, data) => {
+  const userUpdates = {};
+  const profileUpdates = {};
+
+  for (const [key, value] of Object.entries(data)) {
+    if (USER_TABLE_FIELDS.has(key)) {
+      userUpdates[key] = value;
+      // For institute, city/state also live in institute_profiles
+      if (userType === 'institute' && (key === 'city' || key === 'state')) {
+        profileUpdates[key] = value;
+      }
+    } else {
+      profileUpdates[key] = value;
+    }
+  }
+
+  if (Object.keys(userUpdates).length > 0) {
+    await queries.updateUserProfile(userId, userUpdates);
+  }
+
+  if (Object.keys(profileUpdates).length > 0) {
+    const serialized = {};
+    for (const [key, value] of Object.entries(profileUpdates)) {
+      if (JSON_PROFILE_FIELDS.has(key) && Array.isArray(value)) {
+        serialized[key] = JSON.stringify(value);
+      } else {
+        serialized[key] = value;
+      }
+    }
+    const table = PROFILE_TABLE_MAP[userType];
+    if (table) await queries.updateProfileTable(table, userId, serialized);
+  }
+
+  return getCurrentUser(userId);
+};
+
 module.exports = {
   register, login, logout, getCurrentUser, googleLogin,
   completeProfile, forgotPassword, resetPassword,
   verifyEmail, resendVerificationEmail, applyMentor,
+  skipProfile, updateProfile,
 };

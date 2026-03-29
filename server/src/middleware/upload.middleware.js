@@ -44,4 +44,13 @@ const uploadAvatar = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB for avatars
 }).single('avatar');
 
-module.exports = { uploadSingle, uploadMultiple, uploadAvatar };
+const uploadResumePdf = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, ext === '.pdf');
+  },
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB for resumes
+}).single('resume');
+
+module.exports = { uploadSingle, uploadMultiple, uploadAvatar, uploadResumePdf };

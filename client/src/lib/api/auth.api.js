@@ -12,4 +12,6 @@ export const authAPI = {
   verifyEmail: (token) => api.get(`/auth/verify-email?token=${encodeURIComponent(token)}`),
   resendVerification: (email) => api.post('/auth/resend-verification', { email }),
   applyMentor: (data) => api.post('/auth/apply-mentor', data),
+  skipProfile: () => api.patch('/auth/skip-profile'),
+  updateProfile: (data) => api.patch('/auth/update-profile', data),
 };

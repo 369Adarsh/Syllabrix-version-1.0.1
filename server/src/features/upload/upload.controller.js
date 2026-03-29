@@ -34,4 +34,10 @@ const deleteFile = asyncHandler(async (req, res) => {
   sendSuccess(res, result);
 });
 
-module.exports = { uploadSingle, uploadMultiple, uploadProfilePhoto, uploadCoverPhoto, deleteFile };
+// POST /api/upload/resume — Upload resume PDF (student, teacher, professional_learner)
+const uploadResume = asyncHandler(async (req, res) => {
+  const result = await uploadService.uploadResumeFile(req.user.id, req.user.userType, req.file);
+  sendSuccess(res, result);
+});
+
+module.exports = { uploadSingle, uploadMultiple, uploadProfilePhoto, uploadCoverPhoto, deleteFile, uploadResume };

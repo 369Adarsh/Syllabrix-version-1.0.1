@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const controller = require('./upload.controller');
 const { authenticate } = require('../../middleware/auth.middleware');
-const { uploadSingle, uploadMultiple, uploadAvatar } = require('../../middleware/upload.middleware');
+const { uploadSingle, uploadMultiple, uploadAvatar, uploadResumePdf } = require('../../middleware/upload.middleware');
 const { uploadLimiter } = require('../../middleware/rate-limit.middleware');
 
 // POST /api/upload/single — Upload one file (returns URL to use in posts, jobs, etc.)
@@ -33,6 +33,14 @@ router.post('/cover-photo',
   authenticate,
   uploadAvatar,
   controller.uploadCoverPhoto
+);
+
+// POST /api/upload/resume — Upload resume PDF for student/teacher/professional_learner
+router.post('/resume',
+  authenticate,
+  uploadLimiter,
+  uploadResumePdf,
+  controller.uploadResume
 );
 
 // DELETE /api/upload/:publicId — Delete uploaded file

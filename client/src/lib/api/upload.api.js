@@ -13,4 +13,8 @@ export const uploadAPI = {
     const fd = new FormData(); fd.append('file', file);
     return api.post('/upload/single', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
   },
+  resume: (file) => {
+    const fd = new FormData(); fd.append('resume', file);
+    return api.post('/upload/resume', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
 };

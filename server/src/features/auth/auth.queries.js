@@ -379,10 +379,25 @@ const getOrganizationProfile = async (userId) => {
   return rows[0] || null;
 };
 
+// Generic profile table updater — only sets fields that are provided (not undefined)
+const updateProfileTable = async (table, userId, fields) => {
+  const updates = [];
+  const values = [];
+  for (const [key, value] of Object.entries(fields)) {
+    if (value !== undefined) {
+      updates.push(`\`${key}\` = ?`);
+      values.push(value);
+    }
+  }
+  if (updates.length === 0) return;
+  values.push(userId);
+  await pool.query(`UPDATE \`${table}\` SET ${updates.join(', ')} WHERE user_id = ?`, values);
+};
+
 module.exports = {
   findUserByEmail, findUserByUsername, findUserById, findUserByGoogleId, findUserBySyllabrixId,
   createUser, updateLastLogin, updateEmailVerified,
-  updatePassword, markProfileComplete, updateUserProfile,
+  updatePassword, markProfileComplete, updateUserProfile, updateProfileTable,
   createSession, deactivateSession, deactivateAllSessions,
   createStudentProfile, createTeacherProfile, createInstituteProfile,
   createParentProfile, createProfessionalLearnerProfile, createOrganizationProfile,

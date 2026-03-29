@@ -1,10 +1,11 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { authAPI } from '@/lib/api/auth.api';
+import { uploadAPI } from '@/lib/api/upload.api';
 import Image from 'next/image';
-import { Loader2, ArrowRight, CheckCircle, Plus, X, Lock } from 'lucide-react';
+import { Loader2, ArrowRight, CheckCircle, Plus, X, Lock, Camera } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // ─── Static data ───────────────────────────────────────────────────────────
@@ -52,6 +53,32 @@ const Inp = ({ label, name, form, set, required, placeholder, type = 'text', rea
       {readOnly && <Lock size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />}
     </div>
   </Field>
+);
+
+// Full name is always locked — stored at registration and shown read-only.
+// If not captured (pre-fix accounts), show a support notice instead of a blank editable field.
+const FullNameField = ({ form, user, label = 'Full Name', placeholder = 'Your full name' }) => (
+  <div>
+    <Field label={label} required>
+      <div className="relative">
+        <input
+          type="text"
+          value={form.full_name || ''}
+          readOnly
+          placeholder={placeholder}
+          className={inp + ' bg-gray-100 text-gray-500 cursor-not-allowed pr-9'}
+        />
+        <Lock size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+      </div>
+    </Field>
+    {!user?.full_name && (
+      <p className="text-[11px] text-amber-600 mt-1">
+        Name was not captured at sign-up — contact{' '}
+        <a href="mailto:support@syllabrix.com" className="underline">support@syllabrix.com</a>{' '}
+        to update it.
+      </p>
+    )}
+  </div>
 );
 const Sel = ({ label, name, form, set, options, required, placeholder }) => (
   <Field label={label} required={required}>
@@ -122,17 +149,27 @@ const Progress = ({ step, total }) => (
   </div>
 );
 
-const NavBtns = ({ step, total, onBack, onNext, loading, isLast }) => (
-  <div className="flex gap-3 pt-2">
-    {step > 1 && (
-      <button type="button" onClick={onBack} className="flex-1 py-3 rounded-xl font-semibold text-[13px] bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all">
-        Back
+const NavBtns = ({ step, total, onBack, onNext, loading, isLast, onSkip, skipLoading }) => (
+  <div className="pt-2 space-y-2">
+    <div className="flex gap-3">
+      {step > 1 && (
+        <button type="button" onClick={onBack} className="flex-1 py-3 rounded-xl font-semibold text-[13px] bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all">
+          Back
+        </button>
+      )}
+      <button type="button" onClick={onNext} disabled={loading || skipLoading}
+        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-[13px] transition-all disabled:opacity-50 ${isLast ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md' : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'}`}>
+        {loading ? <><Loader2 size={14} className="animate-spin" /> Saving…</> : isLast ? <><CheckCircle size={14} /> Complete Profile</> : <>Next <ArrowRight size={14} /></>}
       </button>
+    </div>
+    {onSkip && (
+      <div className="text-center">
+        <button type="button" onClick={onSkip} disabled={skipLoading || loading}
+          className="text-[12px] text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-40">
+          {skipLoading ? 'Skipping…' : 'Skip for now →'}
+        </button>
+      </div>
     )}
-    <button type="button" onClick={onNext} disabled={loading}
-      className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-[13px] transition-all disabled:opacity-50 ${isLast ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md' : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'}`}>
-      {loading ? <><Loader2 size={14} className="animate-spin" /> Saving…</> : isLast ? <><CheckCircle size={14} /> Complete Profile</> : <>Next <ArrowRight size={14} /></>}
-    </button>
   </div>
 );
 
@@ -142,24 +179,44 @@ export default function CompleteProfilePage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [skipLoading, setSkipLoading] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState('');
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const photoInputRef = useRef(null);
   // Pre-populate full_name from user record (stored at registration)
   const [form, setForm] = useState(() => ({ full_name: '' }));
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
-  // Once user loads, pre-fill full_name
-  // Priority: stored full_name (new registrations) → derived from username (pre-fix users)
+  // Pre-fill full_name from user record — always locked, never editable
   useEffect(() => {
-    if (!user) return;
-    if (user.full_name) {
-      // Stored at registration — use it and lock the field
+    if (user?.full_name) {
       setForm(p => ({ ...p, full_name: user.full_name }));
-    } else if (user.username) {
-      // Derive first name from auto-generated username (e.g. "krishna9849" → "Krishna")
-      const derived = user.username.replace(/\d+$/, '');
-      const hint = derived.charAt(0).toUpperCase() + derived.slice(1);
-      setForm(p => ({ ...p, full_name: hint }));
     }
-  }, [user?.full_name, user?.username]);
+  }, [user?.full_name]);
+
+  // Pre-load existing profile photo
+  useEffect(() => {
+    if (user?.profile_photo_url) setPhotoUrl(user.profile_photo_url);
+  }, [user?.profile_photo_url]);
+
+  const handlePhotoChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoUploading(true);
+    try {
+      const res = await uploadAPI.profilePhoto(file);
+      const url = res.data?.data?.url || res.data?.url;
+      if (!url) throw new Error('No URL returned');
+      setPhotoUrl(url);
+      toast.success('Photo uploaded!');
+    } catch {
+      toast.error('Photo upload failed. Please try again.');
+    } finally {
+      setPhotoUploading(false);
+      // Reset input so same file can be re-selected if needed
+      if (photoInputRef.current) photoInputRef.current.value = '';
+    }
+  };
 
   useEffect(() => {
     if (!user) router.push('/sign-in');
@@ -239,6 +296,19 @@ export default function CompleteProfilePage() {
     return p;
   };
 
+  const handleSkip = async () => {
+    setSkipLoading(true);
+    try {
+      await authAPI.skipProfile();
+      await refreshUser();
+      router.push('/home');
+    } catch {
+      toast.error('Could not skip profile. Please try again.');
+    } finally {
+      setSkipLoading(false);
+    }
+  };
+
   const handleNext = async () => {
     if (!validate()) return;
     if (step < totalSteps) { setStep(s => s + 1); return; }
@@ -264,9 +334,46 @@ export default function CompleteProfilePage() {
         <div className="text-center mb-5">
           <Image src="/images/logo/syllabrix-logo.png" alt="Syllabrix" width={180} height={50} className="h-9 w-auto mx-auto" priority />
           <p className="text-[12px] text-gray-400 mt-1">Complete your profile to get started</p>
-          {/* Syllabrix ID badge — always visible, non-editable */}
+
+          {/* ── Profile photo uploader ── */}
+          <div className="flex flex-col items-center mt-4 mb-2">
+            <button
+              type="button"
+              onClick={() => !photoUploading && photoInputRef.current?.click()}
+              className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-dashed border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/30 group"
+              aria-label="Upload profile photo"
+            >
+              {photoUploading ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full">
+                  <Loader2 size={22} className="text-white animate-spin" />
+                </div>
+              ) : photoUrl ? (
+                <>
+                  <img src={photoUrl} alt="Profile" className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
+                    <Camera size={18} className="text-white" />
+                  </div>
+                </>
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
+                  <Camera size={20} className="text-gray-400 group-hover:text-blue-500 transition-colors" />
+                  <span className="text-[9px] text-gray-400 group-hover:text-blue-500 font-medium leading-tight">Add photo</span>
+                </div>
+              )}
+            </button>
+            <p className="text-[10px] text-gray-400 mt-1.5">Optional — you can add it later</p>
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handlePhotoChange}
+            />
+          </div>
+
+          {/* Syllabrix ID badge */}
           {user?.syllabrix_id && (
-            <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-full">
+            <div className="inline-flex items-center gap-1.5 mt-1 px-3 py-1 bg-blue-50 border border-blue-200 rounded-full">
               <Lock size={10} className="text-blue-400" />
               <span className="text-[11px] font-bold text-blue-700 tracking-wider">{user.syllabrix_id}</span>
             </div>
@@ -283,14 +390,14 @@ export default function CompleteProfilePage() {
           {type === 'student' && step === 1 && (
             <div className="space-y-4">
               <h2 className="text-[17px] font-extrabold text-gray-900">Basic Information</h2>
-              <Inp label="Full Name" name="full_name" form={form} set={set} required placeholder="Your full name" readOnly={!!user?.full_name} />
+              <FullNameField form={form} user={user} />
               <Inp label="Phone Number" name="phone" form={form} set={set} placeholder="+91 XXXXX XXXXX" type="tel" />
               <Sel label="Gender" name="gender" form={form} set={set} options={['Male','Female','Other','Prefer not to say']} />
               <div className="grid grid-cols-2 gap-3">
                 <Inp label="City" name="address_city" form={form} set={set} placeholder="Your city" />
                 <Sel label="State" name="address_state" form={form} set={set} options={STATES} />
               </div>
-              <NavBtns step={step} total={totalSteps} onNext={handleNext} />
+              <NavBtns step={step} total={totalSteps} onNext={handleNext} onSkip={handleSkip} skipLoading={skipLoading} />
             </div>
           )}
 
@@ -313,7 +420,7 @@ export default function CompleteProfilePage() {
                   </button>
                 ))}
               </div>
-              <NavBtns step={step} total={totalSteps} onBack={() => setStep(1)} onNext={handleNext} />
+              <NavBtns step={step} total={totalSteps} onBack={() => setStep(1)} onNext={handleNext} onSkip={handleSkip} skipLoading={skipLoading} />
             </div>
           )}
 
@@ -341,7 +448,7 @@ export default function CompleteProfilePage() {
               {form.education_level === 'specialization' && (<>
                 <CheckGroup label="Courses / Activities (select all that apply)" options={SPEC_COURSES} selected={form.specialization_courses || []} onChange={v => set('specialization_courses', v)} />
               </>)}
-              <NavBtns step={step} total={totalSteps} onBack={() => setStep(2)} onNext={handleNext} />
+              <NavBtns step={step} total={totalSteps} onBack={() => setStep(2)} onNext={handleNext} onSkip={handleSkip} skipLoading={skipLoading} />
             </div>
           )}
 
@@ -371,7 +478,7 @@ export default function CompleteProfilePage() {
                 )}
               </Field>
               <Txt label="I see my future as…" name="future_vision" form={form} set={set} placeholder="Describe your dream future in a few words" rows={2} />
-              <NavBtns step={step} total={totalSteps} onBack={() => setStep(3)} onNext={handleNext} />
+              <NavBtns step={step} total={totalSteps} onBack={() => setStep(3)} onNext={handleNext} onSkip={handleSkip} skipLoading={skipLoading} />
             </div>
           )}
 
@@ -387,7 +494,7 @@ export default function CompleteProfilePage() {
                   <p className="text-[10px] text-amber-600 mt-1">Required for students under 13 years old.</p>
                 </Field>
               )}
-              <NavBtns step={step} total={totalSteps} onBack={() => setStep(4)} onNext={handleNext} />
+              <NavBtns step={step} total={totalSteps} onBack={() => setStep(4)} onNext={handleNext} onSkip={handleSkip} skipLoading={skipLoading} />
             </div>
           )}
 
@@ -397,7 +504,7 @@ export default function CompleteProfilePage() {
               <p className="text-[12px] text-gray-400 -mt-1">Select exactly 2 technical + 2 functional courses (free forever).</p>
               <CheckGroup label="Technical Courses (pick 2)" options={TECH_COURSES} selected={form.tech_courses || []} onChange={v => set('tech_courses', v)} max={2} required />
               <CheckGroup label="Functional Courses (pick 2)" options={FUNC_COURSES} selected={form.func_courses || []} onChange={v => set('func_courses', v)} max={2} required />
-              <NavBtns step={step} total={totalSteps} onBack={() => setStep(5)} onNext={handleNext} loading={loading} isLast />
+              <NavBtns step={step} total={totalSteps} onBack={() => setStep(5)} onNext={handleNext} loading={loading} isLast onSkip={handleSkip} skipLoading={skipLoading} />
             </div>
           )}
 
@@ -405,14 +512,14 @@ export default function CompleteProfilePage() {
           {type === 'teacher' && step === 1 && (
             <div className="space-y-4">
               <h2 className="text-[17px] font-extrabold text-gray-900">Basic Information</h2>
-              <Inp label="Full Name" name="full_name" form={form} set={set} required placeholder="Your full name" readOnly={!!user?.full_name} />
+              <FullNameField form={form} user={user} />
               <Inp label="Phone Number" name="phone" form={form} set={set} placeholder="+91 XXXXX XXXXX" type="tel" />
               <Sel label="Gender" name="gender" form={form} set={set} options={['Male','Female','Other','Prefer not to say']} />
               <div className="grid grid-cols-2 gap-3">
                 <Inp label="City" name="city" form={form} set={set} placeholder="Your city" />
                 <Sel label="State" name="state" form={form} set={set} options={STATES} />
               </div>
-              <NavBtns step={step} total={totalSteps} onNext={handleNext} />
+              <NavBtns step={step} total={totalSteps} onNext={handleNext} onSkip={handleSkip} skipLoading={skipLoading} />
             </div>
           )}
 
@@ -436,7 +543,7 @@ export default function CompleteProfilePage() {
                 <Inp label="Current Institute" name="institute_name" form={form} set={set} placeholder="School / College / Academy name" />
               )}
               <Inp label="Years of Experience" name="experience_years" form={form} set={set} placeholder="e.g. 5" type="number" />
-              <NavBtns step={step} total={totalSteps} onBack={() => setStep(1)} onNext={handleNext} />
+              <NavBtns step={step} total={totalSteps} onBack={() => setStep(1)} onNext={handleNext} onSkip={handleSkip} skipLoading={skipLoading} />
             </div>
           )}
 
@@ -458,7 +565,7 @@ export default function CompleteProfilePage() {
               {form.has_own_business && (
                 <Inp label="Business / Institute Name" name="business_name" form={form} set={set} placeholder="Name of your teaching business" />
               )}
-              <NavBtns step={step} total={totalSteps} onBack={() => setStep(2)} onNext={handleNext} />
+              <NavBtns step={step} total={totalSteps} onBack={() => setStep(2)} onNext={handleNext} onSkip={handleSkip} skipLoading={skipLoading} />
             </div>
           )}
 
@@ -471,7 +578,7 @@ export default function CompleteProfilePage() {
               <CheckGroup label="Skills I Want to Learn" options={LEARNING_INTERESTS} selected={form.learning_interests || []} onChange={v => set('learning_interests', v)} />
               <CheckGroup label="Technical Courses (pick 2)" options={TECH_COURSES} selected={form.tech_courses || []} onChange={v => set('tech_courses', v)} max={2} required />
               <CheckGroup label="Functional Courses (pick 2)" options={FUNC_COURSES} selected={form.func_courses || []} onChange={v => set('func_courses', v)} max={2} required />
-              <NavBtns step={step} total={totalSteps} onBack={() => setStep(3)} onNext={handleNext} />
+              <NavBtns step={step} total={totalSteps} onBack={() => setStep(3)} onNext={handleNext} onSkip={handleSkip} skipLoading={skipLoading} />
             </div>
           )}
 
@@ -482,7 +589,7 @@ export default function CompleteProfilePage() {
               <Txt label="How do you think of yourself as a student?" name="self_as_learner" form={form} set={set} placeholder="e.g. I love exploring new topics outside my subject, I prefer visual learning…" rows={3} />
               <Txt label="How will you use Syllabrix as a student?" name="platform_as_student" form={form} set={set} placeholder="e.g. Take courses, earn certificates, explore career paths…" rows={2} />
               <Txt label="How will you use Syllabrix as a teacher?" name="platform_as_teacher" form={form} set={set} placeholder="e.g. Conduct live classes, create content, connect with students…" rows={2} />
-              <NavBtns step={step} total={totalSteps} onBack={() => setStep(4)} onNext={handleNext} loading={loading} isLast />
+              <NavBtns step={step} total={totalSteps} onBack={() => setStep(4)} onNext={handleNext} loading={loading} isLast onSkip={handleSkip} skipLoading={skipLoading} />
             </div>
           )}
 
@@ -497,7 +604,7 @@ export default function CompleteProfilePage() {
                 <Inp label="UDISE Code" name="udise_code" form={form} set={set} placeholder="For schools" />
               </div>
               <Inp label="Registration Number" name="registration_number" form={form} set={set} placeholder="Govt. registration / affiliation no." />
-              <NavBtns step={step} total={totalSteps} onNext={handleNext} />
+              <NavBtns step={step} total={totalSteps} onNext={handleNext} onSkip={handleSkip} skipLoading={skipLoading} />
             </div>
           )}
 
@@ -521,7 +628,7 @@ export default function CompleteProfilePage() {
                   <Inp label="Handler Email" name="platform_handler_email" form={form} set={set} placeholder="handler@institute.com" type="email" />
                 </div>
               </div>
-              <NavBtns step={step} total={totalSteps} onBack={() => setStep(1)} onNext={handleNext} />
+              <NavBtns step={step} total={totalSteps} onBack={() => setStep(1)} onNext={handleNext} onSkip={handleSkip} skipLoading={skipLoading} />
             </div>
           )}
 
@@ -535,7 +642,7 @@ export default function CompleteProfilePage() {
                 <textarea value={form.chain_schools || ''} onChange={e => set('chain_schools', e.target.value)} placeholder={"Branch 1 name\nBranch 2 name"} rows={3} className={inp + ' resize-none'} />
               </Field>
               <Txt label="How are parents involved? (optional)" name="parent_involvement_policy" form={form} set={set} placeholder="Describe your parent engagement model…" rows={2} />
-              <NavBtns step={step} total={totalSteps} onBack={() => setStep(2)} onNext={handleNext} loading={loading} isLast />
+              <NavBtns step={step} total={totalSteps} onBack={() => setStep(2)} onNext={handleNext} loading={loading} isLast onSkip={handleSkip} skipLoading={skipLoading} />
             </div>
           )}
 
@@ -543,14 +650,14 @@ export default function CompleteProfilePage() {
           {type === 'parent' && step === 1 && (
             <div className="space-y-4">
               <h2 className="text-[17px] font-extrabold text-gray-900">Basic Information</h2>
-              <Inp label="Full Name" name="full_name" form={form} set={set} required placeholder="Your full name" readOnly={!!user?.full_name} />
+              <FullNameField form={form} user={user} />
               <Inp label="Phone Number" name="phone" form={form} set={set} placeholder="+91 XXXXX XXXXX" type="tel" />
               <Sel label="Gender" name="gender" form={form} set={set} options={['Male','Female','Other','Prefer not to say']} />
               <div className="grid grid-cols-2 gap-3">
                 <Inp label="City" name="city" form={form} set={set} placeholder="Your city" />
                 <Sel label="State" name="state" form={form} set={set} options={STATES} />
               </div>
-              <NavBtns step={step} total={totalSteps} onNext={handleNext} />
+              <NavBtns step={step} total={totalSteps} onNext={handleNext} onSkip={handleSkip} skipLoading={skipLoading} />
             </div>
           )}
 
@@ -560,7 +667,7 @@ export default function CompleteProfilePage() {
               <Sel label="Relationship to Child" name="relationship" form={form} set={set} required options={['Mother','Father','Guardian','Other']} placeholder="Select relationship" />
               <Inp label="Occupation" name="occupation" form={form} set={set} placeholder="e.g. Engineer, Teacher, Business owner" />
               <Inp label="Notification Email" name="notification_email" form={form} set={set} placeholder="Email for child activity reports" type="email" />
-              <NavBtns step={step} total={totalSteps} onBack={() => setStep(1)} onNext={handleNext} />
+              <NavBtns step={step} total={totalSteps} onBack={() => setStep(1)} onNext={handleNext} onSkip={handleSkip} skipLoading={skipLoading} />
             </div>
           )}
 
@@ -570,7 +677,7 @@ export default function CompleteProfilePage() {
               <p className="text-[12px] text-gray-400 -mt-1">Help us understand how you support your child.</p>
               <Txt label="How do you support your child's hobbies?" name="hobby_involvement" form={form} set={set} placeholder="e.g. I take them to art classes, buy materials, attend events…" rows={3} />
               <Txt label="How do you support your child's sports?" name="sports_involvement" form={form} set={set} placeholder="e.g. I attend matches, enrolled them in coaching, practice together…" rows={3} />
-              <NavBtns step={step} total={totalSteps} onBack={() => setStep(2)} onNext={handleNext} loading={loading} isLast />
+              <NavBtns step={step} total={totalSteps} onBack={() => setStep(2)} onNext={handleNext} loading={loading} isLast onSkip={handleSkip} skipLoading={skipLoading} />
             </div>
           )}
 
@@ -578,14 +685,14 @@ export default function CompleteProfilePage() {
           {type === 'professional_learner' && step === 1 && (
             <div className="space-y-4">
               <h2 className="text-[17px] font-extrabold text-gray-900">Basic Information</h2>
-              <Inp label="Full Name" name="full_name" form={form} set={set} required placeholder="Your full name" readOnly={!!user?.full_name} />
+              <FullNameField form={form} user={user} />
               <Inp label="Phone Number" name="phone" form={form} set={set} placeholder="+91 XXXXX XXXXX" type="tel" />
               <Sel label="Gender" name="gender" form={form} set={set} options={['Male','Female','Other','Prefer not to say']} />
               <div className="grid grid-cols-2 gap-3">
                 <Inp label="City" name="address_city" form={form} set={set} placeholder="Your city" />
                 <Sel label="State" name="address_state" form={form} set={set} options={STATES} />
               </div>
-              <NavBtns step={step} total={totalSteps} onNext={handleNext} />
+              <NavBtns step={step} total={totalSteps} onNext={handleNext} onSkip={handleSkip} skipLoading={skipLoading} />
             </div>
           )}
 
@@ -596,7 +703,7 @@ export default function CompleteProfilePage() {
               <Inp label="Designation / Role" name="designation" form={form} set={set} placeholder="e.g. Software Engineer, Manager" />
               <Sel label="Industry" name="industry" form={form} set={set} options={INDUSTRIES} placeholder="Select industry" />
               <Inp label="Years of Experience" name="experience_years" form={form} set={set} placeholder="0–40" type="number" />
-              <NavBtns step={step} total={totalSteps} onBack={() => setStep(1)} onNext={handleNext} />
+              <NavBtns step={step} total={totalSteps} onBack={() => setStep(1)} onNext={handleNext} onSkip={handleSkip} skipLoading={skipLoading} />
             </div>
           )}
 
@@ -607,7 +714,7 @@ export default function CompleteProfilePage() {
               <TagInput label="Current Skills" tags={form.skills || []} onChange={v => set('skills', v)} placeholder="Add a skill…" />
               <TagInput label="Previous Companies / Organisations" tags={form.previous_companies || []} onChange={v => set('previous_companies', v)} placeholder="Add past employer…" />
               <CheckGroup label="Learning Goals (select all that apply)" options={LEARNING_GOALS} selected={form.learning_goals || []} onChange={v => set('learning_goals', v)} />
-              <NavBtns step={step} total={totalSteps} onBack={() => setStep(2)} onNext={handleNext} />
+              <NavBtns step={step} total={totalSteps} onBack={() => setStep(2)} onNext={handleNext} onSkip={handleSkip} skipLoading={skipLoading} />
             </div>
           )}
 
@@ -625,7 +732,7 @@ export default function CompleteProfilePage() {
                 </div>
               </Field>
               <Txt label="How do you plan to use Syllabrix?" name="how_use_platform" form={form} set={set} placeholder="e.g. Learn new skills, get certified, network with peers, find job opportunities…" rows={3} />
-              <NavBtns step={step} total={totalSteps} onBack={() => setStep(3)} onNext={handleNext} />
+              <NavBtns step={step} total={totalSteps} onBack={() => setStep(3)} onNext={handleNext} onSkip={handleSkip} skipLoading={skipLoading} />
             </div>
           )}
 
@@ -637,7 +744,7 @@ export default function CompleteProfilePage() {
               </Field>
               <CheckGroup label="Technical Courses (pick 2)" options={TECH_COURSES} selected={form.tech_courses || []} onChange={v => set('tech_courses', v)} max={2} required />
               <CheckGroup label="Functional Courses (pick 2)" options={FUNC_COURSES} selected={form.func_courses || []} onChange={v => set('func_courses', v)} max={2} required />
-              <NavBtns step={step} total={totalSteps} onBack={() => setStep(4)} onNext={handleNext} loading={loading} isLast />
+              <NavBtns step={step} total={totalSteps} onBack={() => setStep(4)} onNext={handleNext} loading={loading} isLast onSkip={handleSkip} skipLoading={skipLoading} />
             </div>
           )}
 
@@ -646,13 +753,13 @@ export default function CompleteProfilePage() {
             <div className="space-y-4">
               <h2 className="text-[17px] font-extrabold text-gray-900">Admin Contact Details</h2>
               <p className="text-[12px] text-gray-400 -mt-1">Details of the person managing this organization account.</p>
-              <Inp label="Admin Full Name" name="full_name" form={form} set={set} required placeholder="Contact person's full name" />
+              <FullNameField form={form} user={user} label="Admin Full Name" placeholder="Contact person's full name" />
               <Inp label="Admin Phone" name="phone" form={form} set={set} placeholder="+91 XXXXX XXXXX" type="tel" />
               <div className="grid grid-cols-2 gap-3">
                 <Inp label="City" name="address_city" form={form} set={set} placeholder="City of HQ" />
                 <Sel label="State" name="address_state" form={form} set={set} options={STATES} />
               </div>
-              <NavBtns step={step} total={totalSteps} onNext={handleNext} />
+              <NavBtns step={step} total={totalSteps} onNext={handleNext} onSkip={handleSkip} skipLoading={skipLoading} />
             </div>
           )}
 
@@ -668,7 +775,7 @@ export default function CompleteProfilePage() {
                 <Inp label="Website" name="website" form={form} set={set} placeholder="https://company.com" />
               </div>
               <Inp label="LinkedIn URL" name="linkedin_url" form={form} set={set} placeholder="https://linkedin.com/company/…" />
-              <NavBtns step={step} total={totalSteps} onBack={() => setStep(1)} onNext={handleNext} />
+              <NavBtns step={step} total={totalSteps} onBack={() => setStep(1)} onNext={handleNext} onSkip={handleSkip} skipLoading={skipLoading} />
             </div>
           )}
 
@@ -677,7 +784,7 @@ export default function CompleteProfilePage() {
               <h2 className="text-[17px] font-extrabold text-gray-900">About Your Organization</h2>
               <Txt label="About the Company" name="about" form={form} set={set} placeholder="Brief description — what you do, your mission, what makes you unique…" rows={4} />
               <Txt label="How will you use Syllabrix?" name="how_use_platform" form={form} set={set} placeholder="e.g. Post job openings, upskill employees, hire fresh talent, run training programmes…" rows={3} />
-              <NavBtns step={step} total={totalSteps} onBack={() => setStep(2)} onNext={handleNext} loading={loading} isLast />
+              <NavBtns step={step} total={totalSteps} onBack={() => setStep(2)} onNext={handleNext} loading={loading} isLast onSkip={handleSkip} skipLoading={skipLoading} />
             </div>
           )}
         </div>

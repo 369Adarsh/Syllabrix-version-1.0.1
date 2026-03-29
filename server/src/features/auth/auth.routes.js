@@ -126,4 +126,10 @@ router.post('/complete-profile/organization',
 // POST /api/auth/apply-mentor — Existing users applying to become a mentor
 router.post('/apply-mentor', authenticate, sanitizeBody, authController.applyMentor);
 
+// PATCH /api/auth/skip-profile — Skip profile completion wizard
+router.patch('/skip-profile', authenticate, authController.skipProfile);
+
+// PATCH /api/auth/update-profile — Edit profile sections after completion
+router.patch('/update-profile', authenticate, sanitizeBody, authController.updateProfile);
+
 module.exports = router;

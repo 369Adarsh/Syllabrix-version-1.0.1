@@ -166,8 +166,35 @@ const deleteFile = async (publicId) => {
   return { message: 'File deleted.' };
 };
 
+// ======================== RESUME UPLOAD ========================
+
+const RESUME_TABLE_MAP = {
+  student: 'student_profiles',
+  teacher: 'teacher_profiles',
+  professional_learner: 'professional_learner_profiles',
+};
+
+const uploadResumeFile = async (userId, userType, file) => {
+  if (!file) throw ApiError.badRequest('No file provided.');
+  if (file.mimetype !== 'application/pdf') throw ApiError.badRequest('Resume must be a PDF file.');
+  if (file.size > 5 * 1024 * 1024) throw ApiError.badRequest('Resume must be under 5MB.');
+
+  const table = RESUME_TABLE_MAP[userType];
+  if (!table) throw ApiError.badRequest('Resume upload is not available for your account type.');
+
+  const result = await uploadToCloudinary(file.buffer, {
+    folder: 'resumes',
+    resourceType: 'raw',
+    public_id: `resume_${userId}_${Date.now()}`,
+  });
+
+  await pool.query(`UPDATE \`${table}\` SET resume_url = ? WHERE user_id = ?`, [result.url, userId]);
+
+  return { url: result.url, message: 'Resume uploaded successfully!' };
+};
+
 module.exports = {
   uploadFile, uploadMultipleFiles,
   uploadProfilePhoto, uploadCoverPhoto,
-  deleteFile, getMediaType,
+  deleteFile, getMediaType, uploadResumeFile,
 };

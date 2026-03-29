@@ -100,8 +100,21 @@ const applyMentor = asyncHandler(async (req, res) => {
   sendSuccess(res, result, result.message);
 });
 
+// PATCH /api/auth/skip-profile
+const skipProfile = asyncHandler(async (req, res) => {
+  const result = await authService.skipProfile(req.user.id);
+  sendSuccess(res, result, 'Profile skipped.');
+});
+
+// PATCH /api/auth/update-profile
+const updateProfile = asyncHandler(async (req, res) => {
+  const result = await authService.updateProfile(req.user.id, req.user.userType, req.body);
+  sendSuccess(res, result, 'Profile updated!');
+});
+
 module.exports = {
   register, login, logout, getMe, googleLogin,
   completeProfile, forgotPassword, resetPassword,
   verifyEmail, resendVerification, applyMentor,
+  skipProfile, updateProfile,
 };
