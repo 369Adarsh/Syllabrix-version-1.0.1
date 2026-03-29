@@ -98,7 +98,7 @@ const register = async (userData) => {
       verificationUrl,
     });
   } catch (emailErr) {
-    console.error('Failed to send verification email:', emailErr.message);
+    console.error('[EMAIL] Failed to send verification email:', emailErr.message, emailErr);
   }
 
   // Don't create a session yet — user must verify email first before logging in
@@ -241,7 +241,7 @@ const verifyEmail = async (token) => {
   try {
     await sendWelcomeEmail({ to: user.email, username: user.username, userType: user.user_type });
   } catch (e) {
-    console.error('Failed to send welcome email:', e.message);
+    console.error('[EMAIL] Failed to send welcome email:', e.message, e);
   }
 
   return { message: 'Email verified successfully! You can now sign in.' };
@@ -487,7 +487,7 @@ const forgotPassword = async (email) => {
   try {
     await sendPasswordResetEmail({ to: email, username: user.username, resetUrl });
   } catch (e) {
-    console.error('Failed to send password reset email:', e.message);
+    console.error('[EMAIL] Failed to send password reset email:', e.message, e);
   }
 
   return { message: 'If an account exists with this email, a reset link has been sent.' };

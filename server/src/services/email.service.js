@@ -5,6 +5,9 @@
 const { Resend } = require('resend');
 const { EMAIL, CLIENT_URL } = require('../config/env');
 
+if (!EMAIL.RESEND_API_KEY) {
+  console.error('[EMAIL] FATAL: RESEND_API_KEY is not set. Emails will not be sent.');
+}
 const resend = new Resend(EMAIL.RESEND_API_KEY);
 
 // ======================== TEMPLATES ========================
@@ -91,12 +94,16 @@ const sendVerificationEmail = async ({ to, username, verificationUrl }) => {
     </p>
   `;
 
-  return resend.emails.send({
+  console.log('[EMAIL] Attempting to send verification email to:', to);
+  const { data, error } = await resend.emails.send({
     from: `Syllabrix <${EMAIL.FROM}>`,
     to,
     subject: 'Verify your Syllabrix email address',
     html: baseTemplate(content),
   });
+  console.log('[EMAIL] Resend response:', data, error);
+  if (error) throw new Error(`Resend error: ${JSON.stringify(error)}`);
+  return data;
 };
 
 // ======================== SEND WELCOME EMAIL (after verification) ========================
@@ -146,12 +153,16 @@ const sendWelcomeEmail = async ({ to, username, userType }) => {
     </div>
   `;
 
-  return resend.emails.send({
+  console.log('[EMAIL] Attempting to send welcome email to:', to);
+  const { data, error } = await resend.emails.send({
     from: `Syllabrix <${EMAIL.FROM}>`,
     to,
     subject: `Welcome to Syllabrix, ${username}! Your account is ready.`,
     html: baseTemplate(content),
   });
+  console.log('[EMAIL] Resend response:', data, error);
+  if (error) throw new Error(`Resend error: ${JSON.stringify(error)}`);
+  return data;
 };
 
 // ======================== SEND PASSWORD RESET EMAIL ========================
@@ -178,12 +189,16 @@ const sendPasswordResetEmail = async ({ to, username, resetUrl }) => {
     </p>
   `;
 
-  return resend.emails.send({
+  console.log('[EMAIL] Attempting to send password reset email to:', to);
+  const { data, error } = await resend.emails.send({
     from: `Syllabrix <${EMAIL.FROM}>`,
     to,
     subject: 'Reset your Syllabrix password',
     html: baseTemplate(content),
   });
+  console.log('[EMAIL] Resend response:', data, error);
+  if (error) throw new Error(`Resend error: ${JSON.stringify(error)}`);
+  return data;
 };
 
 module.exports = { sendVerificationEmail, sendWelcomeEmail, sendPasswordResetEmail };

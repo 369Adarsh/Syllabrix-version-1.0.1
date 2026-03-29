@@ -8,7 +8,7 @@ import {
   FlaskConical, Trophy, Bookmark, Award, Settings,
   LogOut, FileText, Gamepad2, Play,
   Mic, MessageSquare, Beaker, Building2, Store, Code, Heart, Star,
-  UserCheck, Home
+  UserCheck, Home, GraduationCap
 } from 'lucide-react';
 
 const NavLink = ({ href, icon: Icon, label, badge }) => {
@@ -73,6 +73,7 @@ export default function Sidebar() {
 
         <SectionLabel>Learn</SectionLabel>
         <div className="space-y-[1px]">
+          <NavLink href="/ai-study-table" icon={GraduationCap} label="AI Study Table" />
           <NavLink href="/virtual-lab"    icon={Beaker}        label="Virtual Lab" />
           <NavLink href="/mock-interview" icon={Mic}           label="Mock Interview" />
           <NavLink href="/debate-arena"   icon={MessageSquare} label="Debate Arena" />
