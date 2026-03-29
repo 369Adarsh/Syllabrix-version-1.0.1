@@ -2,14 +2,15 @@
 // Throw these in services, caught by error-handler middleware
 
 class ApiError extends Error {
-  constructor(message, statusCode = 500) {
+  constructor(message, statusCode = 500, data = null) {
     super(message);
     this.statusCode = statusCode;
     this.name = 'ApiError';
+    if (data) this.data = data;
   }
 
-  static badRequest(message = 'Bad request') {
-    return new ApiError(message, 400);
+  static badRequest(message = 'Bad request', data = null) {
+    return new ApiError(message, 400, data);
   }
 
   static unauthorized(message = 'Unauthorized') {

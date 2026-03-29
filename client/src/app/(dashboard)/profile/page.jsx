@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { authAPI } from '@/lib/api/auth.api';
 import { uploadAPI } from '@/lib/api/upload.api';
@@ -361,6 +361,179 @@ function useSection(init) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// IDENTITY SECTION — username + display name, 60-day lock
+// ═══════════════════════════════════════════════════════════════════
+const canChange = (changedAt) => {
+  if (!changedAt) return { allowed: true, nextDate: null };
+  const next = new Date(changedAt);
+  next.setDate(next.getDate() + 60);
+  const allowed = new Date() >= next;
+  return { allowed, nextDate: next.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) };
+};
+
+function IdentitySection({ user, onSaved }) {
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [displayName, setDisplayName] = useState('');
+  const [username, setUsername] = useState('');
+  const [usernameStatus, setUsernameStatus] = useState(null); // null | 'checking' | 'available' | 'taken' | 'invalid'
+  const [usernameError, setUsernameError] = useState('');
+  const debounceRef = useRef(null);
+
+  const nameInfo = canChange(user?.full_name_changed_at);
+  const userInfo = canChange(user?.username_changed_at);
+
+  const startEdit = () => {
+    setDisplayName(user?.full_name || '');
+    setUsername(user?.username || '');
+    setUsernameStatus(null);
+    setUsernameError('');
+    setEditing(true);
+  };
+  const cancelEdit = () => { setEditing(false); setUsernameStatus(null); setUsernameError(''); };
+
+  // Debounced username availability check
+  useEffect(() => {
+    if (!editing) return;
+    const val = username.trim();
+    if (val === user?.username) { setUsernameStatus(null); setUsernameError(''); return; }
+    if (!val || !/^[a-z0-9_.]{3,30}$/.test(val)) {
+      setUsernameStatus(val ? 'invalid' : null);
+      setUsernameError(val ? '3–30 chars: lowercase, numbers, _ and . only' : '');
+      return;
+    }
+    setUsernameStatus('checking');
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      // No dedicated check endpoint — optimistic "available" indicator;
+      // actual uniqueness is enforced on save with a clear error message.
+      setUsernameStatus('available');
+    }, 500);
+    return () => clearTimeout(debounceRef.current);
+  }, [username, user?.username, editing]);
+
+  const handleSave = async () => {
+    const updates = {};
+    const nameVal = displayName.trim();
+    const userVal = username.trim();
+    if (nameInfo.allowed && nameVal && nameVal !== user?.full_name) updates.full_name = nameVal;
+    if (userInfo.allowed && userVal && userVal !== user?.username) updates.username = userVal;
+    if (Object.keys(updates).length === 0) { cancelEdit(); return; }
+
+    setSaving(true);
+    try {
+      await authAPI.updateIdentity(updates);
+      await onSaved();
+      setEditing(false);
+      toast.success('Identity updated!');
+    } catch (e) {
+      const msg = e?.response?.data?.message || 'Update failed.';
+      if (msg.toLowerCase().includes('taken')) {
+        setUsernameStatus('taken');
+        setUsernameError('Username already taken');
+      } else {
+        toast.error(msg);
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const LOCK_BADGE = (nextDate) => (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 border border-amber-200 rounded-full text-[10px] font-semibold text-amber-700">
+      <Lock size={9} /> Locked until {nextDate}
+    </span>
+  );
+  const OK_BADGE = (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 border border-green-200 rounded-full text-[10px] font-semibold text-green-700">
+      <CheckCircle size={9} /> Editable
+    </span>
+  );
+
+  return (
+    <SectionCard title="Identity" icon={AtSign} defaultOpen>
+      <EditRow editing={editing} onEdit={startEdit} onCancel={cancelEdit} onSave={handleSave} saving={saving} />
+
+      {!editing ? (
+        <div className="space-y-4">
+          <div>
+            <p className={LBL}>Display Name</p>
+            <p className="text-[14px] font-semibold text-gray-800 mb-1">{user?.full_name}</p>
+            {nameInfo.allowed ? OK_BADGE : LOCK_BADGE(nameInfo.nextDate)}
+          </div>
+          <div>
+            <p className={LBL}>Username</p>
+            <p className="text-[14px] font-mono text-gray-800 mb-1">@{user?.username}</p>
+            {userInfo.allowed ? OK_BADGE : LOCK_BADGE(userInfo.nextDate)}
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {/* Display Name */}
+          <div>
+            <label className={LBL}>Display Name</label>
+            {nameInfo.allowed ? (
+              <input
+                type="text"
+                value={displayName}
+                onChange={e => setDisplayName(e.target.value)}
+                maxLength={100}
+                className={INP}
+                placeholder="Your full name"
+              />
+            ) : (
+              <div className="relative">
+                <input type="text" value={user?.full_name} readOnly
+                  className={INP + ' bg-gray-50 text-gray-500 cursor-not-allowed pr-8'} />
+                <Lock size={11} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <div className="mt-1">{LOCK_BADGE(nameInfo.nextDate)}</div>
+              </div>
+            )}
+          </div>
+
+          {/* Username */}
+          <div>
+            <label className={LBL}>Username</label>
+            {userInfo.allowed ? (
+              <>
+                <div className="relative flex items-center">
+                  <span className="absolute left-3 text-[13px] text-gray-400 font-mono select-none">@</span>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={e => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_.]/g, ''))}
+                    maxLength={30}
+                    className={INP + ' pl-7 pr-8 font-mono'}
+                    placeholder="your_username"
+                  />
+                  {usernameStatus === 'checking' && <Loader2 size={13} className="absolute right-3 text-gray-400 animate-spin" />}
+                  {usernameStatus === 'available' && <CheckCircle size={13} className="absolute right-3 text-green-500" />}
+                  {(usernameStatus === 'taken' || usernameStatus === 'invalid') && <X size={13} className="absolute right-3 text-red-400" />}
+                </div>
+                {usernameError ? (
+                  <p className="text-[11px] text-red-500 mt-1">{usernameError}</p>
+                ) : (
+                  <p className="text-[11px] text-gray-400 mt-1">3–30 chars, lowercase, numbers, _ and . only</p>
+                )}
+              </>
+            ) : (
+              <div>
+                <div className="relative">
+                  <input type="text" value={`@${user?.username}`} readOnly
+                    className={INP + ' bg-gray-50 text-gray-500 cursor-not-allowed font-mono pr-8'} />
+                  <Lock size={11} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                </div>
+                <div className="mt-1">{LOCK_BADGE(userInfo.nextDate)}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </SectionCard>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // STUDENT SECTIONS
 // ═══════════════════════════════════════════════════════════════════
 function StudentSections({ user, saveSection }) {
@@ -387,7 +560,6 @@ function StudentSections({ user, saveSection }) {
       <EditRow editing={bi.isEditing} onEdit={bi.start} onCancel={bi.cancel} onSave={() => save(bi, bi.edit)} saving={bi.saving} />
       {!bi.isEditing ? (
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-          <VF label="Full Name" value={user?.full_name} locked />
           <VF label="Date of Birth" value={user?.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString('en-IN') : ''} locked />
           <VF label="Phone" value={user?.phone} placeholder="Not provided" />
           <VF label="Gender" value={user?.gender} />
@@ -396,7 +568,6 @@ function StudentSections({ user, saveSection }) {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
-          <TI label="Full Name" value={user?.full_name} locked />
           <TI label="Date of Birth" value={user?.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString('en-IN') : ''} locked />
           <TI label="Phone" value={bi.edit.phone} onChange={v => bi.setEdit(e => ({...e, phone: v}))} placeholder="+91 XXXXX XXXXX" />
           <SI label="Gender" value={bi.edit.gender} onChange={v => bi.setEdit(e => ({...e, gender: v}))} options={GENDERS} />
@@ -482,7 +653,6 @@ function TeacherSections({ user, saveSection }) {
       <EditRow editing={bi.isEditing} onEdit={bi.start} onCancel={bi.cancel} onSave={() => save(bi, bi.edit)} saving={bi.saving} />
       {!bi.isEditing ? (
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-          <VF label="Full Name" value={user?.full_name} locked />
           <VF label="Phone" value={user?.phone} />
           <VF label="Gender" value={user?.gender} />
           <VF label="City" value={user?.city} />
@@ -490,7 +660,6 @@ function TeacherSections({ user, saveSection }) {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2"><TI label="Full Name" value={user?.full_name} locked /></div>
           <TI label="Phone" value={bi.edit.phone} onChange={v => bi.setEdit(e => ({...e, phone: v}))} placeholder="+91 XXXXX XXXXX" />
           <SI label="Gender" value={bi.edit.gender} onChange={v => bi.setEdit(e => ({...e, gender: v}))} options={GENDERS} />
           <TI label="City" value={bi.edit.city} onChange={v => bi.setEdit(e => ({...e, city: v}))} placeholder="City" />
@@ -595,7 +764,6 @@ function ProfessionalSections({ user, saveSection }) {
       <EditRow editing={bi.isEditing} onEdit={bi.start} onCancel={bi.cancel} onSave={() => save(bi, bi.edit)} saving={bi.saving} />
       {!bi.isEditing ? (
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-          <VF label="Full Name" value={user?.full_name} locked />
           <VF label="Phone" value={user?.phone} />
           <VF label="Gender" value={user?.gender} />
           <VF label="City" value={user?.city} />
@@ -603,7 +771,6 @@ function ProfessionalSections({ user, saveSection }) {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2"><TI label="Full Name" value={user?.full_name} locked /></div>
           <TI label="Phone" value={bi.edit.phone} onChange={v => bi.setEdit(e => ({...e, phone: v}))} placeholder="+91 XXXXX XXXXX" />
           <SI label="Gender" value={bi.edit.gender} onChange={v => bi.setEdit(e => ({...e, gender: v}))} options={GENDERS} />
           <TI label="City" value={bi.edit.city} onChange={v => bi.setEdit(e => ({...e, city: v}))} placeholder="Your city" />
@@ -795,14 +962,12 @@ function OrganizationSections({ user, saveSection }) {
       <EditRow editing={bi.isEditing} onEdit={bi.start} onCancel={bi.cancel} onSave={() => save(bi, bi.edit)} saving={bi.saving} />
       {!bi.isEditing ? (
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-          <VF label="Admin Name" value={user?.full_name} locked />
           <VF label="Phone" value={user?.phone} />
           <VF label="City" value={user?.city} />
           <VF label="State" value={user?.state} />
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2"><TI label="Admin Name" value={user?.full_name} locked /></div>
           <TI label="Phone" value={bi.edit.phone} onChange={v => bi.setEdit(e => ({...e, phone: v}))} placeholder="+91 XXXXX XXXXX" />
           <div />
           <TI label="City" value={bi.edit.city} onChange={v => bi.setEdit(e => ({...e, city: v}))} placeholder="HQ city" />
@@ -877,7 +1042,6 @@ function ParentSections({ user, saveSection }) {
       <EditRow editing={bi.isEditing} onEdit={bi.start} onCancel={bi.cancel} onSave={() => save(bi, bi.edit)} saving={bi.saving} />
       {!bi.isEditing ? (
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-          <VF label="Full Name" value={user?.full_name} locked />
           <VF label="Phone" value={user?.phone} />
           <VF label="Gender" value={user?.gender} />
           <VF label="City" value={user?.city} />
@@ -885,7 +1049,6 @@ function ParentSections({ user, saveSection }) {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2"><TI label="Full Name" value={user?.full_name} locked /></div>
           <TI label="Phone" value={bi.edit.phone} onChange={v => bi.setEdit(e => ({...e, phone: v}))} placeholder="+91 XXXXX XXXXX" />
           <SI label="Gender" value={bi.edit.gender} onChange={v => bi.setEdit(e => ({...e, gender: v}))} options={GENDERS} />
           <TI label="City" value={bi.edit.city} onChange={v => bi.setEdit(e => ({...e, city: v}))} placeholder="City" />
@@ -990,13 +1153,13 @@ export default function MyProfilePage() {
     <div className="min-h-screen bg-[#F3F4F6]">
 
       {/* ── 1. COVER BANNER ─────────────────────────────────────────── */}
-      <div className="relative h-[140px] md:h-[200px] group">
+      <div className="relative h-40 md:h-56 w-full group">
         {user.cover_photo_url
           ? <img src={user.cover_photo_url} alt="Cover" className="w-full h-full object-cover" />
           : <div className={`w-full h-full bg-gradient-to-r ${cfg.cover}`} />}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
         <button type="button" onClick={() => !coverLoading && coverRef.current?.click()}
-          className="absolute bottom-3 right-4 flex items-center gap-1.5 px-3 py-1.5 bg-black/40 text-white text-[12px] font-semibold rounded-lg opacity-0 group-hover:opacity-100 transition-all hover:bg-black/60 backdrop-blur-sm">
+          className="absolute top-3 right-4 flex items-center gap-1.5 px-3 py-1.5 bg-black/40 text-white text-[12px] font-semibold rounded-lg opacity-0 group-hover:opacity-100 transition-all hover:bg-black/60 backdrop-blur-sm">
           {coverLoading ? <Loader2 size={12} className="animate-spin" /> : <Camera size={12} />}
           {coverLoading ? 'Uploading…' : 'Change Cover'}
         </button>
@@ -1005,13 +1168,20 @@ export default function MyProfilePage() {
 
       {/* ── 2. PROFILE IDENTITY CARD ─────────────────────────────────── */}
       <div className="max-w-5xl mx-auto px-4 md:px-6">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm -mt-10 md:-mt-14 relative px-6 pt-3 pb-5 mb-4">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm relative pb-6 mb-4">
 
-          {/* Photo + Edit button row */}
-          <div className="flex items-start justify-between mb-1">
-            {/* Profile photo */}
-            <div className="relative -mt-10 md:-mt-14 group/photo">
-              <div className="w-20 h-20 md:w-24 md:h-24 rounded-full border-[3px] border-white shadow-md overflow-hidden bg-gray-100">
+          {/* Edit Profile button — absolute top-right */}
+          <div className="absolute top-4 right-4">
+            <a href="#basic-info"
+              className="flex items-center gap-1.5 px-4 py-2 border-2 border-[#2563EB] text-[#2563EB] text-[13px] font-bold rounded-xl hover:bg-blue-50 transition-all">
+              <Pencil size={13} /> Edit Profile
+            </a>
+          </div>
+
+          {/* Centered avatar — overlaps cover */}
+          <div className="flex flex-col items-center pt-0">
+            <div className="relative -mt-12 mb-3 group/photo">
+              <div className="w-24 h-24 md:w-28 md:h-28 rounded-full border-4 border-white shadow-lg overflow-hidden bg-gray-100">
                 {user.profile_photo_url
                   ? <img src={user.profile_photo_url} alt={user.full_name} className="w-full h-full object-cover" />
                   : <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br ${cfg.cover} text-white text-3xl font-extrabold`}>{initials}</div>}
@@ -1024,31 +1194,29 @@ export default function MyProfilePage() {
               <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
             </div>
 
-            {/* Edit Profile button (top right) */}
-            <a href="#basic-info"
-              className="flex items-center gap-1.5 px-4 py-2 border-2 border-[#2563EB] text-[#2563EB] text-[13px] font-bold rounded-xl hover:bg-blue-50 transition-all mt-2">
-              <Pencil size={13} /> Edit Profile
-            </a>
-          </div>
+            {/* Name */}
+            <h1 className="text-[22px] font-extrabold text-gray-900 leading-tight text-center px-12">
+              {user.full_name || user.username}
+            </h1>
 
-          {/* Name + badges */}
-          <div className="mt-2">
-            <div className="flex flex-wrap items-center gap-2 mb-1">
-              <h1 className="text-[22px] font-extrabold text-gray-900 leading-tight">{user.full_name || user.username}</h1>
+            {/* Syllabrix ID + type chip row */}
+            <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
+              {user.syllabrix_id && (
+                <div className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-blue-50 border border-blue-200 rounded-full">
+                  <Lock size={9} className="text-blue-400" />
+                  <span className="text-[10px] font-bold text-blue-700 tracking-widest">{user.syllabrix_id}</span>
+                </div>
+              )}
               <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${cfg.chip}`}>
                 <TypeIcon size={9} />{cfg.label}
               </span>
             </div>
-            {user.syllabrix_id && (
-              <div className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-blue-50 border border-blue-200 rounded-full mb-2">
-                <Lock size={9} className="text-blue-400" />
-                <span className="text-[10px] font-bold text-blue-700 tracking-widest">{user.syllabrix_id}</span>
-              </div>
-            )}
+
             {/* Bio / tagline */}
-            <p className="text-[13px] text-gray-500 italic">
+            <p className="text-[13px] text-gray-500 italic mt-2 text-center px-8 max-w-lg">
               {user.bio || p.about || 'Add a tagline…'}
             </p>
+
             {/* Location */}
             {location && (
               <div className="flex items-center gap-1 mt-1.5 text-[12px] text-gray-500">
@@ -1066,6 +1234,7 @@ export default function MyProfilePage() {
 
           {/* LEFT — section cards (65%) */}
           <div className="flex-1 space-y-4 min-w-0">
+            <IdentitySection user={user} onSaved={refreshUser} />
             {type === 'student'              && <StudentSections      user={user} saveSection={saveSection} />}
             {type === 'teacher'              && <TeacherSections      user={user} saveSection={saveSection} />}
             {type === 'professional_learner' && <ProfessionalSections user={user} saveSection={saveSection} />}

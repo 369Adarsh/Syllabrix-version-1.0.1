@@ -23,31 +23,16 @@ const findUserByUsername = async (username) => {
 };
 
 const findUserById = async (id) => {
-  try {
-    const [rows] = await pool.query(
-      `SELECT id, syllabrix_id, username, full_name, email, user_type, age_group, date_of_birth, phone,
-              profile_photo_url, cover_photo_url, bio, gender, city, state, country,
-              is_verified, is_active, is_profile_complete, is_banned, strike_count,
-              last_login_at, email_verified_at, created_at, updated_at
-       FROM users WHERE id = ? LIMIT 1`,
-      [id]
-    );
-    return rows[0] || null;
-  } catch (e) {
-    // Fallback if syllabrix_id column doesn't exist yet (migration not run)
-    if (e.message.includes('syllabrix_id')) {
-      const [rows] = await pool.query(
-        `SELECT id, syllabrix_id, username, full_name, email, user_type, age_group, date_of_birth, phone,
-                profile_photo_url, cover_photo_url, bio, gender, city, state, country,
-                is_verified, is_active, is_profile_complete, is_banned, strike_count,
-                last_login_at, email_verified_at, created_at, updated_at
-         FROM users WHERE id = ? LIMIT 1`,
-        [id]
-      );
-      return rows[0] || null;
-    }
-    throw e;
-  }
+  const [rows] = await pool.query(
+    `SELECT id, syllabrix_id, username, username_changed_at, full_name, full_name_changed_at,
+            email, user_type, age_group, date_of_birth, phone,
+            profile_photo_url, cover_photo_url, bio, gender, city, state, country,
+            is_verified, is_active, is_profile_complete, is_banned, strike_count,
+            last_login_at, email_verified_at, created_at, updated_at
+     FROM users WHERE id = ? LIMIT 1`,
+    [id]
+  );
+  return rows[0] || null;
 };
 
 const findUserByGoogleId = async (googleId) => {
@@ -379,6 +364,29 @@ const getOrganizationProfile = async (userId) => {
   return rows[0] || null;
 };
 
+const checkUsernameAvailable = async (username, excludeUserId) => {
+  const [rows] = await pool.query(
+    'SELECT id FROM users WHERE username = ? AND id != ? LIMIT 1',
+    [username, excludeUserId]
+  );
+  return rows.length === 0; // true = available
+};
+
+const updateUserIdentity = async (userId, fields) => {
+  // fields: { username?, username_changed_at?, full_name?, full_name_changed_at? }
+  const updates = [];
+  const values = [];
+  for (const [key, value] of Object.entries(fields)) {
+    if (value !== undefined) {
+      updates.push(`\`${key}\` = ?`);
+      values.push(value);
+    }
+  }
+  if (updates.length === 0) return;
+  values.push(userId);
+  await pool.query(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, values);
+};
+
 // Ensures a profile row exists for users who skipped the wizard (INSERT IGNORE)
 const PROFILE_MIN_COLUMNS = {
   student_profiles: ['user_id', 'full_name'],
@@ -425,6 +433,7 @@ module.exports = {
   findUserByEmail, findUserByUsername, findUserById, findUserByGoogleId, findUserBySyllabrixId,
   createUser, updateLastLogin, updateEmailVerified,
   updatePassword, markProfileComplete, updateUserProfile, updateProfileTable, ensureProfileRowExists,
+  checkUsernameAvailable, updateUserIdentity,
   createSession, deactivateSession, deactivateAllSessions,
   createStudentProfile, createTeacherProfile, createInstituteProfile,
   createParentProfile, createProfessionalLearnerProfile, createOrganizationProfile,

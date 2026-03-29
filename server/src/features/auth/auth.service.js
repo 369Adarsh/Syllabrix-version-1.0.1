@@ -634,9 +634,66 @@ const updateProfile = async (userId, userType, data) => {
   return getCurrentUser(userId);
 };
 
+// ======================== UPDATE IDENTITY (username / display name) ========================
+
+const USERNAME_REGEX = /^[a-z0-9_.]{3,30}$/;
+const CHANGE_WINDOW_DAYS = 60;
+
+const daysSince = (date) => {
+  if (!date) return Infinity;
+  return (Date.now() - new Date(date).getTime()) / (1000 * 60 * 60 * 24);
+};
+
+const nextChangeDate = (changedAt) => {
+  const d = new Date(changedAt);
+  d.setDate(d.getDate() + CHANGE_WINDOW_DAYS);
+  return d;
+};
+
+const updateIdentity = async (userId, data) => {
+  const { username, full_name } = data;
+  if (!username && !full_name) throw ApiError.badRequest('Nothing to update.');
+
+  const user = await queries.findUserById(userId);
+  if (!user) throw ApiError.notFound('User not found.');
+
+  const identityUpdates = {};
+
+  if (username !== undefined && username !== user.username) {
+    if (daysSince(user.username_changed_at) < CHANGE_WINDOW_DAYS) {
+      throw ApiError.badRequest('Username can only be changed every 60 days.', {
+        next_change_at: nextChangeDate(user.username_changed_at),
+      });
+    }
+    if (!USERNAME_REGEX.test(username)) {
+      throw ApiError.badRequest('Username must be 3–30 characters: lowercase letters, numbers, underscores and dots only.');
+    }
+    const available = await queries.checkUsernameAvailable(username, userId);
+    if (!available) throw ApiError.badRequest('Username already taken.');
+    identityUpdates.username = username;
+    identityUpdates.username_changed_at = new Date();
+  }
+
+  if (full_name !== undefined && full_name !== user.full_name) {
+    if (daysSince(user.full_name_changed_at) < CHANGE_WINDOW_DAYS) {
+      throw ApiError.badRequest('Display name can only be changed every 60 days.', {
+        next_change_at: nextChangeDate(user.full_name_changed_at),
+      });
+    }
+    identityUpdates.full_name = full_name;
+    identityUpdates.full_name_changed_at = new Date();
+  }
+
+  if (Object.keys(identityUpdates).length > 0) {
+    await queries.updateUserIdentity(userId, identityUpdates);
+  }
+
+  return getCurrentUser(userId);
+};
+
 module.exports = {
   register, login, logout, getCurrentUser, googleLogin,
   completeProfile, forgotPassword, resetPassword,
   verifyEmail, resendVerificationEmail, applyMentor,
-  skipProfile, updateProfile,
+  skipProfile, updateProfile, updateIdentity,
 };

@@ -14,4 +14,5 @@ export const authAPI = {
   applyMentor: (data) => api.post('/auth/apply-mentor', data),
   skipProfile: () => api.patch('/auth/skip-profile'),
   updateProfile: (data) => api.patch('/auth/update-profile', data),
+  updateIdentity: (data) => api.patch('/auth/update-identity', data),
 };

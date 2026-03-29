@@ -112,9 +112,15 @@ const updateProfile = asyncHandler(async (req, res) => {
   sendSuccess(res, result, 'Profile updated!');
 });
 
+// PATCH /api/auth/update-identity
+const updateIdentity = asyncHandler(async (req, res) => {
+  const result = await authService.updateIdentity(req.user.id, req.body);
+  sendSuccess(res, result, 'Identity updated!');
+});
+
 module.exports = {
   register, login, logout, getMe, googleLogin,
   completeProfile, forgotPassword, resetPassword,
   verifyEmail, resendVerification, applyMentor,
-  skipProfile, updateProfile,
+  skipProfile, updateProfile, updateIdentity,
 };

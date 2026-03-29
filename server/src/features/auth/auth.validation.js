@@ -184,6 +184,18 @@ const completeProfessionalLearnerProfileValidation = [
   body('mandatory_courses').optional().isObject(),
 ];
 
+const updateIdentityValidation = [
+  body('username')
+    .optional()
+    .trim()
+    .matches(/^[a-z0-9_.]{3,30}$/).withMessage('Username must be 3–30 characters: lowercase letters, numbers, underscores and dots only.'),
+
+  body('full_name')
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 100 }).withMessage('Display name must be 2–100 characters.'),
+];
+
 module.exports = {
   registerValidation,
   loginValidation,
@@ -195,4 +207,5 @@ module.exports = {
   completeParentProfileValidation,
   completeProfessionalLearnerProfileValidation,
   completeOrganizationProfileValidation,
+  updateIdentityValidation,
 };

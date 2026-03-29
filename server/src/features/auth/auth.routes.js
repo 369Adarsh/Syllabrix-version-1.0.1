@@ -21,6 +21,7 @@ const {
   completeParentProfileValidation,
   completeProfessionalLearnerProfileValidation,
   completeOrganizationProfileValidation,
+  updateIdentityValidation,
 } = require('./auth.validation');
 
 // ======================== PUBLIC ROUTES ========================
@@ -131,5 +132,8 @@ router.patch('/skip-profile', authenticate, authController.skipProfile);
 
 // PATCH /api/auth/update-profile — Edit profile sections after completion
 router.patch('/update-profile', authenticate, sanitizeBody, authController.updateProfile);
+
+// PATCH /api/auth/update-identity — Change username / display name (60-day lock)
+router.patch('/update-identity', authenticate, sanitizeBody, updateIdentityValidation, validate, authController.updateIdentity);
 
 module.exports = router;
