@@ -15,6 +15,7 @@ import {
   Play, Store, Building2, Users, Calendar, FileText
 } from 'lucide-react';
 import AdPanel from '@/components/ads/AdPanel';
+import StoriesBar from '@/components/stories/StoriesBar';
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -89,6 +90,9 @@ export default function HomePage() {
             ))}
           </div>
         </div>
+
+        {/* Stories */}
+        <StoriesBar />
 
         {/* Create Post */}
         <CreatePostBox onPostCreated={handlePostCreated} />

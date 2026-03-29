@@ -2,7 +2,7 @@
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import Sidebar from '@/components/layout/Sidebar';
 import TopBar from '@/components/layout/TopBar';
-import MobileNav from '@/components/layout/MobileNav';
+import BottomNav from '@/components/layout/BottomNav';
 
 export default function DashboardLayout({ children }) {
   return (
@@ -24,7 +24,7 @@ export default function DashboardLayout({ children }) {
         </div>
 
         {/* Mobile bottom nav */}
-        <MobileNav />
+        <BottomNav />
       </div>
     </ProtectedRoute>
   );

@@ -45,6 +45,9 @@ router.use('/celebrations', require('../features/celebrations/celebrations.route
 router.use('/mentorship', require('../features/mentorship/mentorship.routes'));
 router.use('/moderation', require('../features/moderation/moderation.routes'));
 
+// STORIES
+router.use('/stories', require('../features/stories/stories.routes'));
+
 // AI FEATURES — Gemini Powered
 router.use('/ai', require('../features/ai/ai.routes'));
 
