@@ -379,6 +379,33 @@ const getOrganizationProfile = async (userId) => {
   return rows[0] || null;
 };
 
+// Ensures a profile row exists for users who skipped the wizard (INSERT IGNORE)
+const PROFILE_MIN_COLUMNS = {
+  student_profiles: ['user_id', 'full_name'],
+  teacher_profiles: ['user_id', 'full_name'],
+  institute_profiles: ['user_id', 'full_name'],
+  parent_profiles: ['user_id', 'full_name', 'relationship'],
+  professional_learner_profiles: ['user_id', 'full_name'],
+  organization_profiles: ['user_id', 'admin_name', 'official_company_name'],
+};
+const PROFILE_MIN_VALUES = {
+  student_profiles: (userId, fullName) => [userId, fullName],
+  teacher_profiles: (userId, fullName) => [userId, fullName],
+  institute_profiles: (userId, fullName) => [userId, fullName],
+  parent_profiles: (userId, fullName) => [userId, fullName, 'other'],
+  professional_learner_profiles: (userId, fullName) => [userId, fullName],
+  organization_profiles: (userId, fullName) => [userId, fullName, fullName],
+};
+const ensureProfileRowExists = async (table, userId, fullName) => {
+  const cols = PROFILE_MIN_COLUMNS[table];
+  if (!cols) return;
+  const vals = PROFILE_MIN_VALUES[table](userId, fullName);
+  await pool.query(
+    `INSERT IGNORE INTO \`${table}\` (${cols.map(c => `\`${c}\``).join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`,
+    vals
+  );
+};
+
 // Generic profile table updater — only sets fields that are provided (not undefined)
 const updateProfileTable = async (table, userId, fields) => {
   const updates = [];
@@ -397,7 +424,7 @@ const updateProfileTable = async (table, userId, fields) => {
 module.exports = {
   findUserByEmail, findUserByUsername, findUserById, findUserByGoogleId, findUserBySyllabrixId,
   createUser, updateLastLogin, updateEmailVerified,
-  updatePassword, markProfileComplete, updateUserProfile, updateProfileTable,
+  updatePassword, markProfileComplete, updateUserProfile, updateProfileTable, ensureProfileRowExists,
   createSession, deactivateSession, deactivateAllSessions,
   createStudentProfile, createTeacherProfile, createInstituteProfile,
   createParentProfile, createProfessionalLearnerProfile, createOrganizationProfile,

@@ -371,13 +371,14 @@ function StudentSections({ user, saveSection }) {
   // Academic
   const ac = useSection(() => ({ school_name: p.school_name||'', class_name: p.class_name||'', board: p.board||'', college_name: p.college_name||'', subject_stream: p.subject_stream||'' }));
   // Career & Goals
-  const cg = useSection(() => ({ career_interest: p.career_interest||p.ambition||'', learning_goals: parseJson(p.learning_goals, []), future_vision: p.future_vision||'' }));
+  const cg = useSection(() => ({ ambition: p.ambition||p.career_interest||'', future_vision: p.future_vision||'' }));
   // About
   const ab = useSection(() => ({ bio: user?.bio||'' }));
 
   const save = async (section, data) => {
     section.setSaving(true);
     try { await saveSection(data); section.cancel(); }
+    catch (e) { /* error already toasted in saveSection */ }
     finally { section.setSaving(false); }
   };
 
@@ -432,14 +433,12 @@ function StudentSections({ user, saveSection }) {
       <EditRow editing={cg.isEditing} onEdit={cg.start} onCancel={cg.cancel} onSave={() => save(cg, cg.edit)} saving={cg.saving} />
       {!cg.isEditing ? (
         <div className="space-y-4">
-          <VF label="Career Interest" value={cg.edit ? cg.edit.career_interest : (p.career_interest || p.ambition)} placeholder="Not set" />
-          <div><p className={LBL}>Learning Goals</p><TagsView tags={parseJson(p.learning_goals, [])} /></div>
+          <VF label="Ambition / Career Interest" value={p.ambition || p.career_interest} placeholder="Not set" />
           <VF label="I See My Future As…" value={p.future_vision} placeholder="Not set" />
         </div>
       ) : (
         <div className="space-y-3">
-          <TA label="Career Interest / Ambition" value={cg.edit.career_interest} onChange={v => cg.setEdit(e => ({...e, career_interest: v}))} placeholder="What career are you aiming for?" rows={2} />
-          <TagsEdit label="Learning Goals" tags={cg.edit.learning_goals} onChange={v => cg.setEdit(e => ({...e, learning_goals: v}))} placeholder="Add a goal…" />
+          <TA label="Ambition / Career Interest" value={cg.edit.ambition} onChange={v => cg.setEdit(e => ({...e, ambition: v}))} placeholder="What career are you aiming for?" rows={2} />
           <TA label="I See My Future As…" value={cg.edit.future_vision} onChange={v => cg.setEdit(e => ({...e, future_vision: v}))} placeholder="Describe your dream" rows={2} />
         </div>
       )}
@@ -463,17 +462,18 @@ function TeacherSections({ user, saveSection }) {
   const bi = useSection(() => ({ phone: user?.phone||'', gender: user?.gender||'', city: user?.city||'', state: user?.state||'' }));
   const pr = useSection(() => ({
     subject_primary: p.subject_primary||'', experience_years: p.experience_years||'',
-    institute_name: p.institute_name||'', designation: p.designation||'',
+    institute_name: p.institute_name||'',
     qualifications: parseJson(p.qualifications, []), teacher_type: p.teacher_type||'freelancer'
   }));
   const td = useSection(() => ({
-    has_own_business: p.has_own_business||false, business_name: p.business_name||'', teaching_mode: p.teaching_mode||''
+    has_own_business: p.has_own_business||false, business_name: p.business_name||''
   }));
   const ab = useSection(() => ({ bio: user?.bio||'' }));
 
   const save = async (section, data) => {
     section.setSaving(true);
     try { await saveSection(data); section.cancel(); }
+    catch (e) { /* error already toasted in saveSection */ }
     finally { section.setSaving(false); }
   };
 
@@ -506,7 +506,6 @@ function TeacherSections({ user, saveSection }) {
           <VF label="Subject Specialization" value={p.subject_primary} />
           <VF label="Experience" value={p.experience_years ? `${p.experience_years} years` : ''} />
           <VF label="Current Institution" value={p.institute_name} />
-          <VF label="Designation" value={p.designation} />
           <VF label="Type" value={p.teacher_type?.replace('_', ' ')} />
           <div className="col-span-2"><p className={LBL}>Qualifications</p><TagsView tags={parseJson(p.qualifications, [])} /></div>
         </div>
@@ -515,8 +514,7 @@ function TeacherSections({ user, saveSection }) {
           <div className="grid grid-cols-2 gap-3">
             <TI label="Subject Specialization" value={pr.edit.subject_primary} onChange={v => pr.setEdit(e => ({...e, subject_primary: v}))} placeholder="e.g. Mathematics" />
             <TI label="Years of Experience" value={String(pr.edit.experience_years||'')} onChange={v => pr.setEdit(e => ({...e, experience_years: v}))} type="number" placeholder="e.g. 8" />
-            <TI label="Current Institution" value={pr.edit.institute_name} onChange={v => pr.setEdit(e => ({...e, institute_name: v}))} placeholder="School / College / Academy" />
-            <TI label="Designation" value={pr.edit.designation} onChange={v => pr.setEdit(e => ({...e, designation: v}))} placeholder="e.g. Senior Teacher" />
+            <div className="col-span-2"><TI label="Current Institution" value={pr.edit.institute_name} onChange={v => pr.setEdit(e => ({...e, institute_name: v}))} placeholder="School / College / Academy" /></div>
           </div>
           <Fld label="Teacher Type">
             <div className="flex gap-2">
@@ -539,7 +537,6 @@ function TeacherSections({ user, saveSection }) {
         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
           <VF label="Runs Own Business" value={p.has_own_business ? 'Yes' : (p.has_own_business === false ? 'No' : undefined)} />
           <VF label="Business Name" value={p.business_name} />
-          <VF label="Teaching Mode" value={p.teaching_mode} />
         </div>
       ) : (
         <div className="space-y-3">
@@ -554,8 +551,6 @@ function TeacherSections({ user, saveSection }) {
             </div>
           </Fld>
           <TI label="Business Name (if any)" value={td.edit.business_name} onChange={v => td.setEdit(e => ({...e, business_name: v}))} placeholder="Your academy / tuition center" />
-          <SI label="Teaching Mode" value={td.edit.teaching_mode} onChange={v => td.setEdit(e => ({...e, teaching_mode: v}))}
-            options={['Online Only','Offline Only','Both Online & Offline']} />
         </div>
       )}
     </SectionCard>
@@ -579,7 +574,7 @@ function ProfessionalSections({ user, saveSection }) {
   const wi = useSection(() => ({
     current_company: p.current_company||'', designation: p.designation||'',
     experience_years: p.experience_years||'', industry: p.industry||'',
-    education_level: p.education_level||'', company_size: p.company_size||''
+    education_level: p.education_level||''
   }));
   const sk = useSection(() => ({ skills: parseJson(p.skills, []) }));
   const le = useSection(() => ({
@@ -591,6 +586,7 @@ function ProfessionalSections({ user, saveSection }) {
   const save = async (section, data) => {
     section.setSaving(true);
     try { await saveSection(data); section.cancel(); }
+    catch (e) { /* error already toasted in saveSection */ }
     finally { section.setSaving(false); }
   };
 
@@ -625,7 +621,6 @@ function ProfessionalSections({ user, saveSection }) {
           <VF label="Experience" value={p.experience_years ? `${p.experience_years} yrs` : ''} />
           <VF label="Industry" value={p.industry} />
           <VF label="Education Level" value={p.education_level} />
-          <VF label="Company Size" value={p.company_size} />
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
@@ -697,6 +692,7 @@ function InstituteSections({ user, saveSection }) {
   const save = async (section, data) => {
     section.setSaving(true);
     try { await saveSection(data); section.cancel(); }
+    catch (e) { /* error already toasted in saveSection */ }
     finally { section.setSaving(false); }
   };
 
@@ -790,6 +786,7 @@ function OrganizationSections({ user, saveSection }) {
   const save = async (section, data) => {
     section.setSaving(true);
     try { await saveSection(data); section.cancel(); }
+    catch (e) { /* error already toasted in saveSection */ }
     finally { section.setSaving(false); }
   };
 
@@ -871,6 +868,7 @@ function ParentSections({ user, saveSection }) {
   const save = async (section, data) => {
     section.setSaving(true);
     try { await saveSection(data); section.cancel(); }
+    catch (e) { /* error already toasted in saveSection */ }
     finally { section.setSaving(false); }
   };
 
@@ -952,9 +950,14 @@ export default function MyProfilePage() {
   const [resumeUrl, setResumeUrl] = useState('');
 
   const saveSection = useCallback(async (data) => {
-    await authAPI.updateProfile(data);
-    await refreshUser();
-    toast.success('Saved!');
+    try {
+      await authAPI.updateProfile(data);
+      await refreshUser();
+      toast.success('Saved!');
+    } catch (e) {
+      toast.error(e?.response?.data?.message || 'Save failed. Please try again.');
+      throw e; // re-throw so section save() catches it and doesn't call cancel()
+    }
   }, [refreshUser]);
 
   const handlePhoto = async (e) => {

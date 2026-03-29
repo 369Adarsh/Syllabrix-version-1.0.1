@@ -623,7 +623,12 @@ const updateProfile = async (userId, userType, data) => {
       }
     }
     const table = PROFILE_TABLE_MAP[userType];
-    if (table) await queries.updateProfileTable(table, userId, serialized);
+    if (table) {
+      // Ensure a profile row exists for users who skipped the wizard
+      const userRow = await queries.findUserById(userId);
+      await queries.ensureProfileRowExists(table, userId, userRow?.full_name || userRow?.username || '');
+      await queries.updateProfileTable(table, userId, serialized);
+    }
   }
 
   return getCurrentUser(userId);
