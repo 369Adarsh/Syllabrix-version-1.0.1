@@ -4,638 +4,1118 @@ import { useAuth } from '@/contexts/AuthContext';
 import { authAPI } from '@/lib/api/auth.api';
 import { uploadAPI } from '@/lib/api/upload.api';
 import {
-  Lock, Camera, ChevronDown, ChevronUp, Loader2, Save,
-  FileText, Upload, X, Plus, CheckCircle, ExternalLink, User,
-  Building2, Briefcase, BookOpen, Target, Award
+  Lock, Camera, Pencil, X, Plus, ChevronDown, ChevronUp,
+  Loader2, CheckCircle, ExternalLink, Copy, Check,
+  User, Briefcase, BookOpen, Target, Award, Building2,
+  MapPin, FileText, Upload, Shield, AtSign, Link as LinkIcon,
+  GraduationCap, Users, Star
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import Link from 'next/link';
 
-// ─── Static data ───────────────────────────────────────────────────────────
-const STATES = ['Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat','Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh','Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab','Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand','West Bengal','Delhi','Jammu & Kashmir','Ladakh','Other'];
-const BOARDS = ['CBSE','ICSE','State Board','IB','IGCSE','Other'];
-const CLASSES = ['1','2','3','4','5','6','7','8','9','10','11','12','UG Year 1','UG Year 2','UG Year 3','UG Year 4','PG','Other'];
-const STREAMS = ['Engineering','Medical / Healthcare','Commerce','Arts / Humanities','Science','Law','Media / Journalism','Design','Agriculture','Other'];
-const INDUSTRIES = ['IT / Software','Finance / Banking','Healthcare','Education','Manufacturing','Retail / E-commerce','Media / Entertainment','Government / PSU','Consulting','Real Estate','Agriculture','Other'];
-const LEARNING_GOALS = ['Get a Promotion','Switch Career','Start a Business','Learn a New Technology','Improve Communication','Build Leadership Skills','Get a Certification','Improve Work-Life Balance','Other'];
-const GENDER_OPTS = ['Male','Female','Other','Prefer not to say'];
+// ═══════════════════════════════════════════════════════════════════
+// CONSTANTS & CONFIG
+// ═══════════════════════════════════════════════════════════════════
+const STATES = ['Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat',
+  'Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh','Maharashtra',
+  'Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab','Rajasthan','Sikkim',
+  'Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand','West Bengal',
+  'Delhi','Jammu & Kashmir','Ladakh','Other'];
+const BOARDS       = ['CBSE','ICSE','State Board','IB','IGCSE','Other'];
+const CLASSES      = ['1','2','3','4','5','6','7','8','9','10','11','12','UG Year 1','UG Year 2','UG Year 3','UG Year 4','PG','Other'];
+const STREAMS      = ['Engineering','Medical / Healthcare','Commerce','Arts / Humanities','Science','Law','Media / Journalism','Design','Agriculture','Other'];
+const INDUSTRIES   = ['IT / Software','Finance / Banking','Healthcare','Education','Manufacturing','Retail / E-commerce','Media / Entertainment','Government / PSU','Consulting','Real Estate','Agriculture','Other'];
+const GENDERS      = ['Male','Female','Other','Prefer not to say'];
 const TEACHER_TYPES = ['freelancer','institute_affiliated','both'];
-const INSTITUTE_TYPES = ['school','college','university','coaching','online_academy','other'];
+const INST_TYPES   = ['school','college','university','coaching','online_academy','other'];
+const ORG_INDUSTRIES = ['Technology / Software','Manufacturing / Industrial','Banking / Financial Services','Healthcare / Pharma','Retail / E-commerce','Logistics / Supply Chain','Education','Consulting / Professional Services','Government / Public Sector','Other'];
+const ORG_SIZES    = ['1-50 (Startup)','51-200 (Small)','201-500 (Mid-market)','501-2000 (Enterprise)','2001-10000 (Large Enterprise)','10000+ (Global Enterprise)'];
+const EDU_LEVELS   = ['High School','Graduation','Post Graduation','Doctorate','Other'];
 
-// ─── Shared field styles ───────────────────────────────────────────────────
-const inp = 'w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-[13px] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all';
-const lbl = 'block text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1';
+const TYPE_CONFIG = {
+  student:             { cover: 'from-blue-500 to-indigo-600',   chip: 'bg-blue-50 text-blue-700 border-blue-200',   label: 'Student',      icon: GraduationCap },
+  teacher:             { cover: 'from-teal-500 to-cyan-600',     chip: 'bg-teal-50 text-teal-700 border-teal-200',   label: 'Teacher',      icon: BookOpen },
+  professional_learner:{ cover: 'from-purple-500 to-violet-600', chip: 'bg-purple-50 text-purple-700 border-purple-200', label: 'Professional', icon: Briefcase },
+  institute:           { cover: 'from-orange-400 to-amber-500',  chip: 'bg-orange-50 text-orange-700 border-orange-200', label: 'Institute',    icon: Building2 },
+  organization:        { cover: 'from-rose-500 to-pink-600',     chip: 'bg-rose-50 text-rose-700 border-rose-200',   label: 'Organization', icon: Users },
+  parent:              { cover: 'from-green-500 to-emerald-600', chip: 'bg-green-50 text-green-700 border-green-200', label: 'Parent',       icon: User },
+};
+const getConfig = (type) => TYPE_CONFIG[type] || TYPE_CONFIG.student;
 
-const Fld = ({ label, required, children }) => (
-  <div><label className={lbl}>{label}{required && <span className="text-red-400 ml-0.5">*</span>}</label>{children}</div>
-);
-const TxtInput = ({ label, value, onChange, placeholder, type = 'text', readOnly }) => (
+// ═══════════════════════════════════════════════════════════════════
+// PRIMITIVE FORM COMPONENTS
+// ═══════════════════════════════════════════════════════════════════
+const INP = 'w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-[13px] text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all';
+const LBL = 'block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1';
+
+const Fld = ({ label, children }) => <div><label className={LBL}>{label}</label>{children}</div>;
+
+const TI = ({ label, value, onChange, placeholder, type = 'text', locked }) => (
   <Fld label={label}>
     <div className="relative">
-      <input type={type} value={value || ''} onChange={readOnly ? undefined : e => onChange(e.target.value)}
-        readOnly={readOnly} placeholder={placeholder}
-        className={inp + (readOnly ? ' bg-gray-100 text-gray-500 cursor-not-allowed pr-8' : '')} />
-      {readOnly && <Lock size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />}
+      <input type={type} value={value || ''} readOnly={locked}
+        onChange={locked ? undefined : e => onChange(e.target.value)}
+        placeholder={placeholder}
+        className={INP + (locked ? ' bg-gray-50 text-gray-500 cursor-not-allowed pr-8' : '')} />
+      {locked && <Lock size={11} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />}
     </div>
   </Fld>
 );
-const SelInput = ({ label, value, onChange, options, placeholder }) => (
+const SI = ({ label, value, onChange, options, placeholder }) => (
   <Fld label={label}>
-    <select value={value || ''} onChange={e => onChange(e.target.value)} className={inp}>
+    <select value={value || ''} onChange={e => onChange(e.target.value)} className={INP}>
       <option value="">{placeholder || 'Select…'}</option>
       {options.map(o => <option key={o} value={o}>{o}</option>)}
     </select>
   </Fld>
 );
-const TxtArea = ({ label, value, onChange, placeholder, rows = 3 }) => (
+const TA = ({ label, value, onChange, placeholder, rows = 3 }) => (
   <Fld label={label}>
     <textarea value={value || ''} onChange={e => onChange(e.target.value)}
-      placeholder={placeholder} rows={rows} className={inp + ' resize-none'} />
+      placeholder={placeholder} rows={rows} className={INP + ' resize-none'} />
   </Fld>
 );
 
-// Tags input
-const TagsInput = ({ label, tags, onChange, placeholder }) => {
+// Tags editor (used in EDIT mode)
+const TagsEdit = ({ label, tags, onChange, placeholder }) => {
   const [val, setVal] = useState('');
-  const add = () => {
-    const v = val.trim();
-    if (v && !tags.includes(v)) onChange([...tags, v]);
-    setVal('');
-  };
+  const add = () => { const v = val.trim(); if (v && !tags.includes(v)) onChange([...tags, v]); setVal(''); };
   return (
     <Fld label={label}>
       <div className="flex flex-wrap gap-1.5 mb-2">
         {tags.map(t => (
-          <span key={t} className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 border border-blue-200 rounded-full text-[12px] text-blue-700 font-medium">
-            {t}
-            <button type="button" onClick={() => onChange(tags.filter(x => x !== t))}><X size={10} /></button>
+          <span key={t} className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-blue-50 border border-blue-200 rounded-full text-[12px] text-blue-700 font-medium">
+            {t}<button type="button" onClick={() => onChange(tags.filter(x => x !== t))}><X size={9} /></button>
           </span>
         ))}
       </div>
       <div className="flex gap-2">
         <input value={val} onChange={e => setVal(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), add())}
-          placeholder={placeholder} className={inp + ' flex-1'} />
-        <button type="button" onClick={add} className="px-3 py-2 rounded-xl bg-blue-600 text-white text-[12px] font-bold hover:bg-blue-700 transition-all">
-          <Plus size={13} />
-        </button>
+          placeholder={placeholder} className={INP + ' flex-1'} />
+        <button type="button" onClick={add} className="px-3 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-all"><Plus size={13} /></button>
       </div>
     </Fld>
   );
 };
 
-// Collapsible section card
-const Section = ({ title, icon: Icon, children, defaultOpen = false }) => {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-[0_1px_2px_rgba(0,0,0,0.1)] overflow-hidden">
-      <button type="button" onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors">
-        <div className="flex items-center gap-2.5">
-          {Icon && <Icon size={16} className="text-blue-600" />}
-          <span className="font-bold text-[14px] text-gray-800">{title}</span>
-        </div>
-        {open ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
-      </button>
-      {open && <div className="px-5 pb-5 pt-1 border-t border-gray-100 space-y-4">{children}</div>}
+// ─── VIEW mode primitives ────────────────────────────────────────
+const VF = ({ label, value, placeholder = 'Not set', locked }) => (
+  <div>
+    <p className={LBL}>{label}</p>
+    <div className="flex items-center gap-1.5">
+      {locked && <Lock size={10} className="text-gray-400 shrink-0" />}
+      <p className="text-[14px] text-gray-800">{value || <span className="text-gray-400 italic text-[13px]">{placeholder}</span>}</p>
     </div>
-  );
-};
-
-// Save button for each section
-const SaveBtn = ({ onClick, loading }) => (
-  <div className="pt-2">
-    <button type="button" onClick={onClick} disabled={loading}
-      className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold text-[13px] shadow hover:opacity-90 transition-all disabled:opacity-50">
-      {loading ? <><Loader2 size={13} className="animate-spin" /> Saving…</> : <><Save size={13} /> Save Changes</>}
-    </button>
+  </div>
+);
+const TagsView = ({ tags }) => (
+  <div className="flex flex-wrap gap-1.5">
+    {!tags?.length ? <span className="text-[13px] text-gray-400 italic">None added</span>
+      : tags.map(t => <span key={t} className="px-2.5 py-0.5 bg-gray-100 rounded-full text-[12px] text-gray-600 font-medium">{t}</span>)}
   </div>
 );
 
-// ─── Resume upload card ────────────────────────────────────────────────────
-const ResumeSection = ({ currentUrl, onUploaded }) => {
-  const [uploading, setUploading] = useState(false);
-  const inputRef = useRef(null);
-
-  const handleFile = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { toast.error('PDF must be under 5MB'); return; }
-    if (file.type !== 'application/pdf') { toast.error('Only PDF files are accepted'); return; }
-    setUploading(true);
-    try {
-      const res = await uploadAPI.resume(file);
-      const url = res.data?.data?.url;
-      onUploaded(url);
-      toast.success('Resume uploaded!');
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Upload failed');
-    } finally {
-      setUploading(false);
-      if (inputRef.current) inputRef.current.value = '';
-    }
-  };
-
+// ═══════════════════════════════════════════════════════════════════
+// SECTION CARD — collapsible, with pencil for edit toggle
+// ═══════════════════════════════════════════════════════════════════
+const SectionCard = ({ title, icon: Icon, children, defaultOpen = false }) => {
+  const [open, setOpen] = useState(defaultOpen);
   return (
-    <Section title="Resume" icon={FileText}>
-      <div className="space-y-3">
-        {currentUrl ? (
-          <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-xl">
-            <CheckCircle size={16} className="text-green-600 shrink-0" />
-            <span className="text-[12px] text-green-700 font-medium flex-1">Resume uploaded</span>
-            <a href={currentUrl} target="_blank" rel="noreferrer"
-              className="flex items-center gap-1 text-[12px] text-blue-600 hover:underline font-medium">
-              View <ExternalLink size={11} />
-            </a>
-          </div>
-        ) : (
-          <p className="text-[12px] text-gray-500">No resume uploaded yet.</p>
-        )}
-        <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading}
-          className="flex items-center gap-2 px-4 py-2.5 border-2 border-dashed border-blue-300 rounded-xl text-[13px] text-blue-600 font-semibold hover:bg-blue-50 transition-all disabled:opacity-50 w-full justify-center">
-          {uploading ? <><Loader2 size={14} className="animate-spin" /> Uploading…</> : <><Upload size={14} /> {currentUrl ? 'Replace Resume (PDF, max 5MB)' : 'Upload Resume (PDF, max 5MB)'}</>}
-        </button>
-        <input ref={inputRef} type="file" accept=".pdf" className="hidden" onChange={handleFile} />
-      </div>
-    </Section>
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <button type="button" onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors">
+        <div className="flex items-center gap-2.5">
+          {Icon && <Icon size={15} className="text-[#2563EB]" />}
+          <span className="font-bold text-[15px] text-gray-900">{title}</span>
+        </div>
+        {open ? <ChevronUp size={15} className="text-gray-400" /> : <ChevronDown size={15} className="text-gray-400" />}
+      </button>
+      {open && <div className="px-6 pb-6 pt-3 border-t border-gray-100">{children}</div>}
+    </div>
   );
 };
 
-// ─── Main profile page ─────────────────────────────────────────────────────
-export default function MyProfilePage() {
-  const { user, refreshUser } = useAuth();
-  const coverInputRef = useRef(null);
-  const photoInputRef = useRef(null);
-  const [photoUploading, setPhotoUploading] = useState(false);
-  const [coverUploading, setCoverUploading] = useState(false);
-  const [resumeUrl, setResumeUrl] = useState(() => user?.profile?.resume_url || '');
+// Edit toggle button row
+const EditRow = ({ editing, onEdit, onCancel, onSave, saving }) => (
+  <div className={`flex justify-end mb-4 ${editing ? 'gap-2' : ''}`}>
+    {!editing
+      ? <button type="button" onClick={onEdit} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-gray-700 transition-all font-medium">
+          <Pencil size={11} /> Edit
+        </button>
+      : <>
+          <button type="button" onClick={onCancel} className="px-3 py-1.5 text-[12px] text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all font-medium">Cancel</button>
+          <button type="button" onClick={onSave} disabled={saving}
+            className="flex items-center gap-1.5 px-4 py-1.5 bg-[#2563EB] text-white text-[12px] font-bold rounded-lg hover:bg-blue-700 transition-all disabled:opacity-50">
+            {saving ? <><Loader2 size={12} className="animate-spin" /> Saving…</> : <><CheckCircle size={12} /> Save</>}
+          </button>
+        </>}
+  </div>
+);
 
-  const profile = user?.profile || {};
+// ═══════════════════════════════════════════════════════════════════
+// SIDEBAR CARDS
+// ═══════════════════════════════════════════════════════════════════
+const SyllabrixIdCard = ({ user }) => {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(user.syllabrix_id || '');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Shield size={14} className="text-[#2563EB]" />
+        <span className="font-bold text-[14px] text-gray-900">Syllabrix ID</span>
+      </div>
+      <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-xl px-3 py-2.5">
+        <div className="flex items-center gap-2">
+          <Lock size={11} className="text-blue-400 shrink-0" />
+          <span className="font-bold text-[13px] text-blue-700 tracking-wider">{user.syllabrix_id || '—'}</span>
+        </div>
+        <button type="button" onClick={copy} className="text-blue-500 hover:text-blue-700 transition-colors ml-2">
+          {copied ? <Check size={13} /> : <Copy size={13} />}
+        </button>
+      </div>
+      <p className="text-[11px] text-gray-400 mt-2 text-center">Your permanent unique identifier</p>
+    </div>
+  );
+};
 
-  // ─── Per-section save ────────────────────────────────────────────────────
-  const [saving, setSaving] = useState({});
-  const saveSection = useCallback(async (sectionKey, data) => {
-    setSaving(s => ({ ...s, [sectionKey]: true }));
+const AccountInfoCard = ({ user }) => {
+  const memberSince = user.created_at ? new Date(user.created_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : '—';
+  const cfg = getConfig(user.user_type);
+  const TypeIcon = cfg.icon;
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
+      <div className="flex items-center gap-2 mb-3">
+        <AtSign size={14} className="text-[#2563EB]" />
+        <span className="font-bold text-[14px] text-gray-900">Account</span>
+      </div>
+      <div className="space-y-2.5">
+        <div className="flex items-center justify-between">
+          <span className="text-[12px] text-gray-500">Account Type</span>
+          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${cfg.chip}`}>
+            <TypeIcon size={9} />{cfg.label}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[12px] text-gray-500">Email</span>
+          <div className="flex items-center gap-1">
+            {user.email_verified_at && <CheckCircle size={11} className="text-green-500" />}
+            <span className="text-[12px] text-gray-700 truncate max-w-[140px]">{user.email}</span>
+          </div>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[12px] text-gray-500">Member Since</span>
+          <span className="text-[12px] font-semibold text-gray-700">{memberSince}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[12px] text-gray-500">Status</span>
+          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-green-600">
+            <div className="w-1.5 h-1.5 rounded-full bg-green-500" />Active
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ResumeCard = ({ resumeUrl, onUploaded }) => {
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef(null);
+  const handleFile = async (e) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error('PDF must be under 5MB'); return; }
+    if (file.type !== 'application/pdf') { toast.error('Only PDF files'); return; }
+    setUploading(true);
     try {
-      await authAPI.updateProfile(data);
-      await refreshUser();
-      toast.success('Saved!');
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Save failed');
-    } finally {
-      setSaving(s => ({ ...s, [sectionKey]: false }));
-    }
-  }, [refreshUser]);
-
-  // ─── Photo upload ────────────────────────────────────────────────────────
-  const handlePhotoUpload = async (e) => {
-    const file = e.target.files?.[0]; if (!file) return;
-    setPhotoUploading(true);
-    try { await uploadAPI.profilePhoto(file); await refreshUser(); toast.success('Photo updated!'); }
-    catch { toast.error('Photo upload failed'); }
-    finally { setPhotoUploading(false); if (photoInputRef.current) photoInputRef.current.value = ''; }
+      const res = await uploadAPI.resume(file);
+      onUploaded(res.data?.data?.url);
+      toast.success('Resume uploaded!');
+    } catch (err) { toast.error(err.response?.data?.message || 'Upload failed'); }
+    finally { setUploading(false); if (inputRef.current) inputRef.current.value = ''; }
   };
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
+      <div className="flex items-center gap-2 mb-3">
+        <FileText size={14} className="text-[#2563EB]" />
+        <span className="font-bold text-[14px] text-gray-900">Resume</span>
+      </div>
+      {resumeUrl ? (
+        <div className="flex items-center gap-2 p-2.5 bg-green-50 border border-green-200 rounded-xl mb-3">
+          <CheckCircle size={13} className="text-green-600 shrink-0" />
+          <span className="text-[12px] text-green-700 flex-1 font-medium">Resume on file</span>
+          <a href={resumeUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-[11px] text-blue-600 hover:underline font-semibold">
+            View <ExternalLink size={10} />
+          </a>
+        </div>
+      ) : (
+        <p className="text-[12px] text-gray-400 italic mb-3">No resume uploaded yet.</p>
+      )}
+      <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading}
+        className="flex items-center justify-center gap-2 w-full py-2 border-2 border-dashed border-blue-200 rounded-xl text-[12px] text-blue-600 font-semibold hover:bg-blue-50 transition-all disabled:opacity-50">
+        {uploading ? <><Loader2 size={13} className="animate-spin" />Uploading…</> : <><Upload size={13} />{resumeUrl ? 'Replace PDF' : 'Upload PDF (max 5MB)'}</>}
+      </button>
+      <input ref={inputRef} type="file" accept=".pdf" className="hidden" onChange={handleFile} />
+    </div>
+  );
+};
 
-  const handleCoverUpload = async (e) => {
-    const file = e.target.files?.[0]; if (!file) return;
-    setCoverUploading(true);
-    try { await uploadAPI.coverPhoto(file); await refreshUser(); toast.success('Cover updated!'); }
-    catch { toast.error('Cover upload failed'); }
-    finally { setCoverUploading(false); if (coverInputRef.current) coverInputRef.current.value = ''; }
+const SkillsCard = ({ tags, label = 'Skills' }) => (
+  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
+    <div className="flex items-center gap-2 mb-3">
+      <Star size={14} className="text-[#2563EB]" />
+      <span className="font-bold text-[14px] text-gray-900">{label}</span>
+    </div>
+    <TagsView tags={tags} />
+  </div>
+);
+
+const LinkCard = ({ href, label, icon: Icon = LinkIcon }) => {
+  if (!href) return null;
+  const display = href.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
+  return (
+    <a href={href.startsWith('http') ? href : `https://${href}`} target="_blank" rel="noreferrer"
+      className="flex items-center gap-3 bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-3.5 hover:bg-gray-50 transition-colors group">
+      <Icon size={15} className="text-[#2563EB] shrink-0" />
+      <div className="flex-1 min-w-0">
+        <p className="text-[11px] text-gray-400 uppercase tracking-wider font-bold">{label}</p>
+        <p className="text-[13px] text-gray-700 font-semibold truncate group-hover:text-blue-600 transition-colors">{display}</p>
+      </div>
+      <ExternalLink size={12} className="text-gray-300 group-hover:text-blue-400 transition-colors" />
+    </a>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// QUICK STATS BAR
+// ═══════════════════════════════════════════════════════════════════
+const QuickStatsBar = ({ user }) => {
+  const p = user?.profile || {};
+  const memberSince = user?.created_at ? new Date(user.created_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }) : '—';
+
+  const statsMap = {
+    student: [
+      { label: 'Class', value: p.class_name || '—' },
+      { label: 'Board', value: p.board || '—' },
+      { label: 'School', value: p.school_name || p.college_name || '—' },
+      { label: 'Member Since', value: memberSince },
+    ],
+    teacher: [
+      { label: 'Experience', value: p.experience_years ? `${p.experience_years} yrs` : '—' },
+      { label: 'Specialization', value: p.subject_primary || '—' },
+      { label: 'Institution', value: p.institute_name || '—' },
+      { label: 'Member Since', value: memberSince },
+    ],
+    professional_learner: [
+      { label: 'Company', value: p.current_company || '—' },
+      { label: 'Designation', value: p.designation || '—' },
+      { label: 'Experience', value: p.experience_years ? `${p.experience_years} yrs` : '—' },
+      { label: 'Industry', value: p.industry || '—' },
+    ],
+    institute: [
+      { label: 'Type', value: p.institute_type ? p.institute_type.charAt(0).toUpperCase() + p.institute_type.slice(1) : '—' },
+      { label: 'Board', value: (parseJson(p.boards_offered, []))[0] || '—' },
+      { label: 'Est. Year', value: p.established_year || '—' },
+      { label: 'Students', value: p.student_count ? p.student_count.toLocaleString() : '—' },
+    ],
+    organization: [
+      { label: 'Industry', value: p.industry || '—' },
+      { label: 'Size', value: p.company_size || '—' },
+      { label: 'Founded', value: p.founded_year || '—' },
+      { label: 'Member Since', value: memberSince },
+    ],
+    parent: [
+      { label: 'Relationship', value: p.relationship || '—' },
+      { label: 'Occupation', value: p.occupation || '—' },
+      { label: 'Member Since', value: memberSince },
+    ],
   };
-
-  if (!user) return null;
-  const type = user.user_type;
+  const stats = statsMap[user?.user_type] || statsMap.student;
 
   return (
-    <div className="min-h-screen bg-[#F0F2F5]">
-      {/* ─── Cover + Photo header ─────────────────────────────────────── */}
-      <div className="relative mb-16">
-        {/* Cover photo */}
-        <div className="h-44 bg-gradient-to-r from-blue-600 to-indigo-700 relative overflow-hidden">
-          {user.cover_photo_url && (
-            <img src={user.cover_photo_url} alt="Cover" className="w-full h-full object-cover" />
-          )}
-          <button type="button" onClick={() => !coverUploading && coverInputRef.current?.click()}
-            className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 bg-black/40 text-white rounded-lg text-[12px] font-medium hover:bg-black/60 transition-all backdrop-blur-sm">
-            {coverUploading ? <Loader2 size={13} className="animate-spin" /> : <Camera size={13} />}
-            {coverUploading ? 'Uploading…' : 'Edit Cover'}
-          </button>
-          <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
-        </div>
-
-        {/* Profile photo + name bar */}
-        <div className="absolute -bottom-12 left-0 right-0 px-4 md:px-8 flex items-end gap-4">
-          <div className="relative shrink-0">
-            <div className="w-24 h-24 rounded-full border-4 border-white bg-gray-200 overflow-hidden shadow-md">
-              {user.profile_photo_url
-                ? <img src={user.profile_photo_url} alt="Profile" className="w-full h-full object-cover" />
-                : <div className="w-full h-full flex items-center justify-center bg-blue-100 text-blue-600 text-3xl font-bold">
-                    {(user.full_name || user.username || '?')[0].toUpperCase()}
-                  </div>
-              }
-            </div>
-            <button type="button" onClick={() => !photoUploading && photoInputRef.current?.click()}
-              className="absolute bottom-0 right-0 w-7 h-7 bg-blue-600 rounded-full border-2 border-white flex items-center justify-center hover:bg-blue-700 transition-all shadow">
-              {photoUploading ? <Loader2 size={12} className="text-white animate-spin" /> : <Camera size={12} className="text-white" />}
-            </button>
-            <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-6 py-3 mb-5 overflow-x-auto">
+      <div className="flex items-stretch divide-x divide-gray-200 min-w-max">
+        {stats.map((s, i) => (
+          <div key={i} className="px-5 first:pl-0 last:pr-0">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">{s.label}</p>
+            <p className="text-[14px] font-bold text-gray-800 whitespace-nowrap">{s.value}</p>
           </div>
-          <div className="pb-1 flex-1 min-w-0">
-            <h1 className="text-[17px] font-extrabold text-gray-900 truncate">
-              {user.full_name || user.username}
-            </h1>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// SECTION BUILDER — reusable hook-like function
+// ═══════════════════════════════════════════════════════════════════
+function useSection(init) {
+  const [edit, setEdit] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const isEditing = edit !== null;
+  const start = () => setEdit(typeof init === 'function' ? init() : { ...init });
+  const cancel = () => setEdit(null);
+  return { edit, setEdit, saving, setSaving, isEditing, start, cancel };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// STUDENT SECTIONS
+// ═══════════════════════════════════════════════════════════════════
+function StudentSections({ user, saveSection }) {
+  const p = user?.profile || {};
+
+  // Basic Info
+  const bi = useSection(() => ({ phone: user?.phone||'', gender: user?.gender||'', city: user?.city||'', state: user?.state||'' }));
+  // Academic
+  const ac = useSection(() => ({ school_name: p.school_name||'', class_name: p.class_name||'', board: p.board||'', college_name: p.college_name||'', subject_stream: p.subject_stream||'' }));
+  // Career & Goals
+  const cg = useSection(() => ({ career_interest: p.career_interest||p.ambition||'', learning_goals: parseJson(p.learning_goals, []), future_vision: p.future_vision||'' }));
+  // About
+  const ab = useSection(() => ({ bio: user?.bio||'' }));
+
+  const save = async (section, data) => {
+    section.setSaving(true);
+    try { await saveSection(data); section.cancel(); }
+    finally { section.setSaving(false); }
+  };
+
+  return (<>
+    <SectionCard title="Basic Info" icon={User} defaultOpen>
+      <EditRow editing={bi.isEditing} onEdit={bi.start} onCancel={bi.cancel} onSave={() => save(bi, bi.edit)} saving={bi.saving} />
+      {!bi.isEditing ? (
+        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+          <VF label="Full Name" value={user?.full_name} locked />
+          <VF label="Date of Birth" value={user?.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString('en-IN') : ''} locked />
+          <VF label="Phone" value={user?.phone} placeholder="Not provided" />
+          <VF label="Gender" value={user?.gender} />
+          <VF label="City" value={user?.city} />
+          <VF label="State" value={user?.state} />
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <TI label="Full Name" value={user?.full_name} locked />
+          <TI label="Date of Birth" value={user?.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString('en-IN') : ''} locked />
+          <TI label="Phone" value={bi.edit.phone} onChange={v => bi.setEdit(e => ({...e, phone: v}))} placeholder="+91 XXXXX XXXXX" />
+          <SI label="Gender" value={bi.edit.gender} onChange={v => bi.setEdit(e => ({...e, gender: v}))} options={GENDERS} />
+          <TI label="City" value={bi.edit.city} onChange={v => bi.setEdit(e => ({...e, city: v}))} placeholder="Your city" />
+          <SI label="State" value={bi.edit.state} onChange={v => bi.setEdit(e => ({...e, state: v}))} options={STATES} />
+        </div>
+      )}
+    </SectionCard>
+
+    <SectionCard title="Academic Info" icon={GraduationCap}>
+      <EditRow editing={ac.isEditing} onEdit={ac.start} onCancel={ac.cancel} onSave={() => save(ac, ac.edit)} saving={ac.saving} />
+      {!ac.isEditing ? (
+        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+          <VF label="School / College" value={p.school_name || p.college_name} />
+          <VF label="Class / Year" value={p.class_name} />
+          <VF label="Board" value={p.board} />
+          <VF label="Stream" value={p.subject_stream} />
+          {p.education_level && <VF label="Education Type" value={p.education_level} />}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <TI label="School Name" value={ac.edit.school_name} onChange={v => ac.setEdit(e => ({...e, school_name: v}))} placeholder="Your school" />
+          <TI label="College / Institute" value={ac.edit.college_name} onChange={v => ac.setEdit(e => ({...e, college_name: v}))} placeholder="Your college" />
+          <SI label="Class / Grade" value={ac.edit.class_name} onChange={v => ac.setEdit(e => ({...e, class_name: v}))} options={CLASSES} />
+          <SI label="Board" value={ac.edit.board} onChange={v => ac.setEdit(e => ({...e, board: v}))} options={BOARDS} />
+          <div className="col-span-2">
+            <SI label="Subject Stream" value={ac.edit.subject_stream} onChange={v => ac.setEdit(e => ({...e, subject_stream: v}))} options={STREAMS} />
+          </div>
+        </div>
+      )}
+    </SectionCard>
+
+    <SectionCard title="Career & Goals" icon={Target}>
+      <EditRow editing={cg.isEditing} onEdit={cg.start} onCancel={cg.cancel} onSave={() => save(cg, cg.edit)} saving={cg.saving} />
+      {!cg.isEditing ? (
+        <div className="space-y-4">
+          <VF label="Career Interest" value={cg.edit ? cg.edit.career_interest : (p.career_interest || p.ambition)} placeholder="Not set" />
+          <div><p className={LBL}>Learning Goals</p><TagsView tags={parseJson(p.learning_goals, [])} /></div>
+          <VF label="I See My Future As…" value={p.future_vision} placeholder="Not set" />
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <TA label="Career Interest / Ambition" value={cg.edit.career_interest} onChange={v => cg.setEdit(e => ({...e, career_interest: v}))} placeholder="What career are you aiming for?" rows={2} />
+          <TagsEdit label="Learning Goals" tags={cg.edit.learning_goals} onChange={v => cg.setEdit(e => ({...e, learning_goals: v}))} placeholder="Add a goal…" />
+          <TA label="I See My Future As…" value={cg.edit.future_vision} onChange={v => cg.setEdit(e => ({...e, future_vision: v}))} placeholder="Describe your dream" rows={2} />
+        </div>
+      )}
+    </SectionCard>
+
+    <SectionCard title="About Me" icon={BookOpen}>
+      <EditRow editing={ab.isEditing} onEdit={ab.start} onCancel={ab.cancel} onSave={() => save(ab, ab.edit)} saving={ab.saving} />
+      {!ab.isEditing
+        ? <p className="text-[14px] text-gray-700 leading-relaxed">{user?.bio || <span className="text-gray-400 italic">Add a bio to introduce yourself</span>}</p>
+        : <TA label="Bio" value={ab.edit.bio} onChange={v => ab.setEdit(e => ({...e, bio: v}))} placeholder="Tell others about yourself…" rows={4} />}
+    </SectionCard>
+  </>);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TEACHER SECTIONS
+// ═══════════════════════════════════════════════════════════════════
+function TeacherSections({ user, saveSection }) {
+  const p = user?.profile || {};
+
+  const bi = useSection(() => ({ phone: user?.phone||'', gender: user?.gender||'', city: user?.city||'', state: user?.state||'' }));
+  const pr = useSection(() => ({
+    subject_primary: p.subject_primary||'', experience_years: p.experience_years||'',
+    institute_name: p.institute_name||'', designation: p.designation||'',
+    qualifications: parseJson(p.qualifications, []), teacher_type: p.teacher_type||'freelancer'
+  }));
+  const td = useSection(() => ({
+    has_own_business: p.has_own_business||false, business_name: p.business_name||'', teaching_mode: p.teaching_mode||''
+  }));
+  const ab = useSection(() => ({ bio: user?.bio||'' }));
+
+  const save = async (section, data) => {
+    section.setSaving(true);
+    try { await saveSection(data); section.cancel(); }
+    finally { section.setSaving(false); }
+  };
+
+  return (<>
+    <SectionCard title="Basic Info" icon={User} defaultOpen>
+      <EditRow editing={bi.isEditing} onEdit={bi.start} onCancel={bi.cancel} onSave={() => save(bi, bi.edit)} saving={bi.saving} />
+      {!bi.isEditing ? (
+        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+          <VF label="Full Name" value={user?.full_name} locked />
+          <VF label="Phone" value={user?.phone} />
+          <VF label="Gender" value={user?.gender} />
+          <VF label="City" value={user?.city} />
+          <VF label="State" value={user?.state} />
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="col-span-2"><TI label="Full Name" value={user?.full_name} locked /></div>
+          <TI label="Phone" value={bi.edit.phone} onChange={v => bi.setEdit(e => ({...e, phone: v}))} placeholder="+91 XXXXX XXXXX" />
+          <SI label="Gender" value={bi.edit.gender} onChange={v => bi.setEdit(e => ({...e, gender: v}))} options={GENDERS} />
+          <TI label="City" value={bi.edit.city} onChange={v => bi.setEdit(e => ({...e, city: v}))} placeholder="City" />
+          <SI label="State" value={bi.edit.state} onChange={v => bi.setEdit(e => ({...e, state: v}))} options={STATES} />
+        </div>
+      )}
+    </SectionCard>
+
+    <SectionCard title="Professional Info" icon={Briefcase}>
+      <EditRow editing={pr.isEditing} onEdit={pr.start} onCancel={pr.cancel} onSave={() => save(pr, pr.edit)} saving={pr.saving} />
+      {!pr.isEditing ? (
+        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+          <VF label="Subject Specialization" value={p.subject_primary} />
+          <VF label="Experience" value={p.experience_years ? `${p.experience_years} years` : ''} />
+          <VF label="Current Institution" value={p.institute_name} />
+          <VF label="Designation" value={p.designation} />
+          <VF label="Type" value={p.teacher_type?.replace('_', ' ')} />
+          <div className="col-span-2"><p className={LBL}>Qualifications</p><TagsView tags={parseJson(p.qualifications, [])} /></div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <TI label="Subject Specialization" value={pr.edit.subject_primary} onChange={v => pr.setEdit(e => ({...e, subject_primary: v}))} placeholder="e.g. Mathematics" />
+            <TI label="Years of Experience" value={String(pr.edit.experience_years||'')} onChange={v => pr.setEdit(e => ({...e, experience_years: v}))} type="number" placeholder="e.g. 8" />
+            <TI label="Current Institution" value={pr.edit.institute_name} onChange={v => pr.setEdit(e => ({...e, institute_name: v}))} placeholder="School / College / Academy" />
+            <TI label="Designation" value={pr.edit.designation} onChange={v => pr.setEdit(e => ({...e, designation: v}))} placeholder="e.g. Senior Teacher" />
+          </div>
+          <Fld label="Teacher Type">
+            <div className="flex gap-2">
+              {TEACHER_TYPES.map(t => (
+                <button key={t} type="button" onClick={() => pr.setEdit(e => ({...e, teacher_type: t}))}
+                  className={`flex-1 py-2 rounded-xl text-[12px] font-semibold border-2 transition-all capitalize ${pr.edit.teacher_type === t ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+                  {t.replace(/_/g, ' ')}
+                </button>
+              ))}
+            </div>
+          </Fld>
+          <TagsEdit label="Qualifications" tags={pr.edit.qualifications} onChange={v => pr.setEdit(e => ({...e, qualifications: v}))} placeholder="e.g. M.Sc, B.Ed…" />
+        </div>
+      )}
+    </SectionCard>
+
+    <SectionCard title="Teaching Details" icon={Award}>
+      <EditRow editing={td.isEditing} onEdit={td.start} onCancel={td.cancel} onSave={() => save(td, td.edit)} saving={td.saving} />
+      {!td.isEditing ? (
+        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+          <VF label="Runs Own Business" value={p.has_own_business ? 'Yes' : (p.has_own_business === false ? 'No' : undefined)} />
+          <VF label="Business Name" value={p.business_name} />
+          <VF label="Teaching Mode" value={p.teaching_mode} />
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <Fld label="Runs Own Teaching Business">
+            <div className="flex gap-3">
+              {['Yes','No'].map(v => (
+                <button key={v} type="button" onClick={() => td.setEdit(e => ({...e, has_own_business: v === 'Yes'}))}
+                  className={`flex-1 py-2 rounded-xl text-[12px] font-semibold border-2 transition-all ${(td.edit.has_own_business ? 'Yes' : 'No') === v ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-500'}`}>
+                  {v}
+                </button>
+              ))}
+            </div>
+          </Fld>
+          <TI label="Business Name (if any)" value={td.edit.business_name} onChange={v => td.setEdit(e => ({...e, business_name: v}))} placeholder="Your academy / tuition center" />
+          <SI label="Teaching Mode" value={td.edit.teaching_mode} onChange={v => td.setEdit(e => ({...e, teaching_mode: v}))}
+            options={['Online Only','Offline Only','Both Online & Offline']} />
+        </div>
+      )}
+    </SectionCard>
+
+    <SectionCard title="About" icon={BookOpen}>
+      <EditRow editing={ab.isEditing} onEdit={ab.start} onCancel={ab.cancel} onSave={() => save(ab, ab.edit)} saving={ab.saving} />
+      {!ab.isEditing
+        ? <p className="text-[14px] text-gray-700 leading-relaxed">{user?.bio || <span className="text-gray-400 italic">Add a bio about your teaching experience and approach</span>}</p>
+        : <TA label="Bio" value={ab.edit.bio} onChange={v => ab.setEdit(e => ({...e, bio: v}))} placeholder="Tell students about your teaching style…" rows={4} />}
+    </SectionCard>
+  </>);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PROFESSIONAL LEARNER SECTIONS
+// ═══════════════════════════════════════════════════════════════════
+function ProfessionalSections({ user, saveSection }) {
+  const p = user?.profile || {};
+
+  const bi = useSection(() => ({ phone: user?.phone||'', gender: user?.gender||'', city: user?.city||'', state: user?.state||'' }));
+  const wi = useSection(() => ({
+    current_company: p.current_company||'', designation: p.designation||'',
+    experience_years: p.experience_years||'', industry: p.industry||'',
+    education_level: p.education_level||'', company_size: p.company_size||''
+  }));
+  const sk = useSection(() => ({ skills: parseJson(p.skills, []) }));
+  const le = useSection(() => ({
+    learning_goals: parseJson(p.learning_goals, []),
+    linkedin_url: p.linkedin_url||'', how_use_platform: p.how_use_platform||''
+  }));
+  const ab = useSection(() => ({ bio: user?.bio||'' }));
+
+  const save = async (section, data) => {
+    section.setSaving(true);
+    try { await saveSection(data); section.cancel(); }
+    finally { section.setSaving(false); }
+  };
+
+  return (<>
+    <SectionCard title="Basic Info" icon={User} defaultOpen>
+      <EditRow editing={bi.isEditing} onEdit={bi.start} onCancel={bi.cancel} onSave={() => save(bi, bi.edit)} saving={bi.saving} />
+      {!bi.isEditing ? (
+        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+          <VF label="Full Name" value={user?.full_name} locked />
+          <VF label="Phone" value={user?.phone} />
+          <VF label="Gender" value={user?.gender} />
+          <VF label="City" value={user?.city} />
+          <VF label="State" value={user?.state} />
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="col-span-2"><TI label="Full Name" value={user?.full_name} locked /></div>
+          <TI label="Phone" value={bi.edit.phone} onChange={v => bi.setEdit(e => ({...e, phone: v}))} placeholder="+91 XXXXX XXXXX" />
+          <SI label="Gender" value={bi.edit.gender} onChange={v => bi.setEdit(e => ({...e, gender: v}))} options={GENDERS} />
+          <TI label="City" value={bi.edit.city} onChange={v => bi.setEdit(e => ({...e, city: v}))} placeholder="Your city" />
+          <SI label="State" value={bi.edit.state} onChange={v => bi.setEdit(e => ({...e, state: v}))} options={STATES} />
+        </div>
+      )}
+    </SectionCard>
+
+    <SectionCard title="Work Info" icon={Briefcase}>
+      <EditRow editing={wi.isEditing} onEdit={wi.start} onCancel={wi.cancel} onSave={() => save(wi, wi.edit)} saving={wi.saving} />
+      {!wi.isEditing ? (
+        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+          <VF label="Current Company" value={p.current_company} />
+          <VF label="Designation" value={p.designation} />
+          <VF label="Experience" value={p.experience_years ? `${p.experience_years} yrs` : ''} />
+          <VF label="Industry" value={p.industry} />
+          <VF label="Education Level" value={p.education_level} />
+          <VF label="Company Size" value={p.company_size} />
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <TI label="Current Company" value={wi.edit.current_company} onChange={v => wi.setEdit(e => ({...e, current_company: v}))} placeholder="Where do you work?" />
+          <TI label="Designation / Role" value={wi.edit.designation} onChange={v => wi.setEdit(e => ({...e, designation: v}))} placeholder="e.g. Product Manager" />
+          <TI label="Years of Experience" value={String(wi.edit.experience_years||'')} onChange={v => wi.setEdit(e => ({...e, experience_years: v}))} type="number" />
+          <SI label="Industry" value={wi.edit.industry} onChange={v => wi.setEdit(e => ({...e, industry: v}))} options={INDUSTRIES} />
+          <SI label="Highest Education" value={wi.edit.education_level} onChange={v => wi.setEdit(e => ({...e, education_level: v}))} options={EDU_LEVELS} />
+        </div>
+      )}
+    </SectionCard>
+
+    <SectionCard title="Skills" icon={Star}>
+      <EditRow editing={sk.isEditing} onEdit={sk.start} onCancel={sk.cancel} onSave={() => save(sk, sk.edit)} saving={sk.saving} />
+      {!sk.isEditing
+        ? <TagsView tags={parseJson(p.skills, [])} />
+        : <TagsEdit label="Skills" tags={sk.edit.skills} onChange={v => sk.setEdit(e => ({...e, skills: v}))} placeholder="Add a skill (press Enter)…" />}
+    </SectionCard>
+
+    <SectionCard title="Learning & Links" icon={Target}>
+      <EditRow editing={le.isEditing} onEdit={le.start} onCancel={le.cancel} onSave={() => save(le, le.edit)} saving={le.saving} />
+      {!le.isEditing ? (
+        <div className="space-y-4">
+          <div><p className={LBL}>Learning Goals</p><TagsView tags={parseJson(p.learning_goals, [])} /></div>
+          <VF label="LinkedIn URL" value={p.linkedin_url} placeholder="Not provided" />
+          <VF label="How I Use This Platform" value={p.how_use_platform} />
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <TagsEdit label="Learning Goals" tags={le.edit.learning_goals} onChange={v => le.setEdit(e => ({...e, learning_goals: v}))} placeholder="Add a goal…" />
+          <TI label="LinkedIn URL" value={le.edit.linkedin_url} onChange={v => le.setEdit(e => ({...e, linkedin_url: v}))} placeholder="https://linkedin.com/in/…" />
+          <TA label="How I Use This Platform" value={le.edit.how_use_platform} onChange={v => le.setEdit(e => ({...e, how_use_platform: v}))} placeholder="What are you here to learn or achieve?" rows={2} />
+        </div>
+      )}
+    </SectionCard>
+
+    <SectionCard title="About" icon={BookOpen}>
+      <EditRow editing={ab.isEditing} onEdit={ab.start} onCancel={ab.cancel} onSave={() => save(ab, ab.edit)} saving={ab.saving} />
+      {!ab.isEditing
+        ? <p className="text-[14px] text-gray-700 leading-relaxed">{user?.bio || <span className="text-gray-400 italic">Add a professional summary</span>}</p>
+        : <TA label="Bio / Professional Summary" value={ab.edit.bio} onChange={v => ab.setEdit(e => ({...e, bio: v}))} placeholder="Summarize your career and what you're working toward…" rows={4} />}
+    </SectionCard>
+  </>);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// INSTITUTE SECTIONS
+// ═══════════════════════════════════════════════════════════════════
+function InstituteSections({ user, saveSection }) {
+  const p = user?.profile || {};
+
+  const bi = useSection(() => ({
+    name: p.name||'', phone: user?.phone||'',
+    city: p.city||user?.city||'', state: p.state||user?.state||'', website: p.website||''
+  }));
+  const de = useSection(() => ({
+    institute_type: p.institute_type||'',
+    boards_offered: parseJson(p.boards_offered, []),
+    established_year: p.established_year||'',
+    student_count: p.student_count||'', teacher_count: p.teacher_count||'',
+    udise_code: p.udise_code||'', registration_number: p.registration_number||''
+  }));
+  const ph = useSection(() => ({
+    platform_handler_name: p.platform_handler_name||'',
+    platform_handler_email: p.platform_handler_email||''
+  }));
+  const ab = useSection(() => ({ about: p.about||'' }));
+
+  const save = async (section, data) => {
+    section.setSaving(true);
+    try { await saveSection(data); section.cancel(); }
+    finally { section.setSaving(false); }
+  };
+
+  return (<>
+    <SectionCard title="Basic Info" icon={Building2} defaultOpen>
+      <EditRow editing={bi.isEditing} onEdit={bi.start} onCancel={bi.cancel} onSave={() => save(bi, { phone: bi.edit.phone, name: bi.edit.name, city: bi.edit.city, state: bi.edit.state, website: bi.edit.website })} saving={bi.saving} />
+      {!bi.isEditing ? (
+        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+          <VF label="Institute Name" value={p.name} />
+          <VF label="Contact Phone" value={user?.phone} />
+          <VF label="City" value={p.city || user?.city} />
+          <VF label="State" value={p.state || user?.state} />
+          <VF label="Website" value={p.website} placeholder="Not provided" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="col-span-2"><TI label="Institute Name" value={bi.edit.name} onChange={v => bi.setEdit(e => ({...e, name: v}))} placeholder="Official name" /></div>
+          <TI label="Contact Phone" value={bi.edit.phone} onChange={v => bi.setEdit(e => ({...e, phone: v}))} placeholder="+91 XXXXX XXXXX" />
+          <TI label="Website" value={bi.edit.website} onChange={v => bi.setEdit(e => ({...e, website: v}))} placeholder="https://…" />
+          <TI label="City" value={bi.edit.city} onChange={v => bi.setEdit(e => ({...e, city: v}))} placeholder="City" />
+          <SI label="State" value={bi.edit.state} onChange={v => bi.setEdit(e => ({...e, state: v}))} options={STATES} />
+        </div>
+      )}
+    </SectionCard>
+
+    <SectionCard title="Institute Details" icon={Award}>
+      <EditRow editing={de.isEditing} onEdit={de.start} onCancel={de.cancel} onSave={() => save(de, de.edit)} saving={de.saving} />
+      {!de.isEditing ? (
+        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+          <VF label="Institute Type" value={p.institute_type} />
+          <VF label="Est. Year" value={p.established_year} />
+          <VF label="Total Students" value={p.student_count} />
+          <VF label="Total Teachers" value={p.teacher_count} />
+          <VF label="UDISE Code" value={p.udise_code} />
+          <VF label="Registration No." value={p.registration_number} />
+          <div className="col-span-2"><p className={LBL}>Boards / Syllabi</p><TagsView tags={parseJson(p.boards_offered, [])} /></div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <SI label="Institute Type" value={de.edit.institute_type} onChange={v => de.setEdit(e => ({...e, institute_type: v}))} options={INST_TYPES} />
+            <TI label="Est. Year" value={String(de.edit.established_year||'')} onChange={v => de.setEdit(e => ({...e, established_year: v}))} type="number" placeholder="e.g. 1995" />
+            <TI label="Total Students" value={String(de.edit.student_count||'')} onChange={v => de.setEdit(e => ({...e, student_count: v}))} type="number" />
+            <TI label="Total Teachers" value={String(de.edit.teacher_count||'')} onChange={v => de.setEdit(e => ({...e, teacher_count: v}))} type="number" />
+            <TI label="UDISE Code" value={de.edit.udise_code} onChange={v => de.setEdit(e => ({...e, udise_code: v}))} placeholder="Optional" />
+            <TI label="Registration No." value={de.edit.registration_number} onChange={v => de.setEdit(e => ({...e, registration_number: v}))} placeholder="Optional" />
+          </div>
+          <TagsEdit label="Boards / Syllabi Offered" tags={de.edit.boards_offered} onChange={v => de.setEdit(e => ({...e, boards_offered: v}))} placeholder="Add board (e.g. CBSE)…" />
+        </div>
+      )}
+    </SectionCard>
+
+    <SectionCard title="Platform Handler" icon={User}>
+      <EditRow editing={ph.isEditing} onEdit={ph.start} onCancel={ph.cancel} onSave={() => save(ph, ph.edit)} saving={ph.saving} />
+      {!ph.isEditing ? (
+        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+          <VF label="Handler Name" value={p.platform_handler_name} />
+          <VF label="Handler Email" value={p.platform_handler_email} />
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <TI label="Handler Name" value={ph.edit.platform_handler_name} onChange={v => ph.setEdit(e => ({...e, platform_handler_name: v}))} placeholder="Who manages this account?" />
+          <TI label="Handler Email" value={ph.edit.platform_handler_email} onChange={v => ph.setEdit(e => ({...e, platform_handler_email: v}))} placeholder="handler@institute.edu" type="email" />
+        </div>
+      )}
+    </SectionCard>
+
+    <SectionCard title="About" icon={BookOpen}>
+      <EditRow editing={ab.isEditing} onEdit={ab.start} onCancel={ab.cancel} onSave={() => save(ab, ab.edit)} saving={ab.saving} />
+      {!ab.isEditing
+        ? <p className="text-[14px] text-gray-700 leading-relaxed">{p.about || <span className="text-gray-400 italic">Add a description of your institute, its mission and achievements</span>}</p>
+        : <TA label="About the Institute" value={ab.edit.about} onChange={v => ab.setEdit(e => ({...e, about: v}))} placeholder="Your institute's mission, achievements, culture…" rows={4} />}
+    </SectionCard>
+  </>);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ORGANIZATION SECTIONS
+// ═══════════════════════════════════════════════════════════════════
+function OrganizationSections({ user, saveSection }) {
+  const p = user?.profile || {};
+
+  const bi = useSection(() => ({ phone: user?.phone||'', city: user?.city||'', state: user?.state||'' }));
+  const ci = useSection(() => ({
+    official_company_name: p.official_company_name||'', brand_display_name: p.brand_display_name||'',
+    industry: p.industry||'', company_size: p.company_size||'',
+    founded_year: p.founded_year||'', website: p.website||'', linkedin_url: p.linkedin_url||''
+  }));
+  const ab = useSection(() => ({ about: p.about||'', how_use_platform: p.how_use_platform||'' }));
+
+  const save = async (section, data) => {
+    section.setSaving(true);
+    try { await saveSection(data); section.cancel(); }
+    finally { section.setSaving(false); }
+  };
+
+  return (<>
+    <SectionCard title="Admin Contact" icon={User} defaultOpen>
+      <EditRow editing={bi.isEditing} onEdit={bi.start} onCancel={bi.cancel} onSave={() => save(bi, bi.edit)} saving={bi.saving} />
+      {!bi.isEditing ? (
+        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+          <VF label="Admin Name" value={user?.full_name} locked />
+          <VF label="Phone" value={user?.phone} />
+          <VF label="City" value={user?.city} />
+          <VF label="State" value={user?.state} />
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="col-span-2"><TI label="Admin Name" value={user?.full_name} locked /></div>
+          <TI label="Phone" value={bi.edit.phone} onChange={v => bi.setEdit(e => ({...e, phone: v}))} placeholder="+91 XXXXX XXXXX" />
+          <div />
+          <TI label="City" value={bi.edit.city} onChange={v => bi.setEdit(e => ({...e, city: v}))} placeholder="HQ city" />
+          <SI label="State" value={bi.edit.state} onChange={v => bi.setEdit(e => ({...e, state: v}))} options={STATES} />
+        </div>
+      )}
+    </SectionCard>
+
+    <SectionCard title="Company Identity" icon={Building2}>
+      <EditRow editing={ci.isEditing} onEdit={ci.start} onCancel={ci.cancel} onSave={() => save(ci, ci.edit)} saving={ci.saving} />
+      {!ci.isEditing ? (
+        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+          <VF label="Legal Name" value={p.official_company_name} />
+          <VF label="Brand Name" value={p.brand_display_name} />
+          <VF label="Industry" value={p.industry} />
+          <VF label="Company Size" value={p.company_size} />
+          <VF label="Founded" value={p.founded_year} />
+          <VF label="Website" value={p.website} />
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <TI label="Legal Company Name" value={ci.edit.official_company_name} onChange={v => ci.setEdit(e => ({...e, official_company_name: v}))} placeholder="Registered name" />
+            <TI label="Brand / Display Name" value={ci.edit.brand_display_name} onChange={v => ci.setEdit(e => ({...e, brand_display_name: v}))} placeholder="Public name" />
+            <SI label="Industry" value={ci.edit.industry} onChange={v => ci.setEdit(e => ({...e, industry: v}))} options={ORG_INDUSTRIES} />
+            <SI label="Company Size" value={ci.edit.company_size} onChange={v => ci.setEdit(e => ({...e, company_size: v}))} options={ORG_SIZES} />
+            <TI label="Founded Year" value={String(ci.edit.founded_year||'')} onChange={v => ci.setEdit(e => ({...e, founded_year: v}))} type="number" placeholder="e.g. 2010" />
+            <TI label="Website" value={ci.edit.website} onChange={v => ci.setEdit(e => ({...e, website: v}))} placeholder="https://…" />
+          </div>
+          <TI label="LinkedIn URL" value={ci.edit.linkedin_url} onChange={v => ci.setEdit(e => ({...e, linkedin_url: v}))} placeholder="https://linkedin.com/company/…" />
+        </div>
+      )}
+    </SectionCard>
+
+    <SectionCard title="About" icon={BookOpen}>
+      <EditRow editing={ab.isEditing} onEdit={ab.start} onCancel={ab.cancel} onSave={() => save(ab, ab.edit)} saving={ab.saving} />
+      {!ab.isEditing ? (
+        <div className="space-y-4">
+          <p className="text-[14px] text-gray-700 leading-relaxed">{p.about || <span className="text-gray-400 italic">Add a company description</span>}</p>
+          {p.how_use_platform && <VF label="How We Use This Platform" value={p.how_use_platform} />}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <TA label="About the Company" value={ab.edit.about} onChange={v => ab.setEdit(e => ({...e, about: v}))} placeholder="What you do, your mission…" rows={4} />
+          <TA label="How We Use This Platform" value={ab.edit.how_use_platform} onChange={v => ab.setEdit(e => ({...e, how_use_platform: v}))} placeholder="e.g. Talent hiring, L&D programs…" rows={2} />
+        </div>
+      )}
+    </SectionCard>
+  </>);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PARENT SECTIONS
+// ═══════════════════════════════════════════════════════════════════
+function ParentSections({ user, saveSection }) {
+  const p = user?.profile || {};
+
+  const bi = useSection(() => ({ phone: user?.phone||'', gender: user?.gender||'', city: user?.city||'', state: user?.state||'' }));
+  const fd = useSection(() => ({ relationship: p.relationship||'', occupation: p.occupation||'', notification_email: p.notification_email||'' }));
+  const iv = useSection(() => ({ hobby_involvement: p.hobby_involvement||'', sports_involvement: p.sports_involvement||'' }));
+  const ab = useSection(() => ({ bio: user?.bio||'' }));
+
+  const save = async (section, data) => {
+    section.setSaving(true);
+    try { await saveSection(data); section.cancel(); }
+    finally { section.setSaving(false); }
+  };
+
+  return (<>
+    <SectionCard title="Basic Info" icon={User} defaultOpen>
+      <EditRow editing={bi.isEditing} onEdit={bi.start} onCancel={bi.cancel} onSave={() => save(bi, bi.edit)} saving={bi.saving} />
+      {!bi.isEditing ? (
+        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+          <VF label="Full Name" value={user?.full_name} locked />
+          <VF label="Phone" value={user?.phone} />
+          <VF label="Gender" value={user?.gender} />
+          <VF label="City" value={user?.city} />
+          <VF label="State" value={user?.state} />
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="col-span-2"><TI label="Full Name" value={user?.full_name} locked /></div>
+          <TI label="Phone" value={bi.edit.phone} onChange={v => bi.setEdit(e => ({...e, phone: v}))} placeholder="+91 XXXXX XXXXX" />
+          <SI label="Gender" value={bi.edit.gender} onChange={v => bi.setEdit(e => ({...e, gender: v}))} options={GENDERS} />
+          <TI label="City" value={bi.edit.city} onChange={v => bi.setEdit(e => ({...e, city: v}))} placeholder="City" />
+          <SI label="State" value={bi.edit.state} onChange={v => bi.setEdit(e => ({...e, state: v}))} options={STATES} />
+        </div>
+      )}
+    </SectionCard>
+
+    <SectionCard title="Family Details" icon={Users}>
+      <EditRow editing={fd.isEditing} onEdit={fd.start} onCancel={fd.cancel} onSave={() => save(fd, fd.edit)} saving={fd.saving} />
+      {!fd.isEditing ? (
+        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+          <VF label="Relationship" value={p.relationship} />
+          <VF label="Occupation" value={p.occupation} />
+          <VF label="Notification Email" value={p.notification_email} />
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <SI label="Relationship to Child" value={fd.edit.relationship} onChange={v => fd.setEdit(e => ({...e, relationship: v}))}
+            options={['Father','Mother','Guardian','Grandparent','Uncle/Aunt','Other']} />
+          <TI label="Occupation" value={fd.edit.occupation} onChange={v => fd.setEdit(e => ({...e, occupation: v}))} placeholder="e.g. Teacher, Engineer" />
+          <div className="col-span-2">
+            <TI label="Notification Email" value={fd.edit.notification_email} onChange={v => fd.setEdit(e => ({...e, notification_email: v}))} placeholder="For child activity reports" type="email" />
+          </div>
+        </div>
+      )}
+    </SectionCard>
+
+    <SectionCard title="Involvement" icon={Target}>
+      <EditRow editing={iv.isEditing} onEdit={iv.start} onCancel={iv.cancel} onSave={() => save(iv, iv.edit)} saving={iv.saving} />
+      {!iv.isEditing ? (
+        <div className="space-y-4">
+          <VF label="How I Support Hobbies" value={p.hobby_involvement} />
+          <VF label="How I Support Sports" value={p.sports_involvement} />
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <TA label="How You Support Child's Hobbies" value={iv.edit.hobby_involvement} onChange={v => iv.setEdit(e => ({...e, hobby_involvement: v}))} placeholder="e.g. Enrolled in art classes, attend recitals…" />
+          <TA label="How You Support Child's Sports" value={iv.edit.sports_involvement} onChange={v => iv.setEdit(e => ({...e, sports_involvement: v}))} placeholder="e.g. Attend matches, hired a coach…" />
+        </div>
+      )}
+    </SectionCard>
+
+    <SectionCard title="About" icon={BookOpen}>
+      <EditRow editing={ab.isEditing} onEdit={ab.start} onCancel={ab.cancel} onSave={() => save(ab, ab.edit)} saving={ab.saving} />
+      {!ab.isEditing
+        ? <p className="text-[14px] text-gray-700 leading-relaxed">{user?.bio || <span className="text-gray-400 italic">Tell us a bit about yourself</span>}</p>
+        : <TA label="About You" value={ab.edit.bio} onChange={v => ab.setEdit(e => ({...e, bio: v}))} placeholder="A brief introduction…" rows={4} />}
+    </SectionCard>
+  </>);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MAIN PAGE
+// ═══════════════════════════════════════════════════════════════════
+export default function MyProfilePage() {
+  const { user, refreshUser } = useAuth();
+  const coverRef  = useRef(null);
+  const photoRef  = useRef(null);
+  const [photoLoading, setPhotoLoading] = useState(false);
+  const [coverLoading, setCoverLoading] = useState(false);
+  const [resumeUrl, setResumeUrl] = useState('');
+
+  const saveSection = useCallback(async (data) => {
+    await authAPI.updateProfile(data);
+    await refreshUser();
+    toast.success('Saved!');
+  }, [refreshUser]);
+
+  const handlePhoto = async (e) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    setPhotoLoading(true);
+    try { await uploadAPI.profilePhoto(file); await refreshUser(); toast.success('Photo updated!'); }
+    catch { toast.error('Photo upload failed'); }
+    finally { setPhotoLoading(false); if (photoRef.current) photoRef.current.value = ''; }
+  };
+  const handleCover = async (e) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    setCoverLoading(true);
+    try { await uploadAPI.coverPhoto(file); await refreshUser(); toast.success('Cover updated!'); }
+    catch { toast.error('Cover upload failed'); }
+    finally { setCoverLoading(false); if (coverRef.current) coverRef.current.value = ''; }
+  };
+
+  if (!user) return <div className="flex items-center justify-center min-h-screen bg-[#F3F4F6]"><Loader2 className="animate-spin text-blue-600" size={28} /></div>;
+
+  const type   = user.user_type;
+  const p      = user?.profile || {};
+  const cfg    = getConfig(type);
+  const TypeIcon = cfg.icon;
+  const initials = (user.full_name || user.username || '?')[0].toUpperCase();
+  const location = [user.city || p.city, user.state || p.state].filter(Boolean).join(', ');
+  const currentResumeUrl = resumeUrl || p.resume_url || '';
+  const hasResume = !['institute','organization','parent'].includes(type);
+
+  return (
+    <div className="min-h-screen bg-[#F3F4F6]">
+
+      {/* ── 1. COVER BANNER ─────────────────────────────────────────── */}
+      <div className="relative h-[140px] md:h-[200px] group">
+        {user.cover_photo_url
+          ? <img src={user.cover_photo_url} alt="Cover" className="w-full h-full object-cover" />
+          : <div className={`w-full h-full bg-gradient-to-r ${cfg.cover}`} />}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+        <button type="button" onClick={() => !coverLoading && coverRef.current?.click()}
+          className="absolute bottom-3 right-4 flex items-center gap-1.5 px-3 py-1.5 bg-black/40 text-white text-[12px] font-semibold rounded-lg opacity-0 group-hover:opacity-100 transition-all hover:bg-black/60 backdrop-blur-sm">
+          {coverLoading ? <Loader2 size={12} className="animate-spin" /> : <Camera size={12} />}
+          {coverLoading ? 'Uploading…' : 'Change Cover'}
+        </button>
+        <input ref={coverRef} type="file" accept="image/*" className="hidden" onChange={handleCover} />
+      </div>
+
+      {/* ── 2. PROFILE IDENTITY CARD ─────────────────────────────────── */}
+      <div className="max-w-5xl mx-auto px-4 md:px-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm -mt-10 md:-mt-14 relative px-6 pt-3 pb-5 mb-4">
+
+          {/* Photo + Edit button row */}
+          <div className="flex items-start justify-between mb-1">
+            {/* Profile photo */}
+            <div className="relative -mt-10 md:-mt-14 group/photo">
+              <div className="w-20 h-20 md:w-24 md:h-24 rounded-full border-[3px] border-white shadow-md overflow-hidden bg-gray-100">
+                {user.profile_photo_url
+                  ? <img src={user.profile_photo_url} alt={user.full_name} className="w-full h-full object-cover" />
+                  : <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br ${cfg.cover} text-white text-3xl font-extrabold`}>{initials}</div>}
+              </div>
+              <button type="button" onClick={() => !photoLoading && photoRef.current?.click()}
+                className="absolute inset-0 rounded-full bg-black/0 group-hover/photo:bg-black/30 transition-colors flex items-center justify-center">
+                <Camera size={16} className="text-white opacity-0 group-hover/photo:opacity-100 transition-opacity" />
+                {photoLoading && <Loader2 size={16} className="text-white animate-spin absolute" />}
+              </button>
+              <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
+            </div>
+
+            {/* Edit Profile button (top right) */}
+            <a href="#basic-info"
+              className="flex items-center gap-1.5 px-4 py-2 border-2 border-[#2563EB] text-[#2563EB] text-[13px] font-bold rounded-xl hover:bg-blue-50 transition-all mt-2">
+              <Pencil size={13} /> Edit Profile
+            </a>
+          </div>
+
+          {/* Name + badges */}
+          <div className="mt-2">
+            <div className="flex flex-wrap items-center gap-2 mb-1">
+              <h1 className="text-[22px] font-extrabold text-gray-900 leading-tight">{user.full_name || user.username}</h1>
+              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${cfg.chip}`}>
+                <TypeIcon size={9} />{cfg.label}
+              </span>
+            </div>
             {user.syllabrix_id && (
-              <div className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-blue-50 border border-blue-200 rounded-full mt-0.5">
+              <div className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-blue-50 border border-blue-200 rounded-full mb-2">
                 <Lock size={9} className="text-blue-400" />
-                <span className="text-[10px] font-bold text-blue-700 tracking-wider">{user.syllabrix_id}</span>
+                <span className="text-[10px] font-bold text-blue-700 tracking-widest">{user.syllabrix_id}</span>
+              </div>
+            )}
+            {/* Bio / tagline */}
+            <p className="text-[13px] text-gray-500 italic">
+              {user.bio || p.about || 'Add a tagline…'}
+            </p>
+            {/* Location */}
+            {location && (
+              <div className="flex items-center gap-1 mt-1.5 text-[12px] text-gray-500">
+                <MapPin size={12} className="text-gray-400 shrink-0" />{location}
               </div>
             )}
           </div>
-          <Link href={`/profile/${user.id}`}
-            className="hidden md:flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-200 rounded-xl text-[13px] font-semibold text-gray-700 hover:bg-gray-50 shadow-sm transition-all shrink-0 mb-1">
-            <User size={13} /> View Public Profile
-          </Link>
         </div>
-      </div>
 
-      {/* ─── Sections ──────────────────────────────────────────────────── */}
-      <div className="max-w-2xl mx-auto px-4 md:px-6 pb-12 space-y-4">
+        {/* ── 3. QUICK STATS BAR ───────────────────────────────────── */}
+        <QuickStatsBar user={user} />
 
-        {/* ═══════ STUDENT ═══════ */}
-        {type === 'student' && <StudentSections user={user} profile={profile} saving={saving} saveSection={saveSection} />}
-        {type === 'student' && <ResumeSection currentUrl={resumeUrl || profile.resume_url} onUploaded={url => { setResumeUrl(url); refreshUser(); }} />}
+        {/* ── 4. TWO-COLUMN LAYOUT ─────────────────────────────────── */}
+        <div className="flex flex-col lg:flex-row gap-5 pb-12" id="basic-info">
 
-        {/* ═══════ TEACHER ═══════ */}
-        {type === 'teacher' && <TeacherSections user={user} profile={profile} saving={saving} saveSection={saveSection} />}
-        {type === 'teacher' && <ResumeSection currentUrl={resumeUrl || profile.resume_url} onUploaded={url => { setResumeUrl(url); refreshUser(); }} />}
+          {/* LEFT — section cards (65%) */}
+          <div className="flex-1 space-y-4 min-w-0">
+            {type === 'student'              && <StudentSections      user={user} saveSection={saveSection} />}
+            {type === 'teacher'              && <TeacherSections      user={user} saveSection={saveSection} />}
+            {type === 'professional_learner' && <ProfessionalSections user={user} saveSection={saveSection} />}
+            {type === 'institute'            && <InstituteSections    user={user} saveSection={saveSection} />}
+            {type === 'organization'         && <OrganizationSections user={user} saveSection={saveSection} />}
+            {type === 'parent'               && <ParentSections       user={user} saveSection={saveSection} />}
+          </div>
 
-        {/* ═══════ PROFESSIONAL LEARNER ═══════ */}
-        {type === 'professional_learner' && <ProfessionalSections user={user} profile={profile} saving={saving} saveSection={saveSection} />}
-        {type === 'professional_learner' && <ResumeSection currentUrl={resumeUrl || profile.resume_url} onUploaded={url => { setResumeUrl(url); refreshUser(); }} />}
+          {/* RIGHT — sidebar cards (35%) */}
+          <div className="lg:w-[320px] shrink-0 space-y-4">
+            {hasResume && (
+              <ResumeCard resumeUrl={currentResumeUrl} onUploaded={url => { setResumeUrl(url); refreshUser(); }} />
+            )}
 
-        {/* ═══════ INSTITUTE ═══════ */}
-        {type === 'institute' && <InstituteSections user={user} profile={profile} saving={saving} saveSection={saveSection} />}
+            {/* Skills / Goals sidebar tags */}
+            {type === 'student' && parseJson(p.hobby, []).length > 0 && (
+              <SkillsCard tags={parseJson(p.hobby, [])} label="Hobbies" />
+            )}
+            {type === 'teacher' && parseJson(p.qualifications, []).length > 0 && (
+              <SkillsCard tags={parseJson(p.qualifications, [])} label="Qualifications" />
+            )}
+            {type === 'professional_learner' && parseJson(p.skills, []).length > 0 && (
+              <SkillsCard tags={parseJson(p.skills, [])} label="Skills" />
+            )}
 
-        {/* ═══════ PARENT ═══════ */}
-        {type === 'parent' && <ParentSections user={user} profile={profile} saving={saving} saveSection={saveSection} />}
+            {/* LinkedIn / Website quick links */}
+            {type === 'professional_learner' && p.linkedin_url && (
+              <LinkCard href={p.linkedin_url} label="LinkedIn" icon={LinkIcon} />
+            )}
+            {type === 'organization' && p.website && (
+              <LinkCard href={p.website} label="Website" icon={ExternalLink} />
+            )}
+            {type === 'organization' && p.linkedin_url && (
+              <LinkCard href={p.linkedin_url} label="LinkedIn" icon={LinkIcon} />
+            )}
+            {type === 'institute' && p.website && (
+              <LinkCard href={p.website} label="Website" icon={ExternalLink} />
+            )}
 
-        {/* ═══════ ORGANIZATION ═══════ */}
-        {type === 'organization' && <OrganizationSections user={user} profile={profile} saving={saving} saveSection={saveSection} />}
+            <SyllabrixIdCard user={user} />
+            <AccountInfoCard user={user} />
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-// ═══════════════════════════════════════════════════════
-// STUDENT SECTIONS
-// ═══════════════════════════════════════════════════════
-function StudentSections({ user, profile, saving, saveSection }) {
-  const [basic, setBasic] = useState({
-    phone: user.phone || '',
-    gender: user.gender || '',
-    city: user.city || '',
-    state: user.state || '',
-  });
-  const [academic, setAcademic] = useState({
-    school_name: profile.school_name || '',
-    class_name: profile.class_name || '',
-    board: profile.board || '',
-    college_name: profile.college_name || '',
-    subject_stream: profile.subject_stream || '',
-  });
-  const [goals, setGoals] = useState({
-    ambition: profile.ambition || '',
-    future_vision: profile.future_vision || '',
-    hobby: parseJson(profile.hobby, []),
-  });
-
-  return (<>
-    <Section title="Basic Info" icon={User} defaultOpen>
-      <div className="grid grid-cols-2 gap-3">
-        <TxtInput label="Full Name" value={user.full_name} readOnly />
-        <TxtInput label="Date of Birth" value={user.date_of_birth ? user.date_of_birth.split('T')[0] : ''} readOnly />
-      </div>
-      <TxtInput label="Phone" value={basic.phone} onChange={v => setBasic(p => ({ ...p, phone: v }))} placeholder="+91 XXXXX XXXXX" />
-      <SelInput label="Gender" value={basic.gender} onChange={v => setBasic(p => ({ ...p, gender: v }))} options={GENDER_OPTS} />
-      <div className="grid grid-cols-2 gap-3">
-        <TxtInput label="City" value={basic.city} onChange={v => setBasic(p => ({ ...p, city: v }))} placeholder="Your city" />
-        <SelInput label="State" value={basic.state} onChange={v => setBasic(p => ({ ...p, state: v }))} options={STATES} />
-      </div>
-      <SaveBtn onClick={() => saveSection('basic', basic)} loading={saving.basic} />
-    </Section>
-
-    <Section title="Academic Info" icon={BookOpen}>
-      {(profile.education_level === 'school' || !profile.education_level) && (<>
-        <TxtInput label="School Name" value={academic.school_name} onChange={v => setAcademic(p => ({ ...p, school_name: v }))} placeholder="Name of your school" />
-        <div className="grid grid-cols-2 gap-3">
-          <SelInput label="Class / Grade" value={academic.class_name} onChange={v => setAcademic(p => ({ ...p, class_name: v }))} options={CLASSES} />
-          <SelInput label="Board" value={academic.board} onChange={v => setAcademic(p => ({ ...p, board: v }))} options={BOARDS} />
-        </div>
-      </>)}
-      {profile.education_level === 'college' && (<>
-        <TxtInput label="College / Institute" value={academic.college_name} onChange={v => setAcademic(p => ({ ...p, college_name: v }))} placeholder="College name" />
-        <SelInput label="Subject Stream" value={academic.subject_stream} onChange={v => setAcademic(p => ({ ...p, subject_stream: v }))} options={STREAMS} />
-      </>)}
-      {profile.education_level === 'coaching' && (<>
-        <TxtInput label="Coaching Institute" value={academic.school_name} onChange={v => setAcademic(p => ({ ...p, school_name: v }))} placeholder="Coaching center name" />
-      </>)}
-      {profile.education_level && (
-        <div className="flex items-center gap-2 p-2.5 bg-blue-50 rounded-lg">
-          <Lock size={12} className="text-blue-400" />
-          <span className="text-[12px] text-blue-600">Education type: <strong>{profile.education_level}</strong> (set during signup)</span>
-        </div>
-      )}
-      <SaveBtn onClick={() => saveSection('academic', academic)} loading={saving.academic} />
-    </Section>
-
-    <Section title="Goals & Interests" icon={Target}>
-      <TxtArea label="My Ambition" value={goals.ambition} onChange={v => setGoals(p => ({ ...p, ambition: v }))} placeholder="What do you want to achieve in life?" />
-      <TagsInput label="Hobbies" tags={goals.hobby} onChange={v => setGoals(p => ({ ...p, hobby: v }))} placeholder="Add a hobby…" />
-      <TxtArea label="I See My Future As…" value={goals.future_vision} onChange={v => setGoals(p => ({ ...p, future_vision: v }))} placeholder="Describe your dream future" rows={2} />
-      <SaveBtn onClick={() => saveSection('goals', goals)} loading={saving.goals} />
-    </Section>
-  </>);
-}
-
-// ═══════════════════════════════════════════════════════
-// TEACHER SECTIONS
-// ═══════════════════════════════════════════════════════
-function TeacherSections({ user, profile, saving, saveSection }) {
-  const [basic, setBasic] = useState({
-    phone: user.phone || '',
-    gender: user.gender || '',
-    city: user.city || '',
-    state: user.state || '',
-  });
-  const [pro, setPro] = useState({
-    subject_primary: profile.subject_primary || '',
-    experience_years: profile.experience_years || '',
-    institute_name: profile.institute_name || '',
-    teacher_type: profile.teacher_type || 'freelancer',
-    qualifications: parseJson(profile.qualifications, []),
-  });
-  const [about, setAbout] = useState({ bio: user.bio || '' });
-
-  return (<>
-    <Section title="Basic Info" icon={User} defaultOpen>
-      <TxtInput label="Full Name" value={user.full_name} readOnly />
-      <TxtInput label="Phone" value={basic.phone} onChange={v => setBasic(p => ({ ...p, phone: v }))} placeholder="+91 XXXXX XXXXX" />
-      <SelInput label="Gender" value={basic.gender} onChange={v => setBasic(p => ({ ...p, gender: v }))} options={GENDER_OPTS} />
-      <div className="grid grid-cols-2 gap-3">
-        <TxtInput label="City" value={basic.city} onChange={v => setBasic(p => ({ ...p, city: v }))} placeholder="Your city" />
-        <SelInput label="State" value={basic.state} onChange={v => setBasic(p => ({ ...p, state: v }))} options={STATES} />
-      </div>
-      <SaveBtn onClick={() => saveSection('basic', basic)} loading={saving.basic} />
-    </Section>
-
-    <Section title="Professional Info" icon={Briefcase}>
-      <TxtInput label="Primary Subject" value={pro.subject_primary} onChange={v => setPro(p => ({ ...p, subject_primary: v }))} placeholder="e.g. Mathematics" />
-      <TxtInput label="Years of Experience" value={String(pro.experience_years || '')} onChange={v => setPro(p => ({ ...p, experience_years: v }))} placeholder="e.g. 8" type="number" />
-      <TxtInput label="Current Institution" value={pro.institute_name} onChange={v => setPro(p => ({ ...p, institute_name: v }))} placeholder="School / College / Academy" />
-      <Fld label="Teacher Type">
-        <div className="flex gap-2">
-          {TEACHER_TYPES.map(t => (
-            <button key={t} type="button" onClick={() => setPro(p => ({ ...p, teacher_type: t }))}
-              className={`flex-1 py-2 rounded-xl text-[12px] font-semibold border-2 transition-all capitalize ${pro.teacher_type === t ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
-              {t.replace('_', ' ')}
-            </button>
-          ))}
-        </div>
-      </Fld>
-      <TagsInput label="Qualifications" tags={pro.qualifications} onChange={v => setPro(p => ({ ...p, qualifications: v }))} placeholder="e.g. M.Sc, B.Ed…" />
-      <SaveBtn onClick={() => saveSection('pro', pro)} loading={saving.pro} />
-    </Section>
-
-    <Section title="About" icon={BookOpen}>
-      <TxtArea label="Bio" value={about.bio} onChange={v => setAbout({ bio: v })} placeholder="Tell students about yourself, your teaching philosophy…" rows={4} />
-      <SaveBtn onClick={() => saveSection('about', about)} loading={saving.about} />
-    </Section>
-  </>);
-}
-
-// ═══════════════════════════════════════════════════════
-// PROFESSIONAL LEARNER SECTIONS
-// ═══════════════════════════════════════════════════════
-function ProfessionalSections({ user, profile, saving, saveSection }) {
-  const [basic, setBasic] = useState({
-    phone: user.phone || '',
-    gender: user.gender || '',
-    city: user.city || '',
-    state: user.state || '',
-  });
-  const [work, setWork] = useState({
-    current_company: profile.current_company || '',
-    designation: profile.designation || '',
-    experience_years: profile.experience_years || '',
-    industry: profile.industry || '',
-    education_level: profile.education_level || '',
-    skills: parseJson(profile.skills, []),
-  });
-  const [learning, setLearning] = useState({
-    learning_goals: parseJson(profile.learning_goals, []),
-    linkedin_url: profile.linkedin_url || '',
-  });
-
-  return (<>
-    <Section title="Basic Info" icon={User} defaultOpen>
-      <TxtInput label="Full Name" value={user.full_name} readOnly />
-      <TxtInput label="Phone" value={basic.phone} onChange={v => setBasic(p => ({ ...p, phone: v }))} placeholder="+91 XXXXX XXXXX" />
-      <SelInput label="Gender" value={basic.gender} onChange={v => setBasic(p => ({ ...p, gender: v }))} options={GENDER_OPTS} />
-      <div className="grid grid-cols-2 gap-3">
-        <TxtInput label="City" value={basic.city} onChange={v => setBasic(p => ({ ...p, city: v }))} placeholder="Your city" />
-        <SelInput label="State" value={basic.state} onChange={v => setBasic(p => ({ ...p, state: v }))} options={STATES} />
-      </div>
-      <SaveBtn onClick={() => saveSection('basic', basic)} loading={saving.basic} />
-    </Section>
-
-    <Section title="Work Info" icon={Briefcase}>
-      <TxtInput label="Current Company" value={work.current_company} onChange={v => setWork(p => ({ ...p, current_company: v }))} placeholder="Where do you work?" />
-      <TxtInput label="Designation / Role" value={work.designation} onChange={v => setWork(p => ({ ...p, designation: v }))} placeholder="e.g. Software Engineer" />
-      <div className="grid grid-cols-2 gap-3">
-        <TxtInput label="Years of Experience" value={String(work.experience_years || '')} onChange={v => setWork(p => ({ ...p, experience_years: v }))} type="number" placeholder="0–40" />
-        <SelInput label="Industry" value={work.industry} onChange={v => setWork(p => ({ ...p, industry: v }))} options={INDUSTRIES} />
-      </div>
-      <SelInput label="Highest Education Level" value={work.education_level} onChange={v => setWork(p => ({ ...p, education_level: v }))}
-        options={['High School','Graduation','Post Graduation','Doctorate','Other']} />
-      <TagsInput label="Skills" tags={work.skills} onChange={v => setWork(p => ({ ...p, skills: v }))} placeholder="Add a skill…" />
-      <SaveBtn onClick={() => saveSection('work', work)} loading={saving.work} />
-    </Section>
-
-    <Section title="Learning & Links" icon={Target}>
-      <TagsInput label="Learning Goals" tags={learning.learning_goals} onChange={v => setLearning(p => ({ ...p, learning_goals: v }))} placeholder="Add a goal…" />
-      <Fld label="Suggested Goals">
-        <div className="flex flex-wrap gap-1.5 mt-1">
-          {LEARNING_GOALS.filter(g => !learning.learning_goals.includes(g)).slice(0, 6).map(g => (
-            <button key={g} type="button" onClick={() => setLearning(p => ({ ...p, learning_goals: [...p.learning_goals, g] }))}
-              className="px-2.5 py-1 rounded-full text-[11px] border border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600 transition-all">
-              + {g}
-            </button>
-          ))}
-        </div>
-      </Fld>
-      <TxtInput label="LinkedIn URL" value={learning.linkedin_url} onChange={v => setLearning(p => ({ ...p, linkedin_url: v }))} placeholder="https://linkedin.com/in/…" />
-      <SaveBtn onClick={() => saveSection('learning', learning)} loading={saving.learning} />
-    </Section>
-  </>);
-}
-
-// ═══════════════════════════════════════════════════════
-// INSTITUTE SECTIONS
-// ═══════════════════════════════════════════════════════
-function InstituteSections({ user, profile, saving, saveSection }) {
-  const [basic, setBasic] = useState({
-    name: profile.name || '',
-    phone: user.phone || '',
-    city: profile.city || user.city || '',
-    state: profile.state || user.state || '',
-  });
-  const [details, setDetails] = useState({
-    institute_type: profile.institute_type || '',
-    boards_offered: parseJson(profile.boards_offered, []),
-    established_year: profile.established_year || '',
-    student_count: profile.student_count || '',
-    teacher_count: profile.teacher_count || '',
-    website: profile.website || '',
-  });
-  const [about, setAbout] = useState({ about: profile.about || '' });
-
-  return (<>
-    <Section title="Basic Info" icon={Building2} defaultOpen>
-      <TxtInput label="Institute Name" value={basic.name} onChange={v => setBasic(p => ({ ...p, name: v }))} placeholder="Official name of your institute" />
-      <TxtInput label="Contact Phone" value={basic.phone} onChange={v => setBasic(p => ({ ...p, phone: v }))} placeholder="+91 XXXXX XXXXX" />
-      <div className="grid grid-cols-2 gap-3">
-        <TxtInput label="City" value={basic.city} onChange={v => setBasic(p => ({ ...p, city: v }))} placeholder="City" />
-        <SelInput label="State" value={basic.state} onChange={v => setBasic(p => ({ ...p, state: v }))} options={STATES} />
-      </div>
-      <SaveBtn onClick={() => saveSection('basic', { phone: basic.phone, name: basic.name, city: basic.city, state: basic.state })} loading={saving.basic} />
-    </Section>
-
-    <Section title="Institute Details" icon={Award}>
-      <SelInput label="Institute Type" value={details.institute_type} onChange={v => setDetails(p => ({ ...p, institute_type: v }))} options={INSTITUTE_TYPES} />
-      <TagsInput label="Boards / Syllabi Offered" tags={details.boards_offered} onChange={v => setDetails(p => ({ ...p, boards_offered: v }))} placeholder="Add board…" />
-      <div className="grid grid-cols-3 gap-3">
-        <TxtInput label="Est. Year" value={String(details.established_year || '')} onChange={v => setDetails(p => ({ ...p, established_year: v }))} type="number" placeholder="e.g. 1995" />
-        <TxtInput label="Total Students" value={String(details.student_count || '')} onChange={v => setDetails(p => ({ ...p, student_count: v }))} type="number" placeholder="e.g. 1200" />
-        <TxtInput label="Total Teachers" value={String(details.teacher_count || '')} onChange={v => setDetails(p => ({ ...p, teacher_count: v }))} type="number" placeholder="e.g. 60" />
-      </div>
-      <TxtInput label="Website" value={details.website} onChange={v => setDetails(p => ({ ...p, website: v }))} placeholder="https://your-institute.com" />
-      <SaveBtn onClick={() => saveSection('details', details)} loading={saving.details} />
-    </Section>
-
-    <Section title="About" icon={BookOpen}>
-      <TxtArea label="About the Institute" value={about.about} onChange={v => setAbout({ about: v })} placeholder="Describe your institute, its mission, achievements…" rows={4} />
-      <SaveBtn onClick={() => saveSection('about', about)} loading={saving.about} />
-    </Section>
-  </>);
-}
-
-// ═══════════════════════════════════════════════════════
-// PARENT SECTIONS
-// ═══════════════════════════════════════════════════════
-function ParentSections({ user, profile, saving, saveSection }) {
-  const [basic, setBasic] = useState({
-    phone: user.phone || '',
-    gender: user.gender || '',
-    city: user.city || '',
-    state: user.state || '',
-  });
-  const [family, setFamily] = useState({
-    occupation: profile.occupation || '',
-    notification_email: profile.notification_email || '',
-  });
-  const [involvement, setInvolvement] = useState({
-    hobby_involvement: profile.hobby_involvement || '',
-    sports_involvement: profile.sports_involvement || '',
-  });
-
-  return (<>
-    <Section title="Basic Info" icon={User} defaultOpen>
-      <TxtInput label="Full Name" value={user.full_name} readOnly />
-      <TxtInput label="Phone" value={basic.phone} onChange={v => setBasic(p => ({ ...p, phone: v }))} placeholder="+91 XXXXX XXXXX" />
-      <SelInput label="Gender" value={basic.gender} onChange={v => setBasic(p => ({ ...p, gender: v }))} options={GENDER_OPTS} />
-      <div className="grid grid-cols-2 gap-3">
-        <TxtInput label="City" value={basic.city} onChange={v => setBasic(p => ({ ...p, city: v }))} placeholder="Your city" />
-        <SelInput label="State" value={basic.state} onChange={v => setBasic(p => ({ ...p, state: v }))} options={STATES} />
-      </div>
-      <SaveBtn onClick={() => saveSection('basic', basic)} loading={saving.basic} />
-    </Section>
-
-    <Section title="Family Details" icon={Briefcase}>
-      <TxtInput label="Occupation" value={family.occupation} onChange={v => setFamily(p => ({ ...p, occupation: v }))} placeholder="e.g. Engineer, Teacher" />
-      <TxtInput label="Notification Email" value={family.notification_email} onChange={v => setFamily(p => ({ ...p, notification_email: v }))} placeholder="For child activity reports" type="email" />
-      <SaveBtn onClick={() => saveSection('family', family)} loading={saving.family} />
-    </Section>
-
-    <Section title="Child Involvement" icon={Target}>
-      <TxtArea label="How You Support Hobbies" value={involvement.hobby_involvement} onChange={v => setInvolvement(p => ({ ...p, hobby_involvement: v }))} placeholder="e.g. I take them to art classes…" />
-      <TxtArea label="How You Support Sports" value={involvement.sports_involvement} onChange={v => setInvolvement(p => ({ ...p, sports_involvement: v }))} placeholder="e.g. I attend matches, enrolled in coaching…" />
-      <SaveBtn onClick={() => saveSection('involvement', involvement)} loading={saving.involvement} />
-    </Section>
-  </>);
-}
-
-// ═══════════════════════════════════════════════════════
-// ORGANIZATION SECTIONS
-// ═══════════════════════════════════════════════════════
-function OrganizationSections({ user, profile, saving, saveSection }) {
-  const [basic, setBasic] = useState({
-    phone: user.phone || '',
-    city: user.city || '',
-    state: user.state || '',
-  });
-  const [company, setCompany] = useState({
-    official_company_name: profile.official_company_name || '',
-    brand_display_name: profile.brand_display_name || '',
-    industry: profile.industry || '',
-    company_size: profile.company_size || '',
-    founded_year: profile.founded_year || '',
-    website: profile.website || '',
-    linkedin_url: profile.linkedin_url || '',
-  });
-  const [about, setAbout] = useState({ about: profile.about || '' });
-
-  const ORG_INDUSTRIES = ['Technology / Software','Manufacturing / Industrial','Banking / Financial Services','Healthcare / Pharma','Retail / E-commerce','Logistics / Supply Chain','Education','Consulting / Professional Services','Government / Public Sector','Other'];
-  const ORG_SIZES = ['1-50 (Startup)','51-200 (Small)','201-500 (Mid-market)','501-2000 (Enterprise)','2001-10000 (Large Enterprise)','10000+ (Global Enterprise)'];
-
-  return (<>
-    <Section title="Admin Contact" icon={User} defaultOpen>
-      <TxtInput label="Admin Name" value={user.full_name} readOnly />
-      <TxtInput label="Contact Phone" value={basic.phone} onChange={v => setBasic(p => ({ ...p, phone: v }))} placeholder="+91 XXXXX XXXXX" />
-      <div className="grid grid-cols-2 gap-3">
-        <TxtInput label="City" value={basic.city} onChange={v => setBasic(p => ({ ...p, city: v }))} placeholder="HQ city" />
-        <SelInput label="State" value={basic.state} onChange={v => setBasic(p => ({ ...p, state: v }))} options={STATES} />
-      </div>
-      <SaveBtn onClick={() => saveSection('basic', basic)} loading={saving.basic} />
-    </Section>
-
-    <Section title="Company Identity" icon={Building2}>
-      <TxtInput label="Official Company Name" value={company.official_company_name} onChange={v => setCompany(p => ({ ...p, official_company_name: v }))} placeholder="Registered legal name" />
-      <TxtInput label="Brand / Display Name" value={company.brand_display_name} onChange={v => setCompany(p => ({ ...p, brand_display_name: v }))} placeholder="Public-facing name" />
-      <div className="grid grid-cols-2 gap-3">
-        <SelInput label="Industry" value={company.industry} onChange={v => setCompany(p => ({ ...p, industry: v }))} options={ORG_INDUSTRIES} />
-        <SelInput label="Company Size" value={company.company_size} onChange={v => setCompany(p => ({ ...p, company_size: v }))} options={ORG_SIZES} />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <TxtInput label="Founded Year" value={String(company.founded_year || '')} onChange={v => setCompany(p => ({ ...p, founded_year: v }))} type="number" placeholder="e.g. 2010" />
-        <TxtInput label="Website" value={company.website} onChange={v => setCompany(p => ({ ...p, website: v }))} placeholder="https://…" />
-      </div>
-      <TxtInput label="LinkedIn URL" value={company.linkedin_url} onChange={v => setCompany(p => ({ ...p, linkedin_url: v }))} placeholder="https://linkedin.com/company/…" />
-      <SaveBtn onClick={() => saveSection('company', company)} loading={saving.company} />
-    </Section>
-
-    <Section title="About" icon={BookOpen}>
-      <TxtArea label="About the Company" value={about.about} onChange={v => setAbout({ about: v })} placeholder="What you do, your mission, what makes you unique…" rows={4} />
-      <SaveBtn onClick={() => saveSection('about', about)} loading={saving.about} />
-    </Section>
-  </>);
-}
-
-// ─── Helper ────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════
 function parseJson(value, fallback) {
   if (Array.isArray(value)) return value;
-  if (typeof value === 'string') {
-    try { return JSON.parse(value); } catch { return fallback; }
-  }
+  if (typeof value === 'string') { try { return JSON.parse(value); } catch { return fallback; } }
   return fallback;
 }
