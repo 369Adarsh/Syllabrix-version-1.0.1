@@ -1,15 +1,14 @@
 'use client';
-import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  Users, Briefcase, GraduationCap, BookOpen, Sparkles, Brain,
-  Map, FlaskConical, Trophy, Video, Bookmark, Award, Settings,
-  LogOut, ChevronDown, FileText, Newspaper, Gamepad2, Play,
+  Users, Briefcase, BookOpen, Sparkles,
+  FlaskConical, Trophy, Bookmark, Award, Settings,
+  LogOut, FileText, Gamepad2, Play,
   Mic, MessageSquare, Beaker, Building2, Store, Code, Heart, Star,
-  UserCheck, Home, Compass
+  UserCheck, Home
 } from 'lucide-react';
 
 const NavLink = ({ href, icon: Icon, label, badge }) => {
@@ -49,7 +48,6 @@ const SectionLabel = ({ children }) => (
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
-  const [aiOpen, setAiOpen] = useState(true);
   const hasPhoto = user?.profile_photo_url && !user.profile_photo_url.includes('PASTE_');
 
   return (
@@ -60,32 +58,10 @@ export default function Sidebar() {
         className="flex-1 overflow-y-auto py-2 px-2"
         style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}
       >
-        {/* Main links */}
+        {/* Main */}
         <div className="space-y-[1px] mb-1">
-          <NavLink href="/home" icon={Home} label="Home" />
-          <NavLink href="/explore" icon={Compass} label="Explore" />
-        </div>
-
-        {/* AI Powered — collapsible */}
-        <div className="mt-1">
-          <button
-            onClick={() => setAiOpen(v => !v)}
-            className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.1em] text-blue-600 w-full hover:bg-blue-50 rounded-lg transition-colors"
-          >
-            <Sparkles size={10} className="flex-shrink-0" />
-            <span className="flex-1 text-left">AI Powered</span>
-            <ChevronDown size={11} className={`transition-transform duration-200 flex-shrink-0 ${aiOpen ? '' : '-rotate-90'}`} />
-          </button>
-          {aiOpen && (
-            <div className="space-y-[1px] mt-0.5">
-              <NavLink href="/ai-buddy"        icon={Sparkles}     label="AI Buddy" />
-              <NavLink href="/career-explorer" icon={Map}          label="Career Explorer" />
-              <NavLink href="/mindmap"         icon={Brain}        label="Mind Map" />
-              <NavLink href="/experience-lab"  icon={FlaskConical} label="Experience Lab" />
-              <NavLink href="/prep"            icon={GraduationCap} label="PrepSmart" />
-              <NavLink href="/newsroom"        icon={Newspaper}    label="Newsroom" />
-            </div>
-          )}
+          <NavLink href="/home"     icon={Home}     label="Home" />
+          <NavLink href="/ai-world" icon={Sparkles} label="AI World" />
         </div>
 
         <SectionLabel>Social</SectionLabel>
@@ -97,13 +73,10 @@ export default function Sidebar() {
 
         <SectionLabel>Learn</SectionLabel>
         <div className="space-y-[1px]">
-          <NavLink href="/virtual-lab"    icon={Beaker}       label="Virtual Lab" />
-          <NavLink href="/mock-interview" icon={Mic}          label="Mock Interview" />
+          <NavLink href="/virtual-lab"    icon={Beaker}        label="Virtual Lab" />
+          <NavLink href="/mock-interview" icon={Mic}           label="Mock Interview" />
           <NavLink href="/debate-arena"   icon={MessageSquare} label="Debate Arena" />
-          <NavLink href="/code-lab"       icon={Code}         label="Code Lab" />
-          <NavLink href="/classroom"      icon={Video}        label="Classroom" />
-          <NavLink href="/mentorship"     icon={UserCheck}    label="Mentorship" />
-          <NavLink href="/question-paper" icon={FileText}     label="Q Papers" />
+          <NavLink href="/code-lab"       icon={Code}          label="Code Lab" />
         </div>
 
         <SectionLabel>Play</SectionLabel>
@@ -120,16 +93,16 @@ export default function Sidebar() {
 
         <SectionLabel>More</SectionLabel>
         <div className="space-y-[1px] pb-2">
-          <NavLink href="/saved"       icon={Bookmark} label="Saved" />
-          <NavLink href="/badges"      icon={Award}    label="Badges" />
-          <NavLink href="/certificates" icon={Star}    label="Certificates" />
-          <NavLink href="/leaderboard" icon={Trophy}   label="Leaderboard" />
-          <NavLink href="/pricing"     icon={Heart}    label="Premium" />
-          <NavLink href="/settings"    icon={Settings} label="Settings" />
+          <NavLink href="/saved"        icon={Bookmark} label="Saved" />
+          <NavLink href="/badges"       icon={Award}    label="Badges" />
+          <NavLink href="/certificates" icon={Star}     label="Certificates" />
+          <NavLink href="/leaderboard"  icon={Trophy}   label="Leaderboard" />
+          <NavLink href="/pricing"      icon={Heart}    label="Premium" />
+          <NavLink href="/settings"     icon={Settings} label="Settings" />
         </div>
       </div>
 
-      {/* ── User card — pinned at bottom, never scrolls away ── */}
+      {/* ── User card — pinned at bottom ── */}
       {user && (
         <div className="flex-shrink-0 border-t border-gray-100 bg-white px-2 py-2">
           <Link

@@ -14,6 +14,7 @@ import {
   Gamepad2, Mic, MessageSquare, ChevronRight, Code, Award, Star,
   Play, Store, Building2, Users, Calendar, FileText
 } from 'lucide-react';
+import AdPanel from '@/components/ads/AdPanel';
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -252,6 +253,9 @@ export default function HomePage() {
             View All Rankings
           </Link>
         </div>
+
+        {/* Ad Panel */}
+        <AdPanel />
 
         {/* Footer */}
         <div className="px-2 py-1">

@@ -335,12 +335,13 @@ const QuickStatsBar = ({ user }) => {
   const stats = statsMap[user?.user_type] || statsMap.student;
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-6 py-3 mb-5 overflow-x-auto">
-      <div className="flex items-stretch divide-x divide-gray-200 min-w-max">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 sm:px-6 py-3 mb-5">
+      {/* Mobile: 2-col grid. sm+: single horizontal row */}
+      <div className="grid grid-cols-2 sm:flex sm:items-stretch sm:divide-x sm:divide-gray-200 gap-y-3 gap-x-0">
         {stats.map((s, i) => (
-          <div key={i} className="px-5 first:pl-0 last:pr-0">
+          <div key={i} className="sm:px-5 sm:first:pl-0 sm:last:pr-0 px-3 first:pl-0">
             <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">{s.label}</p>
-            <p className="text-[14px] font-bold text-gray-800 whitespace-nowrap">{s.value}</p>
+            <p className="text-[13px] sm:text-[14px] font-bold text-gray-800">{s.value}</p>
           </div>
         ))}
       </div>
@@ -559,7 +560,7 @@ function StudentSections({ user, saveSection }) {
     <SectionCard title="Basic Info" icon={User} defaultOpen>
       <EditRow editing={bi.isEditing} onEdit={bi.start} onCancel={bi.cancel} onSave={() => save(bi, bi.edit)} saving={bi.saving} />
       {!bi.isEditing ? (
-        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
           <VF label="Date of Birth" value={user?.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString('en-IN') : ''} locked />
           <VF label="Phone" value={user?.phone} placeholder="Not provided" />
           <VF label="Gender" value={user?.gender} />
@@ -567,7 +568,7 @@ function StudentSections({ user, saveSection }) {
           <VF label="State" value={user?.state} />
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <TI label="Date of Birth" value={user?.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString('en-IN') : ''} locked />
           <TI label="Phone" value={bi.edit.phone} onChange={v => bi.setEdit(e => ({...e, phone: v}))} placeholder="+91 XXXXX XXXXX" />
           <SI label="Gender" value={bi.edit.gender} onChange={v => bi.setEdit(e => ({...e, gender: v}))} options={GENDERS} />
@@ -580,7 +581,7 @@ function StudentSections({ user, saveSection }) {
     <SectionCard title="Academic Info" icon={GraduationCap}>
       <EditRow editing={ac.isEditing} onEdit={ac.start} onCancel={ac.cancel} onSave={() => save(ac, ac.edit)} saving={ac.saving} />
       {!ac.isEditing ? (
-        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
           <VF label="School / College" value={p.school_name || p.college_name} />
           <VF label="Class / Year" value={p.class_name} />
           <VF label="Board" value={p.board} />
@@ -588,7 +589,7 @@ function StudentSections({ user, saveSection }) {
           {p.education_level && <VF label="Education Type" value={p.education_level} />}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <TI label="School Name" value={ac.edit.school_name} onChange={v => ac.setEdit(e => ({...e, school_name: v}))} placeholder="Your school" />
           <TI label="College / Institute" value={ac.edit.college_name} onChange={v => ac.setEdit(e => ({...e, college_name: v}))} placeholder="Your college" />
           <SI label="Class / Grade" value={ac.edit.class_name} onChange={v => ac.setEdit(e => ({...e, class_name: v}))} options={CLASSES} />
@@ -652,14 +653,14 @@ function TeacherSections({ user, saveSection }) {
     <SectionCard title="Basic Info" icon={User} defaultOpen>
       <EditRow editing={bi.isEditing} onEdit={bi.start} onCancel={bi.cancel} onSave={() => save(bi, bi.edit)} saving={bi.saving} />
       {!bi.isEditing ? (
-        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
           <VF label="Phone" value={user?.phone} />
           <VF label="Gender" value={user?.gender} />
           <VF label="City" value={user?.city} />
           <VF label="State" value={user?.state} />
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <TI label="Phone" value={bi.edit.phone} onChange={v => bi.setEdit(e => ({...e, phone: v}))} placeholder="+91 XXXXX XXXXX" />
           <SI label="Gender" value={bi.edit.gender} onChange={v => bi.setEdit(e => ({...e, gender: v}))} options={GENDERS} />
           <TI label="City" value={bi.edit.city} onChange={v => bi.setEdit(e => ({...e, city: v}))} placeholder="City" />
@@ -671,7 +672,7 @@ function TeacherSections({ user, saveSection }) {
     <SectionCard title="Professional Info" icon={Briefcase}>
       <EditRow editing={pr.isEditing} onEdit={pr.start} onCancel={pr.cancel} onSave={() => save(pr, pr.edit)} saving={pr.saving} />
       {!pr.isEditing ? (
-        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
           <VF label="Subject Specialization" value={p.subject_primary} />
           <VF label="Experience" value={p.experience_years ? `${p.experience_years} years` : ''} />
           <VF label="Current Institution" value={p.institute_name} />
@@ -680,7 +681,7 @@ function TeacherSections({ user, saveSection }) {
         </div>
       ) : (
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <TI label="Subject Specialization" value={pr.edit.subject_primary} onChange={v => pr.setEdit(e => ({...e, subject_primary: v}))} placeholder="e.g. Mathematics" />
             <TI label="Years of Experience" value={String(pr.edit.experience_years||'')} onChange={v => pr.setEdit(e => ({...e, experience_years: v}))} type="number" placeholder="e.g. 8" />
             <div className="col-span-2"><TI label="Current Institution" value={pr.edit.institute_name} onChange={v => pr.setEdit(e => ({...e, institute_name: v}))} placeholder="School / College / Academy" /></div>
@@ -703,7 +704,7 @@ function TeacherSections({ user, saveSection }) {
     <SectionCard title="Teaching Details" icon={Award}>
       <EditRow editing={td.isEditing} onEdit={td.start} onCancel={td.cancel} onSave={() => save(td, td.edit)} saving={td.saving} />
       {!td.isEditing ? (
-        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
           <VF label="Runs Own Business" value={p.has_own_business ? 'Yes' : (p.has_own_business === false ? 'No' : undefined)} />
           <VF label="Business Name" value={p.business_name} />
         </div>
@@ -763,14 +764,14 @@ function ProfessionalSections({ user, saveSection }) {
     <SectionCard title="Basic Info" icon={User} defaultOpen>
       <EditRow editing={bi.isEditing} onEdit={bi.start} onCancel={bi.cancel} onSave={() => save(bi, bi.edit)} saving={bi.saving} />
       {!bi.isEditing ? (
-        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
           <VF label="Phone" value={user?.phone} />
           <VF label="Gender" value={user?.gender} />
           <VF label="City" value={user?.city} />
           <VF label="State" value={user?.state} />
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <TI label="Phone" value={bi.edit.phone} onChange={v => bi.setEdit(e => ({...e, phone: v}))} placeholder="+91 XXXXX XXXXX" />
           <SI label="Gender" value={bi.edit.gender} onChange={v => bi.setEdit(e => ({...e, gender: v}))} options={GENDERS} />
           <TI label="City" value={bi.edit.city} onChange={v => bi.setEdit(e => ({...e, city: v}))} placeholder="Your city" />
@@ -782,7 +783,7 @@ function ProfessionalSections({ user, saveSection }) {
     <SectionCard title="Work Info" icon={Briefcase}>
       <EditRow editing={wi.isEditing} onEdit={wi.start} onCancel={wi.cancel} onSave={() => save(wi, wi.edit)} saving={wi.saving} />
       {!wi.isEditing ? (
-        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
           <VF label="Current Company" value={p.current_company} />
           <VF label="Designation" value={p.designation} />
           <VF label="Experience" value={p.experience_years ? `${p.experience_years} yrs` : ''} />
@@ -790,7 +791,7 @@ function ProfessionalSections({ user, saveSection }) {
           <VF label="Education Level" value={p.education_level} />
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <TI label="Current Company" value={wi.edit.current_company} onChange={v => wi.setEdit(e => ({...e, current_company: v}))} placeholder="Where do you work?" />
           <TI label="Designation / Role" value={wi.edit.designation} onChange={v => wi.setEdit(e => ({...e, designation: v}))} placeholder="e.g. Product Manager" />
           <TI label="Years of Experience" value={String(wi.edit.experience_years||'')} onChange={v => wi.setEdit(e => ({...e, experience_years: v}))} type="number" />
@@ -867,7 +868,7 @@ function InstituteSections({ user, saveSection }) {
     <SectionCard title="Basic Info" icon={Building2} defaultOpen>
       <EditRow editing={bi.isEditing} onEdit={bi.start} onCancel={bi.cancel} onSave={() => save(bi, { phone: bi.edit.phone, name: bi.edit.name, city: bi.edit.city, state: bi.edit.state, website: bi.edit.website })} saving={bi.saving} />
       {!bi.isEditing ? (
-        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
           <VF label="Institute Name" value={p.name} />
           <VF label="Contact Phone" value={user?.phone} />
           <VF label="City" value={p.city || user?.city} />
@@ -875,7 +876,7 @@ function InstituteSections({ user, saveSection }) {
           <VF label="Website" value={p.website} placeholder="Not provided" />
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="col-span-2"><TI label="Institute Name" value={bi.edit.name} onChange={v => bi.setEdit(e => ({...e, name: v}))} placeholder="Official name" /></div>
           <TI label="Contact Phone" value={bi.edit.phone} onChange={v => bi.setEdit(e => ({...e, phone: v}))} placeholder="+91 XXXXX XXXXX" />
           <TI label="Website" value={bi.edit.website} onChange={v => bi.setEdit(e => ({...e, website: v}))} placeholder="https://…" />
@@ -888,7 +889,7 @@ function InstituteSections({ user, saveSection }) {
     <SectionCard title="Institute Details" icon={Award}>
       <EditRow editing={de.isEditing} onEdit={de.start} onCancel={de.cancel} onSave={() => save(de, de.edit)} saving={de.saving} />
       {!de.isEditing ? (
-        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
           <VF label="Institute Type" value={p.institute_type} />
           <VF label="Est. Year" value={p.established_year} />
           <VF label="Total Students" value={p.student_count} />
@@ -899,7 +900,7 @@ function InstituteSections({ user, saveSection }) {
         </div>
       ) : (
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <SI label="Institute Type" value={de.edit.institute_type} onChange={v => de.setEdit(e => ({...e, institute_type: v}))} options={INST_TYPES} />
             <TI label="Est. Year" value={String(de.edit.established_year||'')} onChange={v => de.setEdit(e => ({...e, established_year: v}))} type="number" placeholder="e.g. 1995" />
             <TI label="Total Students" value={String(de.edit.student_count||'')} onChange={v => de.setEdit(e => ({...e, student_count: v}))} type="number" />
@@ -915,12 +916,12 @@ function InstituteSections({ user, saveSection }) {
     <SectionCard title="Platform Handler" icon={User}>
       <EditRow editing={ph.isEditing} onEdit={ph.start} onCancel={ph.cancel} onSave={() => save(ph, ph.edit)} saving={ph.saving} />
       {!ph.isEditing ? (
-        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
           <VF label="Handler Name" value={p.platform_handler_name} />
           <VF label="Handler Email" value={p.platform_handler_email} />
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <TI label="Handler Name" value={ph.edit.platform_handler_name} onChange={v => ph.setEdit(e => ({...e, platform_handler_name: v}))} placeholder="Who manages this account?" />
           <TI label="Handler Email" value={ph.edit.platform_handler_email} onChange={v => ph.setEdit(e => ({...e, platform_handler_email: v}))} placeholder="handler@institute.edu" type="email" />
         </div>
@@ -961,15 +962,15 @@ function OrganizationSections({ user, saveSection }) {
     <SectionCard title="Admin Contact" icon={User} defaultOpen>
       <EditRow editing={bi.isEditing} onEdit={bi.start} onCancel={bi.cancel} onSave={() => save(bi, bi.edit)} saving={bi.saving} />
       {!bi.isEditing ? (
-        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
           <VF label="Phone" value={user?.phone} />
           <VF label="City" value={user?.city} />
           <VF label="State" value={user?.state} />
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <TI label="Phone" value={bi.edit.phone} onChange={v => bi.setEdit(e => ({...e, phone: v}))} placeholder="+91 XXXXX XXXXX" />
-          <div />
+          <div className="hidden sm:block" />
           <TI label="City" value={bi.edit.city} onChange={v => bi.setEdit(e => ({...e, city: v}))} placeholder="HQ city" />
           <SI label="State" value={bi.edit.state} onChange={v => bi.setEdit(e => ({...e, state: v}))} options={STATES} />
         </div>
@@ -979,7 +980,7 @@ function OrganizationSections({ user, saveSection }) {
     <SectionCard title="Company Identity" icon={Building2}>
       <EditRow editing={ci.isEditing} onEdit={ci.start} onCancel={ci.cancel} onSave={() => save(ci, ci.edit)} saving={ci.saving} />
       {!ci.isEditing ? (
-        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
           <VF label="Legal Name" value={p.official_company_name} />
           <VF label="Brand Name" value={p.brand_display_name} />
           <VF label="Industry" value={p.industry} />
@@ -989,7 +990,7 @@ function OrganizationSections({ user, saveSection }) {
         </div>
       ) : (
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <TI label="Legal Company Name" value={ci.edit.official_company_name} onChange={v => ci.setEdit(e => ({...e, official_company_name: v}))} placeholder="Registered name" />
             <TI label="Brand / Display Name" value={ci.edit.brand_display_name} onChange={v => ci.setEdit(e => ({...e, brand_display_name: v}))} placeholder="Public name" />
             <SI label="Industry" value={ci.edit.industry} onChange={v => ci.setEdit(e => ({...e, industry: v}))} options={ORG_INDUSTRIES} />
@@ -1041,14 +1042,14 @@ function ParentSections({ user, saveSection }) {
     <SectionCard title="Basic Info" icon={User} defaultOpen>
       <EditRow editing={bi.isEditing} onEdit={bi.start} onCancel={bi.cancel} onSave={() => save(bi, bi.edit)} saving={bi.saving} />
       {!bi.isEditing ? (
-        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
           <VF label="Phone" value={user?.phone} />
           <VF label="Gender" value={user?.gender} />
           <VF label="City" value={user?.city} />
           <VF label="State" value={user?.state} />
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <TI label="Phone" value={bi.edit.phone} onChange={v => bi.setEdit(e => ({...e, phone: v}))} placeholder="+91 XXXXX XXXXX" />
           <SI label="Gender" value={bi.edit.gender} onChange={v => bi.setEdit(e => ({...e, gender: v}))} options={GENDERS} />
           <TI label="City" value={bi.edit.city} onChange={v => bi.setEdit(e => ({...e, city: v}))} placeholder="City" />
@@ -1060,13 +1061,13 @@ function ParentSections({ user, saveSection }) {
     <SectionCard title="Family Details" icon={Users}>
       <EditRow editing={fd.isEditing} onEdit={fd.start} onCancel={fd.cancel} onSave={() => save(fd, fd.edit)} saving={fd.saving} />
       {!fd.isEditing ? (
-        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
           <VF label="Relationship" value={p.relationship} />
           <VF label="Occupation" value={p.occupation} />
           <VF label="Notification Email" value={p.notification_email} />
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <SI label="Relationship to Child" value={fd.edit.relationship} onChange={v => fd.setEdit(e => ({...e, relationship: v}))}
             options={['Father','Mother','Guardian','Grandparent','Uncle/Aunt','Other']} />
           <TI label="Occupation" value={fd.edit.occupation} onChange={v => fd.setEdit(e => ({...e, occupation: v}))} placeholder="e.g. Teacher, Engineer" />
@@ -1195,7 +1196,7 @@ export default function MyProfilePage() {
             </div>
 
             {/* Name */}
-            <h1 className="text-[22px] font-extrabold text-gray-900 leading-tight text-center px-12">
+            <h1 className="text-[22px] font-extrabold text-gray-900 leading-tight text-center px-8 sm:px-14">
               {user.full_name || user.username}
             </h1>
 
