@@ -54,4 +54,7 @@ router.use('/ai', require('../features/ai/ai.routes'));
 // MILESTONE 3 — REVENUE
 router.use('/payments', require('../features/payments/payments.routes'));
 
+// AI LIBRARY — Boards, Syllabus, Chapters, AI Tutor Ask
+router.use('/library', require('../features/library/library.routes'));
+
 module.exports = router;
