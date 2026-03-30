@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Search, Home, Compass, MessageCircle, Bell, X, Settings, LogOut,
-  User, ChevronDown, Plus
+  User, ChevronDown, Plus, Menu,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -17,7 +17,7 @@ const NAV_ITEMS = [
   { href: '/notifications', label: 'Alerts',   icon: Bell },
 ];
 
-export default function TopBar() {
+export default function TopBar({ onMenuClick = () => {} }) {
   const { user, logout } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
@@ -67,9 +67,18 @@ export default function TopBar() {
         {/* ── CONTENT ZONE — search + nav + profile ── */}
         <div className="flex-1 flex items-center h-full px-3 md:px-4 gap-2 min-w-0">
 
+          {/* Mobile hamburger */}
+          <button
+            onClick={onMenuClick}
+            className="md:hidden flex items-center justify-center w-9 h-9 rounded-lg hover:bg-[#F0F2F5] active:bg-[#E4E6EB] transition-colors flex-shrink-0"
+            aria-label="Open menu"
+          >
+            <Menu size={22} className="text-gray-600" />
+          </button>
+
           {/* Mobile logo */}
-          <Link href="/home" className="md:hidden flex items-center mr-1 flex-shrink-0">
-            <Image src="/images/logo/syllabrix-logo.png" alt="Syllabrix" width={110} height={32} className="h-7 w-auto object-contain" priority />
+          <Link href="/home" className="md:hidden flex items-center flex-shrink-0">
+            <Image src="/images/logo/syllabrix-logo.png" alt="Syllabrix" width={100} height={28} className="h-7 w-auto object-contain" priority />
           </Link>
 
           {/* Search */}
@@ -152,7 +161,7 @@ export default function TopBar() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -4, scale: 0.97 }}
                 transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
-                className="absolute right-3 top-[60px] w-[272px] bg-white rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.12)] border border-gray-200/80 py-2 z-50"
+                className="absolute right-0 top-[60px] w-[272px] max-w-[calc(100vw-16px)] bg-white rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.12)] border border-gray-200/80 py-2 z-50"
               >
                 {/* User info */}
                 <Link

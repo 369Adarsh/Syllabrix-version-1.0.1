@@ -24,7 +24,11 @@
   --shadow-glow: 0 0 40px rgba(30, 64, 175, 0.15);
 }
 
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  /* Prevent horizontal overflow on mobile */
+  overflow-x: hidden;
+}
 
 body {
   font-family: var(--font-display);
@@ -32,6 +36,25 @@ body {
   color: #1e293b;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Mobile: prevent horizontal scroll */
+  overflow-x: hidden;
+  /* Remove blue tap flash on mobile */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Faster tap response on mobile */
+a, button, [role="button"] {
+  touch-action: manipulation;
+}
+
+/* Mobile-safe bottom padding for fixed nav */
+.mobile-safe-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+/* iOS momentum scroll in scrollable areas */
+.scroll-smooth-ios {
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Logo always visible */
