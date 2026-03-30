@@ -109,6 +109,13 @@ router.get('/university-books/:id/chapters', controller.getBookChapters);
 router.get('/university-chapters/:id/books', controller.getChapterBooks);
 
 // ─────────────────────────────────────────────────────────────────────────────
+// NCERT TOC — public, no auth required
+// GET /api/library/ncert-toc?class=10&subject=maths[&state=delhi]
+// ─────────────────────────────────────────────────────────────────────────────
+
+router.get('/ncert-toc', controller.getNCERTToc);
+
+// ─────────────────────────────────────────────────────────────────────────────
 // AI ENDPOINTS — require authentication
 // ─────────────────────────────────────────────────────────────────────────────
 

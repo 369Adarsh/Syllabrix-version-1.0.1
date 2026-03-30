@@ -186,4 +186,16 @@ async function enrichContext({ topic, subject, questionType, isAdvanced = false 
   return { wikiSummary, papers: papers || [] };
 }
 
-module.exports = { fetchWikipediaSummary, searchWikipedia, searchArXiv, searchOpenLibraryBook, enrichContext };
+// ─── 5. NCERT context wrapper ─────────────────────────────────────────────────
+
+/**
+ * Convenience re-export so callers only need to import from web-content.service.
+ * Avoids circular deps (ncert-extractor imports httpsGet from here).
+ */
+function fetchNCERTContext(grade, subject, chapterName) {
+  // Lazy-require to prevent circular reference at module load time
+  const ncert = require('./ncert-extractor.service');
+  return ncert.getChapterContext(grade, subject, chapterName);
+}
+
+module.exports = { fetchWikipediaSummary, searchWikipedia, searchArXiv, searchOpenLibraryBook, enrichContext, fetchNCERTContext };

@@ -35,5 +35,9 @@ export const libraryAPI = {
   getChapterBooks:    (chapterId)    => api.get(`/library/university-chapters/${chapterId}/books`),
 
   // ─── AI Ask ──────────────────────────────────────────────────────────────
+  // ─── NCERT TOC ───────────────────────────────────────────────────────────────
+  // params: { class: 10, subject: 'maths', state: 'delhi' }
+  getNCERTToc: (params) => api.get('/library/ncert-toc', { params }),
+
   ask: (payload) => api.post('/library/ask', payload),
 };

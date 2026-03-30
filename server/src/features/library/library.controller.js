@@ -1,5 +1,6 @@
 const service = require('./library.service');
 const aiLibraryService = require('../../services/ai-library.service');
+const ncertExtractor = require('../../services/ncert-extractor.service');
 const { sendSuccess } = require('../../utils/api-response');
 
 // ─── School Library ───────────────────────────────────────────────────────────
@@ -222,6 +223,26 @@ const getChapterBooks = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// ─── NCERT TOC ───────────────────────────────────────────────────────────────
+
+const getNCERTToc = async (req, res, next) => {
+  try {
+    const { class: grade, subject, state } = req.query;
+    if (!grade || !subject) {
+      return res.status(400).json({
+        success: false,
+        message: 'Query params "class" (1-12) and "subject" are required. E.g. ?class=10&subject=maths',
+      });
+    }
+    const gradeNum = Number(grade);
+    if (isNaN(gradeNum) || gradeNum < 1 || gradeNum > 12) {
+      return res.status(400).json({ success: false, message: '"class" must be a number between 1 and 12.' });
+    }
+    const data = await ncertExtractor.getTOC(gradeNum, subject, state || '');
+    sendSuccess(res, data, 'NCERT TOC retrieved');
+  } catch (err) { next(err); }
+};
+
 // ─── AI Ask ──────────────────────────────────────────────────────────────────
 
 const askAI = async (req, res, next) => {
@@ -278,5 +299,7 @@ module.exports = {
   getUniversitySubjectBooks, getUniversityBooksRecommend,
   // chapters + topics + TOC
   getSubjectChapters, getChapterTopics, getBookChapters, getChapterBooks,
+  // NCERT
+  getNCERTToc,
   askAI,
 };

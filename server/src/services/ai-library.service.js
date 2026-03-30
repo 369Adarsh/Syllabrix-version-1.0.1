@@ -28,7 +28,7 @@
  */
 
 const { generateJSON }  = require('./ai.service');
-const { enrichContext } = require('./web-content.service');
+const { enrichContext, fetchNCERTContext } = require('./web-content.service');
 const {
   getAIContext, getAIExamContext, getRecommendedBooks,
   getAIUniversityContext, getUniversitySubjectBooks,
@@ -244,6 +244,18 @@ async function ask(params) {
     }
   }
 
+  // ── 4a. NCERT context — for school mode with grade/chapter info ─────────────
+  let ncertContext = '';
+  if (mode === 'school' && ctx) {
+    try {
+      const chapterHint = chapter?.title || '';
+      const gradeNum    = ctx.grade_label ? parseInt(ctx.grade_label, 10) : (params.grade || 0);
+      if (gradeNum >= 1 && gradeNum <= 12) {
+        ncertContext = fetchNCERTContext(gradeNum, ctx.subject_name, chapterHint) || '';
+      }
+    } catch { /* non-blocking */ }
+  }
+
   // ── 4. Determine domain for Wikipedia topic ──────────────────────────────────
   const subjectName = uniCtx?.subject_name || ctx?.subject_name || '';
   const courseName  = uniCtx?.course_name  || '';
@@ -273,6 +285,7 @@ async function ask(params) {
     examCtx, uniCtx, uniTopicCtx,
     recommendedBooks,
     wikiSummary, papers,
+    ncertContext,
     studentQuery, studentClass, boardCode,
     qType, depth, domain, mode,
   });
@@ -338,6 +351,7 @@ function buildPrompt({
   ctx, chapter, topic,
   examCtx, uniCtx, uniTopicCtx,
   recommendedBooks, wikiSummary, papers,
+  ncertContext,
   studentQuery, studentClass, boardCode,
   qType, depth, domain, mode,
 }) {
@@ -460,6 +474,14 @@ function buildPrompt({
       lines.push(`  ${i + 1}. "${b.title}" by ${b.author || 'N/A'} — ${b.publisher_name || b.publisher_short || ''}`);
       if (b.usage_tip) lines.push(`     Tip: ${b.usage_tip}`);
     });
+  }
+
+  // ── NCERT curriculum reference ────────────────────────────────────────────────
+  if (ncertContext) {
+    lines.push('');
+    lines.push('NCERT OFFICIAL CURRICULUM (school mode — 23+ states + CBSE follow this):');
+    lines.push(ncertContext);
+    lines.push('Align your explanation with the NCERT approach. Use NCERT terminology and sequence.');
   }
 
   // ── Wikipedia enrichment ──────────────────────────────────────────────────────
