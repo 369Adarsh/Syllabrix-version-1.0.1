@@ -38,6 +38,8 @@ export const libraryAPI = {
   // ─── NCERT TOC ───────────────────────────────────────────────────────────────
   // params: { class: 10, subject: 'maths', state: 'delhi' }
   getNCERTToc: (params) => api.get('/library/ncert-toc', { params }),
+  // params: { board, class, subject } or { exam, subject }
+  getSmartChapters: (params) => api.get('/library/smart-chapters', { params }),
 
   ask: (payload) => api.post('/library/ask', payload),
 };

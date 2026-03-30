@@ -115,6 +115,10 @@ router.get('/university-chapters/:id/books', controller.getChapterBooks);
 
 router.get('/ncert-toc', controller.getNCERTToc);
 
+// GET /api/library/smart-chapters?board=cbse&class=10&subject=maths
+// GET /api/library/smart-chapters?exam=JEE&subject=Physics
+router.get('/smart-chapters', controller.getSmartChapters);
+
 // ─────────────────────────────────────────────────────────────────────────────
 // AI ENDPOINTS — require authentication
 // ─────────────────────────────────────────────────────────────────────────────

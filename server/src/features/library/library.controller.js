@@ -1,6 +1,7 @@
 const service = require('./library.service');
 const aiLibraryService = require('../../services/ai-library.service');
 const ncertExtractor = require('../../services/ncert-extractor.service');
+const { getSmartChapters: smartChaptersSvc } = require('../../services/smart-chapters.service');
 const { sendSuccess } = require('../../utils/api-response');
 
 // ─── School Library ───────────────────────────────────────────────────────────
@@ -243,6 +244,24 @@ const getNCERTToc = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// ─── Smart Chapters ──────────────────────────────────────────────────────
+
+const getSmartChapters = async (req, res, next) => {
+  try {
+    const { board, class: grade, subject, exam } = req.query;
+    if (!subject && !exam) {
+      return res.status(400).json({ success: false, message: 'subject or exam is required' });
+    }
+    const data = await smartChaptersSvc({
+      board:   board   || null,
+      grade:   grade   ? Number(grade) : null,
+      subject: subject || null,
+      exam:    exam    || null,
+    });
+    sendSuccess(res, data, 'Chapters retrieved');
+  } catch (err) { next(err); }
+};
+
 // ─── AI Ask ──────────────────────────────────────────────────────────────────
 
 const askAI = async (req, res, next) => {
@@ -301,5 +320,7 @@ module.exports = {
   getSubjectChapters, getChapterTopics, getBookChapters, getChapterBooks,
   // NCERT
   getNCERTToc,
+  // Smart Chapters
+  getSmartChapters,
   askAI,
 };
