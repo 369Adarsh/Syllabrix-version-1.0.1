@@ -1,0 +1,33 @@
+import api from '../api-client';
+
+export const libraryAPI = {
+  // ─── School ───────────────────────────────────────────────────────────────
+  getBoards:          ()                => api.get('/library/boards'),
+  getBoardSyllabus:   (code)            => api.get(`/library/boards/${code}/syllabus`),
+  getClasses:         (code, svId)      => api.get(`/library/boards/${code}/classes`, { params: svId ? { syllabusVersionId: svId } : {} }),
+  getSubjects:        (classId)         => api.get(`/library/classes/${classId}/subjects`),
+  getBooks:           (subjectId)       => api.get(`/library/subjects/${subjectId}/books`),
+  getChapters:        (bookId)          => api.get(`/library/books/${bookId}/chapters`),
+  getTopics:          (chapterId)       => api.get(`/library/chapters/${chapterId}/topics`),
+  recommendBooks:     (params)          => api.get('/library/books/recommend', { params }),
+
+  // ─── Competitive ─────────────────────────────────────────────────────────
+  getExams:           ()                => api.get('/library/exams'),
+  getExamSubjects:    (code)            => api.get(`/library/exams/${code}/subjects`),
+  getExamBooks:       (code, priority)  => api.get(`/library/exams/${code}/books`, { params: priority ? { priority } : {} }),
+
+  // ─── Publishers ──────────────────────────────────────────────────────────
+  getPublishers:      ()                => api.get('/library/publishers'),
+
+  // ─── University ──────────────────────────────────────────────────────────
+  getUniversities:    ()                => api.get('/library/universities'),
+  getUniversityCourses: (id)            => api.get(`/library/universities/${id}/courses`),
+  getCourseCategories: ()               => api.get('/library/course-categories'),
+  getCourses:         (level)           => api.get('/library/courses', { params: level ? { level } : {} }),
+  getCourseSubjects:  (id, semester)    => api.get(`/library/courses/${id}/subjects`, { params: semester ? { semester } : {} }),
+  getSubjectBooks:    (uniSubjectId)    => api.get(`/library/university-subjects/${uniSubjectId}/books`),
+  recommendUniBooks:  (params)          => api.get('/library/university-books/recommend', { params }),
+
+  // ─── AI Ask ──────────────────────────────────────────────────────────────
+  ask: (payload) => api.post('/library/ask', payload),
+};
