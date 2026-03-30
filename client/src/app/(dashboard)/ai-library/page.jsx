@@ -617,7 +617,11 @@ function SchoolAccordion({ onAsk, loading }) {
   const [fetching, setFetching] = useState('');
 
   useEffect(() => {
-    libraryAPI.getBoards().then(r => setBoards(r.data?.data || [])).catch(() => {});
+    // API returns { national: [...], state: [...], international: [...] } — flatten to array
+    libraryAPI.getBoards().then(r => {
+      const data = r.data?.data || {};
+      setBoards(Array.isArray(data) ? data : Object.values(data).flat());
+    }).catch(() => {});
   }, []);
 
   const selectBoard = async (b) => {
@@ -789,14 +793,15 @@ function SchoolAccordion({ onAsk, loading }) {
 // ─── Competitive Accordion ────────────────────────────────────────────────────
 
 function CompetitiveAccordion({ onAsk, loading }) {
-  const [exams, setExams] = useState([]);
+  const [exams, setExams] = useState({});   // grouped object: { engineering: [...], medical: [...] }
   const [exam, setExam] = useState(null);
   const [subjects, setSubjects] = useState([]);
   const [customQ, setCustomQ] = useState('');
   const [fetching, setFetching] = useState(false);
 
   useEffect(() => {
-    libraryAPI.getExams().then(r => setExams(r.data?.data || [])).catch(() => {});
+    // API returns grouped object { engineering: [...], medical: [...], ... }
+    libraryAPI.getExams().then(r => setExams(r.data?.data || {})).catch(() => {});
   }, []);
 
   const selectExam = async (e) => {
@@ -815,20 +820,19 @@ function CompetitiveAccordion({ onAsk, loading }) {
     });
   };
 
-  // Group exams by type
-  const examGroups = exams.reduce((acc, e) => {
-    const g = e.type || 'Other';
-    (acc[g] = acc[g] || []).push(e);
-    return acc;
-  }, {});
+  // exams is already a grouped object from the API — use directly
+  const GROUP_LABELS = {
+    engineering: 'Engineering', medical: 'Medical', civil_services: 'Civil Services',
+    banking: 'Banking & Finance', ssc: 'SSC & Govt Jobs', defence: 'Defence', state_psc: 'State PSC',
+  };
 
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 p-3 space-y-0.5">
-        {Object.entries(examGroups).map(([group, groupExams]) => (
+        {Object.entries(exams).map(([group, groupExams]) => (
           <AccordionItem
             key={group} icon={Trophy} iconColor="text-amber-500"
-            label={group} sublabel={`${groupExams.length} exams`}
+            label={GROUP_LABELS[group] || group} sublabel={`${groupExams.length} exams`}
             isOpen={groupExams.some(e => e.code === exam?.code)}
             onClick={() => {}}
           >
@@ -887,7 +891,7 @@ function CompetitiveAccordion({ onAsk, loading }) {
 const UNI_ICONS = { iit: '🏅', nit: '🏢', iim: '📊', aiims: '🏥', central: '🏛️', state: '🏫', deemed: '🎓', private: '🎓', iit_nit: '⚡' };
 
 function UniversityAccordion({ onAsk, loading }) {
-  const [unis, setUnis] = useState([]);
+  const [unis, setUnis] = useState({});   // grouped object: { iit: [...], nit: [...], ... }
   const [selectedUni, setSelectedUni] = useState(null);
   const [courses, setCourses] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState(null);
@@ -902,7 +906,8 @@ function UniversityAccordion({ onAsk, loading }) {
   const [fetching, setFetching] = useState('');
 
   useEffect(() => {
-    libraryAPI.getUniversities().then(r => setUnis(r.data?.data || [])).catch(() => {});
+    // API returns grouped object { iit: [...], nit: [...], iim: [...], ... }
+    libraryAPI.getUniversities().then(r => setUnis(r.data?.data || {})).catch(() => {});
   }, []);
 
   const selectUni = async (u) => {
@@ -957,22 +962,25 @@ function UniversityAccordion({ onAsk, loading }) {
     });
   };
 
-  // Group universities by type
-  const uniGroups = unis.reduce((acc, u) => {
-    const g = ['iit', 'nit', 'iim', 'aiims'].includes(u.type) ? u.type.toUpperCase() : (u.type === 'central' ? 'Central Universities' : (u.type === 'state' ? 'State Universities' : 'Private/Deemed'));
-    (acc[g] = acc[g] || []).push(u);
-    return acc;
-  }, {});
+  // unis is already grouped from the API — use directly
+  const UNI_GROUP_LABELS = {
+    iit: 'IITs', nit: 'NITs', iim: 'IIMs', aiims: 'AIIMS',
+    central: 'Central Universities', state: 'State Universities',
+    deemed: 'Deemed Universities', private: 'Private Universities',
+    autonomous: 'Autonomous Institutions',
+  };
 
-  const semestersForCourse = selectedCourse ? Array.from({ length: selectedCourse.duration_years * 2 || 8 }, (_, i) => i + 1) : [];
+  const semestersForCourse = selectedCourse
+    ? Array.from({ length: (selectedCourse.duration_years || 4) * 2 }, (_, i) => i + 1)
+    : [];
 
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 p-3 space-y-0.5">
-        {Object.entries(uniGroups).map(([group, groupUnis]) => (
+        {Object.entries(unis).map(([group, groupUnis]) => (
           <AccordionItem
             key={group} icon={Building2} iconColor="text-purple-500"
-            label={group} sublabel={`${groupUnis.length} institutions`}
+            label={UNI_GROUP_LABELS[group] || group} sublabel={`${groupUnis.length} institutions`}
             isOpen={openUniGroup === group}
             onClick={() => setOpenUniGroup(openUniGroup === group ? null : group)}
           >
