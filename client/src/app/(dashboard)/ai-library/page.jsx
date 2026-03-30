@@ -10,6 +10,7 @@ import {
   Sparkles, Send, Loader2, BookOpen, RotateCcw, X, Search, Bot,
   BookMarked, Lightbulb, HelpCircle, Target, Star, ExternalLink,
   ShoppingCart, Building2, Layers, Hash, Award, MapPin, Clock,
+  FileDown, AlignLeft, List, BookText, CheckCircle2,
 } from 'lucide-react';
 import NumberFlow from '@number-flow/react';
 
@@ -174,6 +175,7 @@ function useTypewriter(text, speed = 14) {
 // BOOK CARD
 // ─────────────────────────────────────────────────────────────────────────────
 function BookCard({ book, index }) {
+  const [showTOC, setShowTOC] = useState(false);
   return (
     <StaggerItem>
       <motion.div
@@ -217,29 +219,36 @@ function BookCard({ book, index }) {
         )}
 
         {/* Actions */}
-        {(book.amazon_affiliate_url || book.flipkart_affiliate_url || book.google_books_preview_url) && (
-          <div className="flex gap-2 flex-wrap">
-            {book.google_books_preview_url && (
-              <a href={book.google_books_preview_url} target="_blank" rel="noreferrer"
-                className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 transition-colors">
-                <ExternalLink size={10} /> Preview
-              </a>
-            )}
-            {book.amazon_affiliate_url && (
-              <a href={book.amazon_affiliate_url} target="_blank" rel="noreferrer"
-                className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 border border-orange-200 transition-colors">
-                <ShoppingCart size={10} /> Amazon
-              </a>
-            )}
-            {book.flipkart_affiliate_url && (
-              <a href={book.flipkart_affiliate_url} target="_blank" rel="noreferrer"
-                className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-pink-50 text-pink-600 hover:bg-pink-100 border border-pink-200 transition-colors">
-                <ShoppingCart size={10} /> Flipkart
-              </a>
-            )}
-          </div>
-        )}
+        <div className="flex gap-2 flex-wrap">
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowTOC(true)}
+            className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-200 transition-colors">
+            <List size={10} /> Contents
+          </motion.button>
+          {book.google_books_preview_url && (
+            <a href={book.google_books_preview_url} target="_blank" rel="noreferrer"
+              className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 transition-colors">
+              <ExternalLink size={10} /> Preview
+            </a>
+          )}
+          {book.amazon_affiliate_url && (
+            <a href={book.amazon_affiliate_url} target="_blank" rel="noreferrer"
+              className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-orange-50 text-orange-600 hover:bg-orange-100 border border-orange-200 transition-colors">
+              <ShoppingCart size={10} /> Amazon
+            </a>
+          )}
+          {book.flipkart_affiliate_url && (
+            <a href={book.flipkart_affiliate_url} target="_blank" rel="noreferrer"
+              className="flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-lg bg-pink-50 text-pink-600 hover:bg-pink-100 border border-pink-200 transition-colors">
+              <ShoppingCart size={10} /> Flipkart
+            </a>
+          )}
+        </div>
       </motion.div>
+      <AnimatePresence>
+        {showTOC && <BookTOCModal book={book} onClose={() => setShowTOC(false)} />}
+      </AnimatePresence>
     </StaggerItem>
   );
 }
@@ -247,8 +256,15 @@ function BookCard({ book, index }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // AI RESPONSE PANEL
 // ─────────────────────────────────────────────────────────────────────────────
-function AIResponsePanel({ response, books, mode }) {
+function AIResponsePanel({ response, books, mode, context }) {
   const { displayed, done } = useTypewriter(response?.explanation || '', 12);
+  const [pdfLoading, setPdfLoading] = useState(false);
+
+  const handlePDF = async () => {
+    setPdfLoading(true);
+    try { await generateStudyPDF({ response, context }); }
+    finally { setPdfLoading(false); }
+  };
 
   if (!response) return null;
 
@@ -261,11 +277,25 @@ function AIResponsePanel({ response, books, mode }) {
     >
       {/* Explanation */}
       <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-200/60 p-5">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
-            <Bot size={14} className="text-white" />
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
+              <Bot size={14} className="text-white" />
+            </div>
+            <span className="text-[12px] font-bold text-blue-700 uppercase tracking-wider">AI Explanation</span>
           </div>
-          <span className="text-[12px] font-bold text-blue-700 uppercase tracking-wider">AI Explanation</span>
+          {done && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+              whileTap={{ scale: 0.95 }} whileHover={{ scale: 1.03 }}
+              onClick={handlePDF}
+              disabled={pdfLoading}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 text-white text-[10px] font-bold shadow-sm shadow-indigo-200/50 hover:from-indigo-700 hover:to-blue-700 transition-all disabled:opacity-60"
+            >
+              {pdfLoading ? <Loader2 size={11} className="animate-spin" /> : <FileDown size={11} />}
+              {pdfLoading ? 'Generating…' : 'Download PDF'}
+            </motion.button>
+          )}
         </div>
         <p className="text-[14px] text-gray-800 leading-relaxed whitespace-pre-wrap">
           {displayed}
@@ -425,6 +455,295 @@ function AIInputBar({ onAsk, disabled, loading, placeholder }) {
       {!disabled && (
         <p className="text-center text-[10px] text-gray-400 mt-1">Enter to send · Shift+Enter for new line</p>
       )}
+    </motion.div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PDF GENERATOR (client-side, jsPDF)
+// ─────────────────────────────────────────────────────────────────────────────
+async function generateStudyPDF({ response, context }) {
+  const { default: jsPDF } = await import('jspdf');
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+
+  const pageW = 210, pageH = 297, margin = 18, contentW = pageW - margin * 2;
+  let y = margin;
+
+  const checkPage = (needed = 10) => {
+    if (y + needed > pageH - margin) { doc.addPage(); y = margin; }
+  };
+
+  // ── Cover gradient bar ──
+  doc.setFillColor(37, 99, 235);
+  doc.rect(0, 0, pageW, 28, 'F');
+  doc.setFillColor(79, 70, 229);
+  doc.rect(0, 22, pageW, 6, 'F');
+
+  // Syllabrix label
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(147, 197, 253);
+  doc.text('SYLLABRIX AI LIBRARY', margin, 10);
+
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(191, 219, 254);
+  doc.text('Generated Study Notes', margin, 17);
+
+  const now = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  doc.text(now, pageW - margin, 17, { align: 'right' });
+
+  y = 38;
+
+  // ── Topic / Subject title ──
+  const titleText = context?.topicName || context?.subjectName || 'Study Notes';
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.setTextColor(17, 24, 39);
+  const titleLines = doc.splitTextToSize(titleText, contentW);
+  doc.text(titleLines, margin, y);
+  y += titleLines.length * 8 + 2;
+
+  if (context?.chapterName) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(99, 102, 241);
+    doc.text(`Chapter: ${context.chapterName}`, margin, y);
+    y += 6;
+  }
+  if (context?.subjectName && context?.topicName) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(107, 114, 128);
+    const meta = [
+      context.subjectName,
+      context.uniName && `@ ${context.uniName}`,
+    ].filter(Boolean).join(' · ');
+    doc.text(meta, margin, y);
+    y += 6;
+  }
+
+  // Divider
+  doc.setDrawColor(229, 231, 235);
+  doc.setLineWidth(0.4);
+  doc.line(margin, y, pageW - margin, y);
+  y += 6;
+
+  // ── Explanation ──
+  if (response.explanation) {
+    doc.setFillColor(239, 246, 255);
+    const expLines = doc.splitTextToSize(response.explanation, contentW - 8);
+    const boxH = expLines.length * 5.5 + 10;
+    checkPage(boxH + 10);
+    doc.roundedRect(margin, y, contentW, boxH, 3, 3, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(37, 99, 235);
+    doc.text('AI EXPLANATION', margin + 4, y + 7);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor(31, 41, 55);
+    doc.text(expLines, margin + 4, y + 14);
+    y += boxH + 6;
+  }
+
+  // ── Key Points ──
+  if (response.key_points?.length) {
+    checkPage(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(17, 24, 39);
+    doc.text('KEY POINTS', margin, y);
+    y += 6;
+    response.key_points.forEach((pt, i) => {
+      const ptLines = doc.splitTextToSize(`${i + 1}.  ${pt}`, contentW - 6);
+      checkPage(ptLines.length * 5.5 + 4);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.setTextColor(55, 65, 81);
+      doc.text(ptLines, margin + 3, y);
+      y += ptLines.length * 5.5 + 2;
+    });
+    y += 4;
+  }
+
+  // ── Remember This ──
+  if (response.remember_this) {
+    const remLines = doc.splitTextToSize(response.remember_this, contentW - 8);
+    const boxH = remLines.length * 5.5 + 10;
+    checkPage(boxH + 10);
+    doc.setFillColor(240, 253, 244);
+    doc.roundedRect(margin, y, contentW, boxH, 3, 3, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(22, 163, 74);
+    doc.text('REMEMBER THIS', margin + 4, y + 7);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor(31, 41, 55);
+    doc.text(remLines, margin + 4, y + 14);
+    y += boxH + 6;
+  }
+
+  // ── University Exam Tip ──
+  if (response.university_exam_tip) {
+    const tipLines = doc.splitTextToSize(response.university_exam_tip, contentW - 8);
+    const boxH = tipLines.length * 5.5 + 10;
+    checkPage(boxH + 10);
+    doc.setFillColor(250, 245, 255);
+    doc.roundedRect(margin, y, contentW, boxH, 3, 3, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(109, 40, 217);
+    doc.text('EXAM TIP', margin + 4, y + 7);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor(31, 41, 55);
+    doc.text(tipLines, margin + 4, y + 14);
+    y += boxH + 6;
+    if (response.textbook_reference) {
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(8.5);
+      doc.setTextColor(109, 40, 217);
+      doc.text(`📖 ${response.textbook_reference}`, margin + 4, y);
+      y += 7;
+    }
+  }
+
+  // ── Viva Questions ──
+  if (response.viva_questions?.length) {
+    checkPage(20);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(17, 24, 39);
+    doc.text('VIVA / ORAL EXAM QUESTIONS', margin, y);
+    y += 6;
+    response.viva_questions.forEach((q, i) => {
+      const qLines = doc.splitTextToSize(`Q${i + 1}. ${q}`, contentW - 6);
+      checkPage(qLines.length * 5.5 + 4);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.setTextColor(190, 18, 60);
+      doc.text(qLines, margin + 3, y);
+      y += qLines.length * 5.5 + 3;
+    });
+    y += 4;
+  }
+
+  // ── Real-life example ──
+  if (response.real_life_example) {
+    const exLines = doc.splitTextToSize(response.real_life_example, contentW - 8);
+    const boxH = exLines.length * 5.5 + 10;
+    checkPage(boxH + 10);
+    doc.setFillColor(255, 251, 235);
+    doc.roundedRect(margin, y, contentW, boxH, 3, 3, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(180, 83, 9);
+    doc.text('REAL-LIFE EXAMPLE', margin + 4, y + 7);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor(31, 41, 55);
+    doc.text(exLines, margin + 4, y + 14);
+    y += boxH + 6;
+  }
+
+  // ── Footer on every page ──
+  const totalPages = doc.getNumberOfPages();
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(156, 163, 175);
+    doc.text('Syllabrix AI Library · syllabrix.com', margin, pageH - 8);
+    doc.text(`Page ${p} / ${totalPages}`, pageW - margin, pageH - 8, { align: 'right' });
+  }
+
+  const safeName = (titleText).replace(/[^a-z0-9]/gi, '_').toLowerCase().slice(0, 40);
+  doc.save(`syllabrix_${safeName}.pdf`);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BOOK TOC MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+function BookTOCModal({ book, onClose }) {
+  const [chapters, setChapters] = useState(null);
+  const [loading, setLoading]   = useState(true);
+
+  useEffect(() => {
+    libraryAPI.getBookChapters(book.id)
+      .then(r => setChapters(r.data?.data || []))
+      .catch(() => setChapters([]))
+      .finally(() => setLoading(false));
+  }, [book.id]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 40, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 20, scale: 0.97 }}
+        transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden"
+      >
+        {/* Header */}
+        <div className="flex items-start gap-3 p-4 border-b border-gray-100">
+          <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
+            <List size={16} className="text-indigo-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-bold text-gray-800 leading-snug line-clamp-2">{book.title}</p>
+            {book.author && <p className="text-[11px] text-gray-400 mt-0.5">{book.author}</p>}
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* TOC */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-1">
+          {loading ? (
+            <div className="py-8 text-center"><Loader2 size={22} className="animate-spin text-indigo-400 mx-auto" /></div>
+          ) : chapters?.length === 0 ? (
+            <p className="text-center text-[13px] text-gray-400 py-8">No TOC data available for this book yet.</p>
+          ) : (
+            chapters?.map((ch, i) => (
+              <motion.div
+                key={ch.id}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.04 }}
+                className="rounded-xl border border-gray-100 overflow-hidden"
+              >
+                <div className="flex items-center gap-3 px-3 py-2.5 bg-gray-50 hover:bg-indigo-50 transition-colors">
+                  <span className="w-6 h-6 rounded-md bg-indigo-100 text-indigo-600 text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                    {ch.chapter_num}
+                  </span>
+                  <span className="flex-1 text-[12px] font-semibold text-gray-700">{ch.chapter_title}</span>
+                  {ch.page_start && (
+                    <span className="text-[10px] text-gray-400 font-mono">p.{ch.page_start}–{ch.page_end || '?'}</span>
+                  )}
+                </div>
+                {ch.topics?.length > 0 && (
+                  <div className="px-3 py-1.5 space-y-1 bg-white">
+                    {ch.topics.map((tp, j) => (
+                      <div key={j} className="flex items-center gap-2 text-[11px] text-gray-500">
+                        <span className="w-1 h-1 rounded-full bg-indigo-300 flex-shrink-0" />
+                        <span className="flex-1 truncate">{tp.topic_name}</span>
+                        {tp.page_num && <span className="text-gray-300 font-mono flex-shrink-0">p.{tp.page_num}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            ))
+          )}
+        </div>
+      </motion.div>
     </motion.div>
   );
 }
@@ -738,6 +1057,10 @@ function UniversityDrillDown({ onContextReady, onContextClear }) {
   const [subjects, setSubjects]         = useState(null);
   const [uniSubject, setUniSubject]     = useState(null);
   const [books, setBooks]               = useState(null);
+  const [chapters, setChapters]         = useState(null);
+  const [chapter, setChapter]           = useState(null);
+  const [topics, setTopics]             = useState(null);
+  const [topic, setTopic]               = useState(null);
   const [loading, setLoading]           = useState({});
   const [uniFilter, setUniFilter]       = useState('');
   const [expandedType, setExpandedType] = useState(null);
@@ -782,15 +1105,44 @@ function UniversityDrillDown({ onContextReady, onContextClear }) {
   };
 
   const selectSubject = async (s) => {
-    setUniSubject(s); setBooks(null);
+    setUniSubject(s); setBooks(null); setChapters(null); setChapter(null); setTopics(null); setTopic(null);
     onContextClear();
     setLoad('books', true);
     try {
-      const r = await libraryAPI.getSubjectBooks(s.id);
-      const booksData = r.data?.data || [];
+      const [bookRes, chapRes] = await Promise.all([
+        libraryAPI.getSubjectBooks(s.id),
+        libraryAPI.getSubjectChapters(s.id),
+      ]);
+      const booksData = bookRes.data?.data || [];
+      const chapsData = chapRes.data?.data || [];
       setBooks(booksData);
+      setChapters(chapsData.length > 0 ? chapsData : null);
       onContextReady({ mode: 'university', universitySubjectId: s.id, subjectName: s.name, uniName: uni?.short_name || uni?.name, books: booksData });
     } finally { setLoad('books', false); }
+  };
+
+  const selectChapter = async (ch) => {
+    setChapter(ch); setTopics(null); setTopic(null);
+    onContextReady({ mode: 'university', universitySubjectId: uniSubject.id, subjectName: uniSubject.name, chapterName: ch.chapter_name, uniName: uni?.short_name || uni?.name, books });
+    setLoad('topics', true);
+    try {
+      const r = await libraryAPI.getChapterTopics(ch.id);
+      setTopics(r.data?.data || []);
+    } finally { setLoad('topics', false); }
+  };
+
+  const selectTopic = (tp) => {
+    setTopic(tp);
+    onContextReady({
+      mode: 'university',
+      universitySubjectId: uniSubject.id,
+      universityTopicId: tp.id,
+      subjectName: uniSubject.name,
+      chapterName: chapter?.chapter_name,
+      topicName: tp.topic_name,
+      uniName: uni?.short_name || uni?.name,
+      books,
+    });
   };
 
   const uniGroups = universities
@@ -808,17 +1160,23 @@ function UniversityDrillDown({ onContextReady, onContextClear }) {
     course && course.short_name,
     semester && `Sem ${semester}`,
     uniSubject && uniSubject.name,
+    chapter && `Ch.${chapter.chapter_num}`,
+    topic && topic.topic_name,
   ].filter(Boolean);
+
+  const resetAll = () => { setUni(null); setUniCourses(null); setCourse(null); setSemesters(null); setSemester(null); setSubjects(null); setUniSubject(null); setBooks(null); setChapters(null); setChapter(null); setTopics(null); setTopic(null); onContextClear(); };
 
   return (
     <div className="space-y-4">
       <Breadcrumb
         crumbs={['University', ...crumbs]}
         onClickIndex={(i) => {
-          if (i === 0) { setUni(null); setUniCourses(null); setCourse(null); setSemesters(null); setSemester(null); setSubjects(null); setUniSubject(null); setBooks(null); onContextClear(); }
-          if (i === 1) { setCourse(null); setSemesters(null); setSemester(null); setSubjects(null); setUniSubject(null); setBooks(null); onContextClear(); }
-          if (i === 2) { setSemester(null); setSubjects(null); setUniSubject(null); setBooks(null); onContextClear(); }
-          if (i === 3) { setUniSubject(null); setBooks(null); onContextClear(); }
+          if (i === 0) { resetAll(); }
+          if (i === 1) { setCourse(null); setSemesters(null); setSemester(null); setSubjects(null); setUniSubject(null); setBooks(null); setChapters(null); setChapter(null); setTopics(null); setTopic(null); onContextClear(); }
+          if (i === 2) { setSemester(null); setSubjects(null); setUniSubject(null); setBooks(null); setChapters(null); setChapter(null); setTopics(null); setTopic(null); onContextClear(); }
+          if (i === 3) { setUniSubject(null); setBooks(null); setChapters(null); setChapter(null); setTopics(null); setTopic(null); onContextClear(); }
+          if (i === 4) { setChapter(null); setTopics(null); setTopic(null); if (uniSubject) onContextReady({ mode: 'university', universitySubjectId: uniSubject.id, subjectName: uniSubject.name, uniName: uni?.short_name || uni?.name, books }); }
+          if (i === 5) { setTopic(null); if (chapter) onContextReady({ mode: 'university', universitySubjectId: uniSubject.id, subjectName: uniSubject.name, chapterName: chapter.chapter_name, uniName: uni?.short_name || uni?.name, books }); }
         }}
       />
 
@@ -964,6 +1322,107 @@ function UniversityDrillDown({ onContextReady, onContextClear }) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Step 5: Chapters (only shown when chapters exist for the subject) */}
+      <AnimatePresence>
+        {chapters && uniSubject && (
+          <StepSection step={5} title={`Chapters — ${uniSubject.name}`} loading={loading.topics}
+            onReset={() => { setChapter(null); setTopics(null); setTopic(null); onContextReady({ mode: 'university', universitySubjectId: uniSubject.id, subjectName: uniSubject.name, uniName: uni?.short_name || uni?.name, books }); }}>
+            <p className="text-[11px] text-gray-400 mb-3">Drill into a chapter for focused AI explanations and topic-level PDF notes.</p>
+            <StaggerChildren className="space-y-2" stagger={0.05}>
+              {chapters.map(ch => (
+                <StaggerItem key={ch.id}>
+                  <motion.button
+                    whileTap={{ scale: 0.99 }} whileHover={{ x: 2 }}
+                    onClick={() => selectChapter(ch)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all ${
+                      chapter?.id === ch.id
+                        ? 'border-purple-300 bg-purple-50'
+                        : 'border-gray-200 bg-gray-50 hover:border-purple-200 hover:bg-purple-50/40'
+                    }`}
+                  >
+                    <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-[12px] font-bold flex-shrink-0 ${
+                      chapter?.id === ch.id ? 'bg-purple-600 text-white' : 'bg-white border border-gray-200 text-gray-600'
+                    }`}>
+                      {ch.chapter_num}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-[13px] font-semibold truncate ${chapter?.id === ch.id ? 'text-purple-700' : 'text-gray-800'}`}>
+                        {ch.chapter_name}
+                      </p>
+                      {ch.description && <p className="text-[10px] text-gray-400 truncate mt-0.5">{ch.description}</p>}
+                    </div>
+                    {chapter?.id === ch.id
+                      ? <CheckCircle2 size={16} className="text-purple-500 flex-shrink-0" />
+                      : <ChevronRight size={14} className="text-gray-300 flex-shrink-0" />
+                    }
+                  </motion.button>
+                </StaggerItem>
+              ))}
+            </StaggerChildren>
+          </StepSection>
+        )}
+      </AnimatePresence>
+
+      {/* Step 6: Topics */}
+      <AnimatePresence>
+        {chapter && (
+          <StepSection step={6} title={`Topics — Ch.${chapter.chapter_num}: ${chapter.chapter_name}`} loading={loading.topics}
+            onReset={() => { setTopic(null); setTopics(null); setChapter(null); onContextReady({ mode: 'university', universitySubjectId: uniSubject.id, subjectName: uniSubject.name, uniName: uni?.short_name || uni?.name, books }); }}>
+            {loading.topics ? (
+              <SkeletonGrid n={4} />
+            ) : (
+              <>
+                <p className="text-[11px] text-gray-400 mb-3">Select a topic for deep AI explanation + downloadable PDF study notes.</p>
+                <StaggerChildren className="grid grid-cols-1 sm:grid-cols-2 gap-2" stagger={0.05}>
+                  {(topics || []).map(tp => (
+                    <StaggerItem key={tp.id}>
+                      <motion.button
+                        whileTap={{ scale: 0.97 }} whileHover={{ y: -1 }}
+                        onClick={() => selectTopic(tp)}
+                        className={`w-full flex items-start gap-3 p-3.5 rounded-xl border text-left transition-all group ${
+                          topic?.id === tp.id
+                            ? 'border-violet-300 bg-violet-50 shadow-sm shadow-violet-100'
+                            : 'border-gray-200 bg-white hover:border-violet-200 hover:bg-violet-50/30'
+                        }`}
+                      >
+                        <span className={`w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5 ${
+                          topic?.id === tp.id ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-500'
+                        }`}>
+                          {tp.topic_num}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-[13px] font-semibold leading-snug ${topic?.id === tp.id ? 'text-violet-700' : 'text-gray-800'}`}>
+                            {tp.topic_name}
+                          </p>
+                          {tp.description && (
+                            <p className="text-[10px] text-gray-400 mt-0.5 line-clamp-2">{tp.description}</p>
+                          )}
+                        </div>
+                        {topic?.id === tp.id
+                          ? <CheckCircle2 size={15} className="text-violet-500 flex-shrink-0 mt-0.5" />
+                          : <FileDown size={13} className="text-gray-300 group-hover:text-violet-400 transition-colors flex-shrink-0 mt-0.5" />
+                        }
+                      </motion.button>
+                    </StaggerItem>
+                  ))}
+                </StaggerChildren>
+                {topic && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                    className="mt-3 flex items-center gap-2 p-3 bg-violet-50 rounded-xl border border-violet-200"
+                  >
+                    <CheckCircle2 size={15} className="text-violet-500 flex-shrink-0" />
+                    <p className="text-[12px] text-violet-700 flex-1">
+                      <span className="font-semibold">{topic.topic_name}</span> selected — type your question below or ask for a PDF summary.
+                    </p>
+                  </motion.div>
+                )}
+              </>
+            )}
+          </StepSection>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -1006,7 +1465,10 @@ export default function AILibraryPage() {
     const payload = { studentQuery: query };
     if (context.mode === 'school')       { payload.subjectId = context.subjectId; }
     if (context.mode === 'competitive')  { payload.examCode  = context.examCode;  }
-    if (context.mode === 'university')   { payload.universitySubjectId = context.universitySubjectId; }
+    if (context.mode === 'university')   {
+      payload.universitySubjectId = context.universitySubjectId;
+      if (context.universityTopicId) payload.universityTopicId = context.universityTopicId;
+    }
 
     try {
       const r = await libraryAPI.ask(payload);
@@ -1191,6 +1653,7 @@ export default function AILibraryPage() {
                 response={aiResponse}
                 books={aiBooksUsed}
                 mode={context.mode}
+                context={context}
               />
             )}
 

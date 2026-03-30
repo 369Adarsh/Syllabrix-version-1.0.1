@@ -96,6 +96,18 @@ router.get('/university-books/recommend', controller.getUniversityBooksRecommend
 // GET /api/library/university-subjects/:id/books
 router.get('/university-subjects/:id/books', controller.getUniversitySubjectBooks);
 
+// GET /api/library/university-subjects/:id/chapters
+router.get('/university-subjects/:id/chapters', controller.getSubjectChapters);
+
+// GET /api/library/university-chapters/:id/topics
+router.get('/university-chapters/:id/topics', controller.getChapterTopics);
+
+// GET /api/library/university-books/:id/chapters  (book TOC)
+router.get('/university-books/:id/chapters', controller.getBookChapters);
+
+// GET /api/library/university-chapters/:id/books  (books covering this chapter's subject)
+router.get('/university-chapters/:id/books', controller.getChapterBooks);
+
 // ─────────────────────────────────────────────────────────────────────────────
 // AI ENDPOINTS — require authentication
 // ─────────────────────────────────────────────────────────────────────────────

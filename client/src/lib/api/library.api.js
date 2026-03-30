@@ -28,6 +28,12 @@ export const libraryAPI = {
   getSubjectBooks:    (uniSubjectId)    => api.get(`/library/university-subjects/${uniSubjectId}/books`),
   recommendUniBooks:  (params)          => api.get('/library/university-books/recommend', { params }),
 
+  // ─── Chapters + Topics + TOC ─────────────────────────────────────────────
+  getSubjectChapters: (subjectId)    => api.get(`/library/university-subjects/${subjectId}/chapters`),
+  getChapterTopics:   (chapterId)    => api.get(`/library/university-chapters/${chapterId}/topics`),
+  getBookChapters:    (bookId)       => api.get(`/library/university-books/${bookId}/chapters`),
+  getChapterBooks:    (chapterId)    => api.get(`/library/university-chapters/${chapterId}/books`),
+
   // ─── AI Ask ──────────────────────────────────────────────────────────────
   ask: (payload) => api.post('/library/ask', payload),
 };

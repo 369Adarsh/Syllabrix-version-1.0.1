@@ -24,6 +24,7 @@ const { generateJSON } = require('./ai.service');
 const {
   getAIContext, getAIExamContext, getRecommendedBooks,
   getAIUniversityContext, getUniversitySubjectBooks,
+  getTopicContext,
 } = require('../features/library/library.service');
 
 /**
@@ -41,7 +42,7 @@ const {
  * @param {number|null}  params.userId
  */
 async function ask(params) {
-  const { subjectId, chapterId, topicId, examCode, universitySubjectId, studentQuery, studentClass, boardCode } = params;
+  const { subjectId, chapterId, topicId, examCode, universitySubjectId, universityTopicId, studentQuery, studentClass, boardCode } = params;
 
   // ── 1. Fetch DB context ──────────────────────────────────────────────────────
   const { ctx, chapter, topic } = await getAIContext({
@@ -53,14 +54,18 @@ async function ask(params) {
   // Competitive exam context (if examCode provided)
   const examCtx = examCode ? await getAIExamContext(examCode) : null;
 
-  // University context (if universitySubjectId provided)
-  const uniCtx = universitySubjectId ? await getAIUniversityContext(universitySubjectId) : null;
+  // University topic context — can derive subject automatically
+  const uniTopicCtx = universityTopicId ? await getTopicContext(universityTopicId) : null;
+
+  // University context (if universitySubjectId provided, or derived from topic)
+  const resolvedUniSubjectId = universitySubjectId || uniTopicCtx?.subject_id || null;
+  const uniCtx = resolvedUniSubjectId ? await getAIUniversityContext(resolvedUniSubjectId) : null;
 
   // ── 2. Fetch recommended books (DB-driven, injected into prompt) ────────────
   let recommendedBooks = [];
   if (uniCtx) {
     // University mode: get books prescribed for this subject
-    const uniBooks = await getUniversitySubjectBooks(universitySubjectId);
+    const uniBooks = await getUniversitySubjectBooks(resolvedUniSubjectId);
     recommendedBooks = uniBooks.slice(0, 5);
   } else if (examCode) {
     // For competitive mode: get top priority books for this exam
@@ -89,7 +94,7 @@ async function ask(params) {
 
   // ── 3. Build prompt ──────────────────────────────────────────────────────────
   const prompt = buildPrompt({
-    ctx, chapter, topic, examCtx, uniCtx, recommendedBooks,
+    ctx, chapter, topic, examCtx, uniCtx, uniTopicCtx, recommendedBooks,
     studentQuery, studentClass, boardCode,
   });
 
@@ -122,7 +127,7 @@ async function ask(params) {
 
 // ── Prompt Builder ─────────────────────────────────────────────────────────────
 
-function buildPrompt({ ctx, chapter, topic, examCtx, uniCtx, recommendedBooks, studentQuery, studentClass, boardCode }) {
+function buildPrompt({ ctx, chapter, topic, examCtx, uniCtx, uniTopicCtx, recommendedBooks, studentQuery, studentClass, boardCode }) {
   const lines = [];
   const isUniversityMode = !!uniCtx;
 
@@ -181,6 +186,15 @@ function buildPrompt({ ctx, chapter, topic, examCtx, uniCtx, recommendedBooks, s
     lines.push(`Subject: ${uniCtx.subject_name}${uniCtx.subject_code ? ' (' + uniCtx.subject_code + ')' : ''}`);
     lines.push(`Subject Type: ${uniCtx.subject_type} | Credits: ${uniCtx.credits}`);
     if (uniCtx.syllabus_body)  lines.push(`Syllabus Body: ${uniCtx.syllabus_body}`);
+  }
+
+  // University topic context (chapter + topic from new tables)
+  if (uniTopicCtx) {
+    lines.push('');
+    lines.push('=== UNIVERSITY CHAPTER & TOPIC ===');
+    lines.push(`Chapter ${uniTopicCtx.chapter_num}: ${uniTopicCtx.chapter_name}`);
+    lines.push(`Topic ${uniTopicCtx.topic_num}: ${uniTopicCtx.topic_name}`);
+    if (uniTopicCtx.topic_desc) lines.push(`Description: ${uniTopicCtx.topic_desc}`);
   }
 
   // ── Section 2: Chapter / Topic ───────────────────────────────────────────────

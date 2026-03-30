@@ -192,6 +192,36 @@ const getUniversityBooksRecommend = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// ─── Chapters, Topics, Book TOC ──────────────────────────────────────────────
+
+const getSubjectChapters = async (req, res, next) => {
+  try {
+    const data = await service.getSubjectChapters(Number(req.params.id));
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+const getChapterTopics = async (req, res, next) => {
+  try {
+    const data = await service.getChapterTopics(Number(req.params.id));
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+const getBookChapters = async (req, res, next) => {
+  try {
+    const data = await service.getBookChapters(Number(req.params.id));
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+const getChapterBooks = async (req, res, next) => {
+  try {
+    const data = await service.getChapterBooks(Number(req.params.id));
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
 // ─── AI Ask ──────────────────────────────────────────────────────────────────
 
 const askAI = async (req, res, next) => {
@@ -205,14 +235,15 @@ const askAI = async (req, res, next) => {
       topicId,
       examCode,
       universitySubjectId,
+      universityTopicId,
       studentQuery,
       studentClass,
     } = req.body;
 
-    if (!studentQuery || (!subjectId && !examCode && !universitySubjectId)) {
+    if (!studentQuery || (!subjectId && !examCode && !universitySubjectId && !universityTopicId)) {
       return res.status(400).json({
         success: false,
-        message: 'studentQuery and one of subjectId, examCode, or universitySubjectId are required',
+        message: 'studentQuery and one of subjectId, examCode, universitySubjectId, or universityTopicId are required',
       });
     }
 
@@ -225,6 +256,7 @@ const askAI = async (req, res, next) => {
       topicId:              topicId              ? Number(topicId)              : null,
       examCode,
       universitySubjectId:  universitySubjectId  ? Number(universitySubjectId)  : null,
+      universityTopicId:    universityTopicId    ? Number(universityTopicId)    : null,
       studentQuery,
       studentClass,
       userId: req.user?.id,
@@ -244,5 +276,7 @@ module.exports = {
   getUniversities, getUniversity, getUniversityCourses,
   getCourseCategories, getCourses, getCourseSubjects,
   getUniversitySubjectBooks, getUniversityBooksRecommend,
+  // chapters + topics + TOC
+  getSubjectChapters, getChapterTopics, getBookChapters, getChapterBooks,
   askAI,
 };

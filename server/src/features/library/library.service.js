@@ -495,6 +495,76 @@ async function getAIExamContext(examCode) {
   return rows[0] || null;
 }
 
+// ─── University Chapters + Topics + Book TOC ─────────────────────────────────
+
+async function getSubjectChapters(subjectId) {
+  const [rows] = await pool.execute(
+    `SELECT id, chapter_num, chapter_name, description
+     FROM university_subject_chapters
+     WHERE subject_id = ? AND is_active = 1
+     ORDER BY chapter_num ASC`,
+    [subjectId]
+  );
+  return rows;
+}
+
+async function getChapterTopics(chapterId) {
+  const [rows] = await pool.execute(
+    `SELECT id, topic_num, topic_name, description
+     FROM university_chapter_topics
+     WHERE chapter_id = ? AND is_active = 1
+     ORDER BY topic_num ASC`,
+    [chapterId]
+  );
+  return rows;
+}
+
+async function getBookChapters(bookId) {
+  const [chapters] = await pool.execute(
+    `SELECT bc.id, bc.chapter_num, bc.chapter_title, bc.page_start, bc.page_end
+     FROM university_book_chapters bc
+     WHERE bc.book_id = ? AND bc.is_active = 1
+     ORDER BY bc.chapter_num ASC`,
+    [bookId]
+  );
+  // Attach topics to each chapter
+  for (const ch of chapters) {
+    const [topics] = await pool.execute(
+      `SELECT topic_name, page_num FROM university_book_chapter_topics
+       WHERE book_chapter_id = ? ORDER BY page_num ASC`,
+      [ch.id]
+    );
+    ch.topics = topics;
+  }
+  return chapters;
+}
+
+async function getChapterBooks(chapterId) {
+  // Find subject for this chapter, then return its books
+  const [rows] = await pool.execute(
+    `SELECT usc.subject_id FROM university_subject_chapters usc WHERE usc.id = ? LIMIT 1`,
+    [chapterId]
+  );
+  if (!rows.length) return [];
+  return getUniversitySubjectBooks(rows[0].subject_id);
+}
+
+async function getTopicContext(topicId) {
+  const [rows] = await pool.execute(
+    `SELECT uct.id AS topic_id, uct.topic_name, uct.topic_num, uct.description AS topic_desc,
+            usc.id AS chapter_id, usc.chapter_name, usc.chapter_num,
+            us.id AS subject_id, us.name AS subject_name, us.semester, us.subject_code,
+            c.name AS course_name, c.short_name AS course_short
+     FROM university_chapter_topics uct
+     JOIN university_subject_chapters usc ON usc.id = uct.chapter_id
+     JOIN university_subjects us ON us.id = usc.subject_id
+     JOIN courses c ON c.id = us.course_id
+     WHERE uct.id = ? LIMIT 1`,
+    [topicId]
+  );
+  return rows[0] || null;
+}
+
 function safeParseJSON(val, fallback) {
   if (!val) return fallback;
   if (typeof val === 'object') return val;
@@ -517,4 +587,7 @@ module.exports = {
   getUniversitySubjectBooks, getUniversityBooksRecommend,
   // AI context
   getAIContext, getAIExamContext, getAIUniversityContext,
+  // chapters + topics + TOC
+  getSubjectChapters, getChapterTopics, getBookChapters, getChapterBooks,
+  getTopicContext,
 };
