@@ -1,120 +1,327 @@
+'use strict';
 /**
- * AI Library Service
- * Builds a board/syllabus-aware or exam-aware prompt from DB context
- * and calls the AI provider chain (Gemini → Groq → Together → Cohere).
+ * AI Library Service — Adaptive Intelligence Engine
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Supports ANY question a learner can ask, across 4 modes:
+ *   1. School      — board/syllabus aware (NCERT, state boards)
+ *   2. Competitive — exam-focused (JEE, NEET, UPSC, Banking, etc.)
+ *   3. University  — professor-level (IIT/NIT/AIIMS style) with topic precision
+ *   4. Open        — no context, pure AI knowledge
  *
- * Supports two modes:
- *   1. School mode  — subjectId + chapterId + topicId  (NCERT / board syllabus)
- *   2. Exam mode    — examCode  (UPSC, JEE, NEET, SSC, Banking, NDA, etc.)
+ * Question types detected and handled differently:
+ *   code        → full working implementation + explanation + complexity
+ *   derivation  → step-by-step mathematical/scientific proof
+ *   solve       → worked numerical/analytical solution
+ *   compare     → structured comparison with table-style output
+ *   complexity  → Big-O analysis, recurrence relations
+ *   examples    → multiple graded examples (basic → advanced)
+ *   explain     → conceptual with analogies + diagrams (default)
  *
- * Returned shape:
- * {
- *   explanation:         string,
- *   key_points:          string[],
- *   real_life_example:   string,
- *   remember_this:       string,
- *   follow_up_question:  string,
- *   related_topics:      string[],
- *   syllabus_note:       string,
- *   recommended_books:   { title, author, publisher, usage_tip, priority_rank }[]
- * }
+ * Sources injected into prompt:
+ *   - DB context (subject / chapter / topic metadata)
+ *   - Wikipedia summary (free, no key, auto-fetched per topic)
+ *   - arXiv papers (for advanced/research questions)
+ *   - Prescribed textbooks from Syllabrix library DB
+ *
+ * AI's own training knowledge covers virtually every standard textbook.
+ * The prompt instructs the AI to use that knowledge FULLY — not just previews.
  */
 
-const { generateJSON } = require('./ai.service');
+const { generateJSON }  = require('./ai.service');
+const { enrichContext } = require('./web-content.service');
 const {
   getAIContext, getAIExamContext, getRecommendedBooks,
   getAIUniversityContext, getUniversitySubjectBooks,
   getTopicContext,
 } = require('../features/library/library.service');
 
-/**
- * @param {object} params
- * @param {string|null}  params.boardCode
- * @param {number|null}  params.syllabusVersionId
- * @param {number|null}  params.grade
- * @param {number|null}  params.subjectId
- * @param {number|null}  params.chapterId
- * @param {number|null}  params.topicId
- * @param {string|null}  params.examCode              — for competitive exam mode
- * @param {number|null}  params.universitySubjectId   — for university mode
- * @param {string}       params.studentQuery
- * @param {string|null}  params.studentClass
- * @param {number|null}  params.userId
- */
+// ─── Question-type detector ───────────────────────────────────────────────────
+
+function detectQuestionType(query) {
+  const q = query.toLowerCase();
+
+  if (/\b(code|implement(ation)?|program|write\s+(a\s+)?(function|code|program|class)|in\s+(python|java|c\+\+|javascript|c\b|golang|rust)|algorithm\s+in|pseudocode)\b/.test(q))
+    return 'code';
+
+  if (/\b(derive|derivation|derivat|prove|proof|show\s+that|deduce)\b/.test(q))
+    return 'derivation';
+
+  if (/\b(solve|calculate|find\s+the|compute|evaluate|what\s+is\s+the\s+(value|answer|result)|numerically)\b/.test(q))
+    return 'solve';
+
+  if (/\b(compare|difference\s+between|vs\.?\s|versus|contrast|similarities|which\s+is\s+better)\b/.test(q))
+    return 'compare';
+
+  if (/\b(complexity|time\s+complexity|space\s+complexity|big.?o|big\s+oh|o\(n\)|recurrence)\b/.test(q))
+    return 'complexity';
+
+  if (/\b(example|examples|give\s+(me\s+)?(an?\s+)?example|illustrate|demonstrate|show\s+(me\s+)?(how))\b/.test(q))
+    return 'examples';
+
+  if (/\b(what\s+is|define|definition|meaning\s+of|explain)\b/.test(q))
+    return 'explain';
+
+  return 'explain';
+}
+
+function detectDepth(query) {
+  const q = query.toLowerCase();
+  if (/\b(beginner|basics|simple|easy|eli5|like\s+i.m\s+(5|a\s+kid)|for\s+dummies|introduction|overview)\b/.test(q))
+    return 'beginner';
+  if (/\b(advanced|deep\s+dive|research|internals|under\s+the\s+hood|first\s+principles|rigorous|proof|formal|academic)\b/.test(q))
+    return 'advanced';
+  return 'intermediate';
+}
+
+function detectDomain(subject, course) {
+  const s = (subject + ' ' + (course || '')).toLowerCase();
+  if (/\b(data str|algorithm|os|operating|dbms|database|network|computer|programming|software|compiler|machine learning|ai|deep learning)\b/.test(s))
+    return 'cs';
+  if (/\b(mathematics|calculus|algebra|statistics|linear algebra|discrete math|probability)\b/.test(s))
+    return 'math';
+  if (/\b(physics|thermodynamics|mechanics|electro|fluid|heat transfer|strength)\b/.test(s))
+    return 'physics_engineering';
+  if (/\b(chemistry|organic|inorganic|biochemistry|pharmacology)\b/.test(s))
+    return 'chemistry';
+  if (/\b(anatomy|physiology|pathology|microbiology|medicine|surgery|mbbs)\b/.test(s))
+    return 'medical';
+  if (/\b(accounting|finance|marketing|management|economics|commerce|business)\b/.test(s))
+    return 'commerce_management';
+  return 'general';
+}
+
+// ─── JSON schema builder per question type ────────────────────────────────────
+
+function buildSchema(qType, mode, domain) {
+  const isUni  = mode === 'university';
+  const isCode = qType === 'code';
+  const isDeriv = qType === 'derivation';
+  const isSolve = qType === 'solve';
+  const isComp = qType === 'compare';
+
+  const base = {
+    explanation:        'Main explanation. Markdown allowed (use **bold**, bullet lists with -).',
+    key_points:         ['Key insight 1', 'Key insight 2', 'Key insight 3'],
+    real_life_example:  'Concrete real-world application or analogy.',
+    remember_this:      'One-liner memory trick, mnemonic, or essential takeaway.',
+    follow_up_question: 'One probing question to test deeper understanding.',
+    related_topics:     ['Related topic A', 'Related topic B'],
+    syllabus_note:      'Any important syllabus/exam note. Empty string if none.',
+  };
+
+  // Code questions
+  if (isCode) {
+    base.code_example = {
+      language:    'python (or the language best suited / asked for)',
+      code:        'Complete, runnable, commented code implementation.',
+      explanation: 'Line-by-line or block-by-block explanation of the code.',
+      sample_io:   'Sample input and expected output.',
+    };
+    base.complexity_analysis = {
+      time:  'Time complexity with justification (e.g., O(n log n) because...)',
+      space: 'Space complexity with justification.',
+      best_case:  'Best-case scenario.',
+      worst_case: 'Worst-case scenario.',
+    };
+    // Remove real_life_example from code — not needed
+    base.real_life_example = 'A use case where this algorithm/code is used in production systems.';
+  }
+
+  // Derivation / proof questions
+  if (isDeriv) {
+    base.derivation_steps = [
+      'Step 1: Start with [assumption/axiom].',
+      'Step 2: Apply [theorem/rule/identity].',
+      'Step 3: Simplify to get...',
+      '... continue until result.',
+    ];
+    base.formula = 'Final derived formula or result in plain text (use ^ for power, * for multiply).';
+    base.explanation = 'Conceptual explanation of WHY this derivation works, not just the steps.';
+  }
+
+  // Solved example questions
+  if (isSolve) {
+    base.solved_example = {
+      problem:        'The problem statement (with numbers if applicable).',
+      approach:       'Which method/formula/technique to use and why.',
+      solution_steps: ['Step 1: ...', 'Step 2: ...', 'Step 3: ...'],
+      answer:         'Final answer with units/label.',
+      verification:   'How to verify the answer (optional sanity check).',
+    };
+    base.formula = 'Key formula(s) used. Empty string if none.';
+  }
+
+  // Comparison questions
+  if (isComp) {
+    base.comparison = {
+      header_a:  'First item name',
+      header_b:  'Second item name',
+      points: [
+        { aspect: 'Aspect name (e.g. Speed)', a: 'Value for A', b: 'Value for B' },
+        { aspect: 'Another aspect', a: '...', b: '...' },
+      ],
+      when_to_use_a: 'When A is preferred.',
+      when_to_use_b: 'When B is preferred.',
+    };
+  }
+
+  // Complexity analysis (standalone)
+  if (qType === 'complexity' && !isCode) {
+    base.complexity_analysis = {
+      time:  'Time complexity with justification.',
+      space: 'Space complexity with justification.',
+      best_case: 'Best-case.',
+      worst_case: 'Worst-case.',
+      average_case: 'Average-case if applicable.',
+    };
+  }
+
+  // Examples request
+  if (qType === 'examples') {
+    base.graded_examples = [
+      { level: 'Basic', problem: '...', solution: '...' },
+      { level: 'Intermediate', problem: '...', solution: '...' },
+      { level: 'Advanced', problem: '...', solution: '...' },
+    ];
+  }
+
+  // University-mode extras
+  if (isUni) {
+    base.university_exam_tip    = 'How this topic/question type appears in university exams. Mention marks weightage, common question patterns. Empty if unknown.';
+    base.textbook_reference     = 'Exact chapter/section/page reference from the prescribed textbook. E.g. "CLRS Chapter 3, Section 3.1, pp. 43–52".';
+    base.viva_questions         = ['Viva Q1?', 'Viva Q2?', 'Viva Q3?', 'Viva Q4?'];
+  } else {
+    base.university_exam_tip    = '';
+    base.textbook_reference     = '';
+    base.viva_questions         = [];
+  }
+
+  return base;
+}
+
+// ─── Main ask function ────────────────────────────────────────────────────────
+
 async function ask(params) {
-  const { subjectId, chapterId, topicId, examCode, universitySubjectId, universityTopicId, studentQuery, studentClass, boardCode } = params;
+  const {
+    subjectId, chapterId, topicId,
+    examCode,
+    universitySubjectId, universityTopicId,
+    studentQuery, studentClass, boardCode,
+  } = params;
 
-  // ── 1. Fetch DB context ──────────────────────────────────────────────────────
-  const { ctx, chapter, topic } = await getAIContext({
-    subjectId: subjectId || null,
-    chapterId: chapterId || null,
-    topicId:   topicId   || null,
-  });
+  // ── 1. Detect question intelligence ─────────────────────────────────────────
+  const qType   = detectQuestionType(studentQuery);
+  const depth   = detectDepth(studentQuery);
 
-  // Competitive exam context (if examCode provided)
-  const examCtx = examCode ? await getAIExamContext(examCode) : null;
+  // ── 2. Fetch DB context (parallel) ──────────────────────────────────────────
+  const [
+    { ctx, chapter, topic },
+    examCtxResult,
+    uniTopicCtxResult,
+  ] = await Promise.all([
+    getAIContext({ subjectId: subjectId || null, chapterId: chapterId || null, topicId: topicId || null }),
+    examCode         ? getAIExamContext(examCode)          : Promise.resolve(null),
+    universityTopicId ? getTopicContext(universityTopicId) : Promise.resolve(null),
+  ]);
 
-  // University topic context — can derive subject automatically
-  const uniTopicCtx = universityTopicId ? await getTopicContext(universityTopicId) : null;
+  const examCtx     = examCtxResult;
+  const uniTopicCtx = uniTopicCtxResult;
 
-  // University context (if universitySubjectId provided, or derived from topic)
   const resolvedUniSubjectId = universitySubjectId || uniTopicCtx?.subject_id || null;
   const uniCtx = resolvedUniSubjectId ? await getAIUniversityContext(resolvedUniSubjectId) : null;
 
-  // ── 2. Fetch recommended books (DB-driven, injected into prompt) ────────────
+  // ── 3. Fetch recommended books ───────────────────────────────────────────────
   let recommendedBooks = [];
   if (uniCtx) {
-    // University mode: get books prescribed for this subject
-    const uniBooks = await getUniversitySubjectBooks(resolvedUniSubjectId);
-    recommendedBooks = uniBooks.slice(0, 5);
+    recommendedBooks = (await getUniversitySubjectBooks(resolvedUniSubjectId)).slice(0, 5);
   } else if (examCode) {
-    // For competitive mode: get top priority books for this exam
-    // Optionally filter by subject if chapter/topic gives us a hint
     const subjectHint = ctx?.subject_name || chapter?.title || null;
-    recommendedBooks = await getRecommendedBooks({
-      examCode,
-      subject: subjectHint,
-      classLevel: 'beginner',  // return priority_rank=1 books only for prompt injection
-    });
-    // Limit to top 5 for prompt efficiency
-    recommendedBooks = recommendedBooks.slice(0, 5);
+    recommendedBooks  = (await getRecommendedBooks({ examCode, subject: subjectHint, classLevel: 'beginner' })).slice(0, 5);
   } else if (subjectId && ctx) {
-    // School mode: check if there are competitive books for the board's likely exam
-    // (basic heuristic — JEE for science subjects, UPSC for history/geo)
     const examHint = guessExamFromSubject(ctx.subject_name);
     if (examHint) {
-      recommendedBooks = await getRecommendedBooks({
-        examCode: examHint,
-        subject: ctx.subject_name,
-        classLevel: 'beginner',
-      });
-      recommendedBooks = recommendedBooks.slice(0, 3);
+      recommendedBooks = (await getRecommendedBooks({ examCode: examHint, subject: ctx.subject_name, classLevel: 'beginner' })).slice(0, 3);
     }
   }
 
-  // ── 3. Build prompt ──────────────────────────────────────────────────────────
-  const prompt = buildPrompt({
-    ctx, chapter, topic, examCtx, uniCtx, uniTopicCtx, recommendedBooks,
-    studentQuery, studentClass, boardCode,
+  // ── 4. Determine domain for Wikipedia topic ──────────────────────────────────
+  const subjectName = uniCtx?.subject_name || ctx?.subject_name || '';
+  const courseName  = uniCtx?.course_name  || '';
+  const domain      = detectDomain(subjectName, courseName);
+
+  // The "topic to search" for Wikipedia
+  const wikiTopic = uniTopicCtx?.topic_name
+    || topic?.title
+    || chapter?.title
+    || uniCtx?.subject_name
+    || ctx?.subject_name
+    || studentQuery.split(' ').slice(0, 5).join(' ');
+
+  // ── 5. Enrich with open-access content (Wikipedia + arXiv) ──────────────────
+  const isAdvanced = depth === 'advanced';
+  const { wikiSummary, papers } = await enrichContext({
+    topic:        wikiTopic,
+    subject:      subjectName,
+    questionType: qType,
+    isAdvanced,
   });
 
-  // ── 4. Call AI provider chain ────────────────────────────────────────────────
-  const result = await generateJSON(prompt, { temperature: 0.6, maxTokens: 2048 });
+  // ── 6. Build the mega-prompt ─────────────────────────────────────────────────
+  const mode = uniCtx ? 'university' : examCode ? 'competitive' : 'school';
+  const prompt = buildPrompt({
+    ctx, chapter, topic,
+    examCtx, uniCtx, uniTopicCtx,
+    recommendedBooks,
+    wikiSummary, papers,
+    studentQuery, studentClass, boardCode,
+    qType, depth, domain, mode,
+  });
 
-  // ── 5. Normalize output ──────────────────────────────────────────────────────
+  // ── 7. Call AI — increased tokens for richer answers ────────────────────────
+  const result = await generateJSON(prompt, {
+    temperature: qType === 'code' || qType === 'derivation' ? 0.3 : 0.55,
+    maxTokens:   4096,
+  });
+
+  // ── 8. Normalize and return ──────────────────────────────────────────────────
   return {
+    // Core (always present)
     explanation:            result.explanation            || '',
-    key_points:             Array.isArray(result.key_points)      ? result.key_points      : [],
+    key_points:             Array.isArray(result.key_points)     ? result.key_points     : [],
     real_life_example:      result.real_life_example      || '',
     remember_this:          result.remember_this          || '',
     follow_up_question:     result.follow_up_question     || '',
-    related_topics:         Array.isArray(result.related_topics)  ? result.related_topics  : [],
+    related_topics:         Array.isArray(result.related_topics) ? result.related_topics : [],
     syllabus_note:          result.syllabus_note          || '',
-    // University-mode extras (empty strings in non-university mode)
+
+    // Code
+    code_example:           result.code_example           || null,
+    complexity_analysis:    result.complexity_analysis    || null,
+
+    // Derivation / Math
+    derivation_steps:       Array.isArray(result.derivation_steps) ? result.derivation_steps : [],
+    formula:                result.formula                || '',
+
+    // Solved example
+    solved_example:         result.solved_example         || null,
+
+    // Comparison
+    comparison:             result.comparison             || null,
+
+    // Graded examples
+    graded_examples:        Array.isArray(result.graded_examples) ? result.graded_examples : [],
+
+    // University-mode extras
     university_exam_tip:    result.university_exam_tip    || '',
     textbook_reference:     result.textbook_reference     || '',
     viva_questions:         Array.isArray(result.viva_questions)  ? result.viva_questions  : [],
-    recommended_books:      recommendedBooks.map(b => ({
+
+    // Meta
+    question_type:          qType,
+    depth_level:            depth,
+
+    // Books
+    recommended_books: recommendedBooks.map(b => ({
       title:         b.title,
       author:        b.author,
       publisher:     b.publisher_name || b.publisher_short,
@@ -125,157 +332,247 @@ async function ask(params) {
   };
 }
 
-// ── Prompt Builder ─────────────────────────────────────────────────────────────
+// ─── Mega Prompt Builder ──────────────────────────────────────────────────────
 
-function buildPrompt({ ctx, chapter, topic, examCtx, uniCtx, uniTopicCtx, recommendedBooks, studentQuery, studentClass, boardCode }) {
-  const lines = [];
-  const isUniversityMode = !!uniCtx;
+function buildPrompt({
+  ctx, chapter, topic,
+  examCtx, uniCtx, uniTopicCtx,
+  recommendedBooks, wikiSummary, papers,
+  studentQuery, studentClass, boardCode,
+  qType, depth, domain, mode,
+}) {
+  const lines    = [];
+  const isUni    = mode === 'university';
+  const isExam   = mode === 'competitive';
 
-  if (isUniversityMode) {
-    const uniName  = uniCtx.university_name  || 'the university';
+  // ── Role & Persona ────────────────────────────────────────────────────────────
+  lines.push('══════════════════════════════════════════════════════════');
+  lines.push('ROLE & MISSION');
+  lines.push('══════════════════════════════════════════════════════════');
+
+  if (isUni && uniCtx) {
+    const uniName  = uniCtx.university_name  || 'a top Indian university';
     const uniType  = uniCtx.university_type  || '';
     const course   = `${uniCtx.course_name} (${uniCtx.course_short})`;
-    const semLabel = uniCtx.semester         ? `Semester ${uniCtx.semester}` : '';
-    lines.push(`You are a senior professor at ${uniName} teaching ${uniCtx.subject_name} for ${course}${semLabel ? ' ' + semLabel : ''}.`);
-    lines.push('Answer at university level — technical, detailed, exam-oriented.');
-    if (uniType === 'iit') {
-      lines.push('Style: IIT-level rigor. Use first-principles thinking. Include mathematical derivations where relevant.');
-    } else {
-      lines.push('Style: Match typical university exam pattern. Cover theory, derivations, and application.');
-    }
-  } else {
-    lines.push('You are a friendly, expert AI tutor on the Syllabrix education platform.');
-    lines.push('Answer the student\'s question using the syllabus context provided below.');
-    lines.push('Use simple, clear language appropriate for school and competitive exam students.');
-  }
-  lines.push('');
+    const semLabel = uniCtx.semester ? `Semester ${uniCtx.semester}` : '';
+    const isIIT    = uniType === 'iit';
+    const isAIIMS  = uniType === 'aiims';
+    const isIIM    = uniType === 'iim';
 
-  // ── Section 1: Syllabus / Exam context ──────────────────────────────────────
-  lines.push('=== SECTION 1: CONTEXT ===');
+    lines.push(`You are a world-class professor at ${uniName}, teaching ${uniCtx.subject_name} for ${course}${semLabel ? ', ' + semLabel : ''}.`);
+    lines.push('');
+    lines.push('You have:');
+    lines.push(`  - 20+ years of teaching and research experience in ${uniCtx.subject_name}`);
+    lines.push('  - Deep knowledge of ALL prescribed and reference textbooks for this subject');
+    lines.push('  - Thorough understanding of university exam patterns, mark distributions, and viva expectations');
+    lines.push('  - The ability to explain ANY question — from first-year basics to PhD-level depth');
+    lines.push('');
+
+    if (isIIT)   lines.push('Style: IIT-level rigor. First-principles thinking, mathematical proofs, algorithmic complexity analysis, research-grade depth when asked.');
+    if (isAIIMS) lines.push('Style: AIIMS/medical precision. Clinical relevance, pathophysiology linkage, mnemonics for memory, MBBS exam pattern awareness.');
+    if (isIIM)   lines.push('Style: IIM case-study approach. Business context, frameworks, real company examples, strategic analysis.');
+    if (!isIIT && !isAIIMS && !isIIM) lines.push('Style: University exam-oriented. Cover theory, derivations, applications, solved examples. Match the question paper style of this subject.');
+
+  } else if (isExam && examCtx) {
+    lines.push(`You are an elite ${examCtx.name} coach and subject matter expert on Syllabrix.`);
+    lines.push(`You have cracked ${examCtx.name} yourself and have coached 10,000+ students.`);
+    lines.push('You know every previous year question, trick, shortcut, and scoring pattern for this exam.');
+    lines.push('Answer in a way that maximises score — give both conceptual understanding AND exam techniques.');
+
+  } else {
+    lines.push('You are an expert AI tutor on Syllabrix — India\'s leading education platform.');
+    lines.push('You teach students from Class 1 to PhD level across all subjects.');
+    lines.push('Your goal: answer ANY question a student asks, at exactly the depth they need.');
+    lines.push('Use simple analogies for beginners. Show full derivations for advanced learners. Write production code for coding questions.');
+  }
+
+  // ── Depth instructions ────────────────────────────────────────────────────────
+  lines.push('');
+  lines.push('══════════════════════════════════════════════════════════');
+  lines.push(`DETECTED DEPTH: ${depth.toUpperCase()}`);
+  lines.push('══════════════════════════════════════════════════════════');
+  if (depth === 'beginner')      lines.push('The student is a beginner. Use simple language, analogies, no jargon without explanation. Build intuition first.');
+  else if (depth === 'advanced') lines.push('The student wants deep, rigorous, research-level content. Show all steps, use formal notation, mention edge cases, refer to specific chapters in the textbook.');
+  else                           lines.push('Intermediate level. Balance intuition with precision. Show key steps without being overly verbose.');
+
+  // ── Context ───────────────────────────────────────────────────────────────────
+  lines.push('');
+  lines.push('══════════════════════════════════════════════════════════');
+  lines.push('CURRICULUM CONTEXT');
+  lines.push('══════════════════════════════════════════════════════════');
 
   if (examCtx) {
     lines.push(`Exam: ${examCtx.name} (${examCtx.code})`);
-    lines.push(`Type: ${examCtx.type} | Level: ${examCtx.level}`);
-    if (examCtx.state) lines.push(`State: ${examCtx.state}`);
+    lines.push(`Type: ${examCtx.type} | Level: ${examCtx.level}${examCtx.state ? ' | State: ' + examCtx.state : ''}`);
     if (examCtx.conducting_body) lines.push(`Conducting Body: ${examCtx.conducting_body}`);
   }
 
   if (ctx) {
     lines.push(`Board: ${ctx.board_name} (${ctx.board_code}) — ${ctx.board_type}`);
-    lines.push(`Syllabus Version: ${ctx.version_name} (${ctx.academic_year_start}${ctx.is_current ? ' — CURRENT' : ' — OLDER/LEGACY'})`);
-    if (!ctx.is_current) {
-      lines.push('⚠️  NOTE: This syllabus version is older and may no longer be examined.');
-    }
-    lines.push(`Grade: ${ctx.grade_label}${ctx.stream !== 'general' ? ` | Stream: ${ctx.stream}` : ''}`);
+    lines.push(`Syllabus: ${ctx.version_name} (${ctx.academic_year_start}${ctx.is_current ? ' — CURRENT' : ' — OLDER'})`);
+    lines.push(`Grade: ${ctx.grade_label}${ctx.stream !== 'general' ? ' | Stream: ' + ctx.stream : ''}`);
     lines.push(`Subject: ${ctx.subject_name}`);
   } else if (boardCode) {
     lines.push(`Board: ${boardCode.toUpperCase()}`);
   }
 
-  if (studentClass) lines.push(`Student\'s class (self-reported): ${studentClass}`);
+  if (studentClass) lines.push(`Student's class (self-reported): ${studentClass}`);
 
-  // University context block
   if (uniCtx) {
     lines.push('');
-    lines.push('=== UNIVERSITY CONTEXT ===');
-    if (uniCtx.university_name)  lines.push(`University: ${uniCtx.university_name} (${uniCtx.university_short || ''}) — Type: ${uniCtx.university_type}`);
-    lines.push(`Course: ${uniCtx.course_name} (${uniCtx.course_short})${uniCtx.specialization ? ' — ' + uniCtx.specialization : ''}`);
-    lines.push(`Level: ${uniCtx.course_level}`);
-    if (uniCtx.semester)       lines.push(`Semester: ${uniCtx.semester}`);
-    if (uniCtx.year)           lines.push(`Year: ${uniCtx.year}`);
-    lines.push(`Subject: ${uniCtx.subject_name}${uniCtx.subject_code ? ' (' + uniCtx.subject_code + ')' : ''}`);
-    lines.push(`Subject Type: ${uniCtx.subject_type} | Credits: ${uniCtx.credits}`);
-    if (uniCtx.syllabus_body)  lines.push(`Syllabus Body: ${uniCtx.syllabus_body}`);
+    lines.push('UNIVERSITY:');
+    if (uniCtx.university_name) lines.push(`  ${uniCtx.university_name} (${uniCtx.university_short || ''}) — ${uniCtx.university_type?.toUpperCase()}`);
+    lines.push(`  Course: ${uniCtx.course_name} (${uniCtx.course_short})${uniCtx.specialization ? ' — ' + uniCtx.specialization : ''} | Level: ${uniCtx.course_level}`);
+    if (uniCtx.semester) lines.push(`  Semester: ${uniCtx.semester}${uniCtx.year ? ' | Year: ' + uniCtx.year : ''}`);
+    lines.push(`  Subject: ${uniCtx.subject_name}${uniCtx.subject_code ? ' (' + uniCtx.subject_code + ')' : ''} | Type: ${uniCtx.subject_type} | Credits: ${uniCtx.credits}`);
+    if (uniCtx.syllabus_body) lines.push(`  Syllabus Body: ${uniCtx.syllabus_body}`);
   }
 
-  // University topic context (chapter + topic from new tables)
   if (uniTopicCtx) {
     lines.push('');
-    lines.push('=== UNIVERSITY CHAPTER & TOPIC ===');
-    lines.push(`Chapter ${uniTopicCtx.chapter_num}: ${uniTopicCtx.chapter_name}`);
-    lines.push(`Topic ${uniTopicCtx.topic_num}: ${uniTopicCtx.topic_name}`);
-    if (uniTopicCtx.topic_desc) lines.push(`Description: ${uniTopicCtx.topic_desc}`);
+    lines.push('CHAPTER & TOPIC (from curriculum DB):');
+    lines.push(`  Chapter ${uniTopicCtx.chapter_num}: ${uniTopicCtx.chapter_name}`);
+    lines.push(`  Topic ${uniTopicCtx.topic_num}: ${uniTopicCtx.topic_name}`);
+    if (uniTopicCtx.topic_desc) lines.push(`  Description: ${uniTopicCtx.topic_desc}`);
   }
 
-  // ── Section 2: Chapter / Topic ───────────────────────────────────────────────
-  if (chapter) {
+  if (chapter && !uniTopicCtx) {
     lines.push('');
-    lines.push(`=== SECTION 2: CHAPTER ===`);
-    lines.push(`Chapter ${chapter.chapter_number}: ${chapter.title}`);
-    if (chapter.description)           lines.push(`  Description: ${chapter.description}`);
-    if (chapter.key_concepts?.length)  lines.push(`  Key Concepts: ${chapter.key_concepts.join(', ')}`);
-    if (chapter.learning_outcomes?.length) lines.push(`  Learning Outcomes: ${chapter.learning_outcomes.join(' | ')}`);
+    lines.push(`CHAPTER: Chapter ${chapter.chapter_number}: ${chapter.title}`);
+    if (chapter.description)          lines.push(`  ${chapter.description}`);
+    if (chapter.key_concepts?.length) lines.push(`  Key Concepts: ${chapter.key_concepts.join(', ')}`);
   }
 
-  if (topic) {
-    lines.push('');
-    lines.push(`=== SECTION 3: TOPIC ===`);
-    lines.push(`Topic: ${topic.title}`);
-    if (topic.bloom_levels?.length)   lines.push(`  Bloom's Levels: ${topic.bloom_levels.join(', ')}`);
-    if (topic.weightage_percent != null) lines.push(`  Exam Weightage: ${topic.weightage_percent}%`);
-    if (topic.is_deleted_in_new_syllabus) {
-      lines.push('  ⚠️  This topic has been REMOVED in the NEP 2020 rationalized syllabus.');
-      lines.push('      Inform the student so they do not waste time if on current syllabus.');
-    }
-    if (topic.is_new_in_current_syllabus) {
-      lines.push('  ✅  This is a NEW topic added in the current syllabus.');
-    }
+  if (topic && !uniTopicCtx) {
+    lines.push(`TOPIC: ${topic.title}`);
+    if (topic.bloom_levels?.length)       lines.push(`  Bloom's: ${topic.bloom_levels.join(', ')}`);
+    if (topic.weightage_percent != null)  lines.push(`  Exam Weightage: ${topic.weightage_percent}%`);
+    if (topic.is_deleted_in_new_syllabus) lines.push('  ⚠️ REMOVED in current NEP 2020 syllabus.');
   }
 
-  // ── Section 4: Recommended books (100% DB-driven) ────────────────────────────
+  // ── Prescribed books ──────────────────────────────────────────────────────────
   if (recommendedBooks.length) {
     lines.push('');
-    lines.push('=== SECTION 4: RECOMMENDED BOOKS (from Syllabrix library database) ===');
-    lines.push('Mention these books if they are directly relevant to the student\'s question:');
+    lines.push('PRESCRIBED / RECOMMENDED TEXTBOOKS (from Syllabrix library):');
+    lines.push('Your explanation should align with how these books explain this topic.');
+    lines.push('Reference specific chapters/sections when relevant.');
     recommendedBooks.forEach((b, i) => {
-      const author    = b.author           ? ` by ${b.author}` : '';
-      const publisher = b.publisher_name   ? ` — ${b.publisher_name}` : '';
-      const tip       = b.usage_tip        ? ` | Tip: ${b.usage_tip}` : '';
-      lines.push(`  ${i + 1}. "${b.title}"${author}${publisher}${tip}`);
+      lines.push(`  ${i + 1}. "${b.title}" by ${b.author || 'N/A'} — ${b.publisher_name || b.publisher_short || ''}`);
+      if (b.usage_tip) lines.push(`     Tip: ${b.usage_tip}`);
     });
   }
 
-  // ── Student's question ───────────────────────────────────────────────────────
+  // ── Wikipedia enrichment ──────────────────────────────────────────────────────
+  if (wikiSummary) {
+    lines.push('');
+    lines.push('OPEN-ACCESS REFERENCE (Wikipedia — use to add factual accuracy):');
+    lines.push(wikiSummary);
+  }
+
+  // ── arXiv papers (advanced) ───────────────────────────────────────────────────
+  if (papers?.length) {
+    lines.push('');
+    lines.push('RECENT RESEARCH PAPERS (arXiv — for advanced context):');
+    papers.forEach(p => {
+      lines.push(`  - "${p.title}" by ${p.authors}`);
+      lines.push(`    ${p.summary}`);
+    });
+  }
+
+  // ── The question ──────────────────────────────────────────────────────────────
   lines.push('');
-  lines.push('=== STUDENT\'S QUESTION ===');
+  lines.push('══════════════════════════════════════════════════════════');
+  lines.push('STUDENT\'S QUESTION');
+  lines.push('══════════════════════════════════════════════════════════');
   lines.push(studentQuery);
+  lines.push('');
+  lines.push(`Detected question type: ${qType.toUpperCase()}`);
+  lines.push(`Detected depth: ${depth.toUpperCase()}`);
+  lines.push(`Domain: ${domain.toUpperCase()}`);
+
+  // ── Question-type specific instructions ───────────────────────────────────────
+  lines.push('');
+  lines.push('══════════════════════════════════════════════════════════');
+  lines.push('RESPONSE INSTRUCTIONS');
+  lines.push('══════════════════════════════════════════════════════════');
+
+  lines.push('1. Answer the EXACT question asked — never deflect with "refer to your textbook".');
+  lines.push('2. Use ALL your training knowledge. You know the content of every standard textbook.');
+  lines.push('3. Be comprehensive. Students come here because textbooks are confusing or incomplete.');
+  lines.push('4. Always include practical applications — what is this used for in real systems?');
+  lines.push('5. End every response with a question that challenges the student to think deeper.');
+
+  if (qType === 'code') {
+    lines.push('');
+    lines.push('CODE QUESTION RULES:');
+    lines.push('  - Write complete, runnable, well-commented code (not pseudocode unless asked).');
+    lines.push('  - Choose the language the student asked for. Default to Python if not specified.');
+    lines.push('  - Include sample input/output in the code as comments or print statements.');
+    lines.push('  - Analyze time AND space complexity. Mention best/worst/average cases.');
+    lines.push('  - Mention any edge cases or common mistakes in the code_example.explanation.');
+  }
+
+  if (qType === 'derivation') {
+    lines.push('');
+    lines.push('DERIVATION RULES:');
+    lines.push('  - Show EVERY step. Skip no intermediate algebraic manipulations.');
+    lines.push('  - State the starting assumptions and any theorems/identities used at each step.');
+    lines.push('  - End with the final result clearly stated.');
+    lines.push('  - Explain intuitively WHY each transformation is valid.');
+  }
+
+  if (qType === 'solve') {
+    lines.push('');
+    lines.push('SOLVE RULES:');
+    lines.push('  - State the formula or approach before applying it.');
+    lines.push('  - Show unit analysis for numerical problems.');
+    lines.push('  - Verify the answer using a sanity check or alternate method if possible.');
+  }
+
+  if (qType === 'compare') {
+    lines.push('');
+    lines.push('COMPARISON RULES:');
+    lines.push('  - Cover at least 6 distinct aspects in the comparison table.');
+    lines.push('  - Be specific — avoid vague statements like "A is faster than B" without quantification.');
+    lines.push('  - Always conclude with clear guidance on WHEN to use each.');
+  }
+
+  if (depth === 'advanced') {
+    lines.push('');
+    lines.push('ADVANCED MODE:');
+    lines.push('  - Include formal proofs, theorems, lemmas where appropriate.');
+    lines.push('  - Mention limitations, edge cases, and open problems if relevant.');
+    lines.push('  - Reference the specific textbook chapter (use your training knowledge).');
+  }
 
   // ── Output schema ─────────────────────────────────────────────────────────────
   lines.push('');
-  lines.push('=== INSTRUCTIONS ===');
-  lines.push('Respond with ONLY a JSON object matching this exact schema:');
-  lines.push('{');
-  lines.push('  "explanation": "Clear step-by-step explanation.",');
-  lines.push('  "key_points": ["Point 1", "Point 2", "Point 3"],');
-  lines.push('  "real_life_example": "A relatable real-life example.",');
-  lines.push('  "remember_this": "Short memory trick or one-liner.",');
-  lines.push('  "follow_up_question": "One question to check understanding.",');
-  lines.push('  "related_topics": ["Topic A", "Topic B"],');
-  lines.push('  "syllabus_note": "Any syllabus warning. Empty string if none.",');
-  if (isUniversityMode) {
-    lines.push('  "university_exam_tip": "How this topic typically appears in university exams (question patterns, marks weightage). Empty string if unknown.",');
-    lines.push('  "textbook_reference": "Chapter or section reference from the prescribed textbook. Empty string if unknown.",');
-    lines.push('  "viva_questions": ["Viva Q1", "Viva Q2", "Viva Q3"]');
-  } else {
-    lines.push('  "university_exam_tip": "",');
-    lines.push('  "textbook_reference": "",');
-    lines.push('  "viva_questions": []');
-  }
-  lines.push('}');
+  lines.push('══════════════════════════════════════════════════════════');
+  lines.push('OUTPUT FORMAT');
+  lines.push('══════════════════════════════════════════════════════════');
+  lines.push('Return ONLY a valid JSON object. No markdown fences. No extra text.');
+  lines.push('Schema (include ALL fields; use empty string/array/null for N/A fields):');
   lines.push('');
-  lines.push('CRITICAL: Return ONLY the JSON object. No markdown. No extra text before or after.');
+
+  const schema = buildSchema(qType, mode, domain);
+  lines.push(JSON.stringify(schema, null, 2));
+
+  lines.push('');
+  lines.push('CRITICAL: Output ONLY the JSON. The response will be parsed with JSON.parse().');
+  lines.push('Markdown is allowed INSIDE string values (e.g., **bold**, - bullet lists, `code`).');
 
   return lines.join('\n');
 }
 
-// ── Heuristic: guess competitive exam from school subject ─────────────────────
+// ─── Heuristic: school subject → competitive exam ─────────────────────────────
 
 function guessExamFromSubject(subjectName) {
   if (!subjectName) return null;
   const s = subjectName.toLowerCase();
-  if (s.includes('history') || s.includes('geography') || s.includes('polity') || s.includes('economy')) return 'UPSC_IAS';
-  if (s.includes('physics') || s.includes('chemistry') || s.includes('mathematics')) return 'JEE_MAIN';
-  if (s.includes('biology')) return 'NEET_UG';
+  if (/history|geography|polity|economy|environment/.test(s)) return 'UPSC_IAS';
+  if (/physics|chemistry|math/.test(s))                       return 'JEE_MAIN';
+  if (/biology/.test(s))                                      return 'NEET_UG';
+  if (/english|reasoning|aptitude/.test(s))                   return 'SSC_CGL';
   return null;
 }
 

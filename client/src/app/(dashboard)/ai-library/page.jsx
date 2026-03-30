@@ -255,10 +255,39 @@ function BookCard({ book, index }) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AI RESPONSE PANEL
+// ─── Simple markdown renderer (bold + bullets only) ──────────────────────────
+function RichText({ text, className = '' }) {
+  if (!text) return null;
+  // Split into paragraphs
+  const paragraphs = text.split('\n').filter(l => l.trim());
+  return (
+    <div className={`space-y-1.5 ${className}`}>
+      {paragraphs.map((p, i) => {
+        const isBullet = p.trim().startsWith('- ') || p.trim().startsWith('• ');
+        const content = isBullet ? p.trim().slice(2) : p;
+        // Bold: **text**
+        const rendered = content.split(/(\*\*[^*]+\*\*)/).map((part, j) =>
+          part.startsWith('**') && part.endsWith('**')
+            ? <strong key={j} className="font-semibold text-gray-900">{part.slice(2, -2)}</strong>
+            : part
+        );
+        if (isBullet) return (
+          <div key={i} className="flex items-start gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0 mt-2" />
+            <p className="text-[13px] text-gray-700 leading-relaxed flex-1">{rendered}</p>
+          </div>
+        );
+        return <p key={i} className="text-[13px] text-gray-700 leading-relaxed">{rendered}</p>;
+      })}
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 function AIResponsePanel({ response, books, mode, context }) {
-  const { displayed, done } = useTypewriter(response?.explanation || '', 12);
+  const { displayed, done } = useTypewriter(response?.explanation || '', 10);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [copyCode, setCopyCode]     = useState(false);
 
   const handlePDF = async () => {
     setPdfLoading(true);
@@ -266,7 +295,27 @@ function AIResponsePanel({ response, books, mode, context }) {
     finally { setPdfLoading(false); }
   };
 
+  const handleCopyCode = () => {
+    if (response.code_example?.code) {
+      navigator.clipboard.writeText(response.code_example.code);
+      setCopyCode(true);
+      setTimeout(() => setCopyCode(false), 2000);
+    }
+  };
+
   if (!response) return null;
+
+  const qType = response.question_type || 'explain';
+  const QTYPE_BADGE = {
+    code: { label: 'Code', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+    derivation: { label: 'Derivation', color: 'bg-violet-100 text-violet-700 border-violet-200' },
+    solve: { label: 'Solved', color: 'bg-orange-100 text-orange-700 border-orange-200' },
+    compare: { label: 'Comparison', color: 'bg-cyan-100 text-cyan-700 border-cyan-200' },
+    complexity: { label: 'Complexity', color: 'bg-red-100 text-red-700 border-red-200' },
+    examples: { label: 'Examples', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+    explain: { label: 'Explanation', color: 'bg-indigo-100 text-indigo-700 border-indigo-200' },
+  };
+  const badge = QTYPE_BADGE[qType] || QTYPE_BADGE.explain;
 
   return (
     <motion.div
@@ -277,12 +326,16 @@ function AIResponsePanel({ response, books, mode, context }) {
     >
       {/* Explanation */}
       <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-200/60 p-5">
-        <div className="flex items-center justify-between gap-2 mb-3">
+        <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
               <Bot size={14} className="text-white" />
             </div>
             <span className="text-[12px] font-bold text-blue-700 uppercase tracking-wider">AI Explanation</span>
+            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${badge.color}`}>{badge.label}</span>
+            {response.depth_level && (
+              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border bg-gray-100 text-gray-600 border-gray-200 capitalize">{response.depth_level}</span>
+            )}
           </div>
           {done && (
             <motion.button
@@ -303,6 +356,211 @@ function AIResponsePanel({ response, books, mode, context }) {
         </p>
       </div>
 
+      {/* ── CODE BLOCK ── */}
+      {done && response.code_example && (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          className="rounded-2xl border border-gray-200/80 overflow-hidden shadow-sm">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-2.5 bg-gray-900">
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1.5"><span className="w-3 h-3 rounded-full bg-red-500" /><span className="w-3 h-3 rounded-full bg-yellow-500" /><span className="w-3 h-3 rounded-full bg-green-500" /></div>
+              <span className="text-[11px] font-mono text-gray-400 ml-1">{response.code_example.language || 'code'}</span>
+            </div>
+            <motion.button whileTap={{ scale: 0.95 }} onClick={handleCopyCode}
+              className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-400 hover:text-white transition-colors">
+              {copyCode ? <CheckCircle2 size={12} className="text-green-400" /> : <AlignLeft size={12} />}
+              {copyCode ? 'Copied!' : 'Copy'}
+            </motion.button>
+          </div>
+          {/* Code */}
+          <pre className="bg-gray-950 text-green-300 text-[12px] font-mono p-4 overflow-x-auto leading-relaxed whitespace-pre">
+            {response.code_example.code}
+          </pre>
+          {/* Code explanation */}
+          {response.code_example.explanation && (
+            <div className="bg-white p-4 border-t border-gray-100">
+              <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">How it works</p>
+              <RichText text={response.code_example.explanation} />
+            </div>
+          )}
+          {/* Sample I/O */}
+          {response.code_example.sample_io && (
+            <div className="bg-gray-50 p-4 border-t border-gray-100">
+              <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Sample I/O</p>
+              <pre className="text-[12px] text-gray-700 font-mono whitespace-pre-wrap">{response.code_example.sample_io}</pre>
+            </div>
+          )}
+        </motion.div>
+      )}
+
+      {/* ── COMPLEXITY ANALYSIS ── */}
+      {done && response.complexity_analysis && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+          className="bg-red-50 rounded-2xl border border-red-200/60 p-4">
+          <h4 className="text-[12px] font-bold text-red-600 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <Layers size={13} /> Complexity Analysis
+          </h4>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {[
+              { label: 'Time', value: response.complexity_analysis.time,         color: 'bg-red-100 text-red-700' },
+              { label: 'Space', value: response.complexity_analysis.space,        color: 'bg-orange-100 text-orange-700' },
+              { label: 'Best', value: response.complexity_analysis.best_case,     color: 'bg-green-100 text-green-700' },
+              { label: 'Worst', value: response.complexity_analysis.worst_case,   color: 'bg-red-100 text-red-700' },
+            ].filter(c => c.value).map(c => (
+              <div key={c.label} className={`${c.color} rounded-xl p-2.5 text-center`}>
+                <p className="text-[9px] font-bold uppercase tracking-widest opacity-60">{c.label}</p>
+                <p className="text-[13px] font-mono font-bold mt-0.5">{c.value}</p>
+              </div>
+            ))}
+          </div>
+          {response.complexity_analysis.average_case && (
+            <p className="text-[12px] text-gray-600 mt-2">Average case: <span className="font-mono font-semibold text-gray-800">{response.complexity_analysis.average_case}</span></p>
+          )}
+        </motion.div>
+      )}
+
+      {/* ── DERIVATION STEPS ── */}
+      {done && response.derivation_steps?.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          className="bg-violet-50 rounded-2xl border border-violet-200/60 p-5">
+          <h4 className="text-[12px] font-bold text-violet-600 uppercase tracking-wider mb-4 flex items-center gap-1.5">
+            <AlignLeft size={13} /> Step-by-Step Derivation
+          </h4>
+          <StaggerChildren className="space-y-3" stagger={0.06}>
+            {response.derivation_steps.map((step, i) => (
+              <StaggerItem key={i}>
+                <div className="flex items-start gap-3">
+                  <span className="w-6 h-6 rounded-full bg-violet-200 text-violet-700 text-[11px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
+                  <p className="text-[13px] text-gray-700 leading-relaxed font-mono whitespace-pre-wrap flex-1">{step}</p>
+                </div>
+              </StaggerItem>
+            ))}
+          </StaggerChildren>
+          {response.formula && (
+            <div className="mt-4 pt-4 border-t border-violet-200">
+              <p className="text-[11px] font-bold text-violet-500 uppercase tracking-wider mb-1">Result</p>
+              <p className="text-[15px] font-mono font-bold text-violet-800 bg-violet-100 rounded-xl px-4 py-2.5 inline-block">{response.formula}</p>
+            </div>
+          )}
+        </motion.div>
+      )}
+
+      {/* ── SOLVED EXAMPLE ── */}
+      {done && response.solved_example && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          className="bg-orange-50 rounded-2xl border border-orange-200/60 p-5">
+          <h4 className="text-[12px] font-bold text-orange-600 uppercase tracking-wider mb-4 flex items-center gap-1.5">
+            <BookText size={13} /> Worked Solution
+          </h4>
+          {response.solved_example.problem && (
+            <div className="bg-white rounded-xl border border-orange-200 p-3 mb-4">
+              <p className="text-[10px] font-bold text-orange-400 uppercase mb-1">Problem</p>
+              <p className="text-[13px] text-gray-800 font-medium">{response.solved_example.problem}</p>
+            </div>
+          )}
+          {response.solved_example.approach && (
+            <p className="text-[12px] text-orange-700 bg-orange-100 rounded-lg px-3 py-1.5 mb-3 font-medium">
+              Approach: {response.solved_example.approach}
+            </p>
+          )}
+          {response.formula && !response.derivation_steps?.length && (
+            <p className="text-[12px] text-gray-500 mb-3">Formula: <span className="font-mono font-semibold text-gray-800">{response.formula}</span></p>
+          )}
+          <StaggerChildren className="space-y-2" stagger={0.05}>
+            {(response.solved_example.solution_steps || []).map((step, i) => (
+              <StaggerItem key={i}>
+                <div className="flex items-start gap-2.5">
+                  <span className="w-5 h-5 rounded-md bg-orange-200 text-orange-700 text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
+                  <p className="text-[13px] text-gray-700 leading-relaxed">{step}</p>
+                </div>
+              </StaggerItem>
+            ))}
+          </StaggerChildren>
+          {response.solved_example.answer && (
+            <div className="mt-4 pt-3 border-t border-orange-200 flex items-center gap-2">
+              <CheckCircle2 size={16} className="text-green-500 flex-shrink-0" />
+              <p className="text-[14px] font-bold text-gray-800">Answer: <span className="text-green-700">{response.solved_example.answer}</span></p>
+            </div>
+          )}
+          {response.solved_example.verification && (
+            <p className="text-[11px] text-gray-500 mt-2 italic">✓ Verification: {response.solved_example.verification}</p>
+          )}
+        </motion.div>
+      )}
+
+      {/* ── COMPARISON TABLE ── */}
+      {done && response.comparison && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          className="bg-white rounded-2xl border border-cyan-200/60 overflow-hidden shadow-sm">
+          <div className="bg-cyan-50 px-4 py-3 border-b border-cyan-100">
+            <h4 className="text-[12px] font-bold text-cyan-700 uppercase tracking-wider flex items-center gap-1.5">
+              <Layers size={13} /> Comparison: {response.comparison.header_a} vs {response.comparison.header_b}
+            </h4>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-[12px]">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider w-1/3">Aspect</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold text-cyan-600 uppercase tracking-wider w-1/3">{response.comparison.header_a}</th>
+                  <th className="text-left px-4 py-2.5 text-[10px] font-bold text-indigo-600 uppercase tracking-wider w-1/3">{response.comparison.header_b}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(response.comparison.points || []).map((row, i) => (
+                  <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                    <td className="px-4 py-2.5 font-semibold text-gray-700 border-b border-gray-100">{row.aspect}</td>
+                    <td className="px-4 py-2.5 text-gray-600 border-b border-gray-100">{row.a}</td>
+                    <td className="px-4 py-2.5 text-gray-600 border-b border-gray-100">{row.b}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {(response.comparison.when_to_use_a || response.comparison.when_to_use_b) && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-gray-100 bg-gray-50">
+              {response.comparison.when_to_use_a && (
+                <div className="p-4">
+                  <p className="text-[10px] font-bold text-cyan-600 uppercase mb-1">Use {response.comparison.header_a} when:</p>
+                  <p className="text-[12px] text-gray-700">{response.comparison.when_to_use_a}</p>
+                </div>
+              )}
+              {response.comparison.when_to_use_b && (
+                <div className="p-4">
+                  <p className="text-[10px] font-bold text-indigo-600 uppercase mb-1">Use {response.comparison.header_b} when:</p>
+                  <p className="text-[12px] text-gray-700">{response.comparison.when_to_use_b}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </motion.div>
+      )}
+
+      {/* ── GRADED EXAMPLES ── */}
+      {done && response.graded_examples?.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          className="space-y-3">
+          <h4 className="text-[12px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+            <Target size={13} className="text-blue-500" /> Graded Examples
+          </h4>
+          <StaggerChildren className="space-y-3" stagger={0.07}>
+            {response.graded_examples.map((ex, i) => {
+              const levelColors = { Basic: 'border-green-200 bg-green-50', Intermediate: 'border-amber-200 bg-amber-50', Advanced: 'border-red-200 bg-red-50' };
+              const textColors  = { Basic: 'text-green-700', Intermediate: 'text-amber-700', Advanced: 'text-red-700' };
+              return (
+                <StaggerItem key={i}>
+                  <div className={`rounded-xl border p-4 ${levelColors[ex.level] || 'border-gray-200 bg-gray-50'}`}>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider ${textColors[ex.level] || 'text-gray-600'}`}>{ex.level}</span>
+                    <p className="text-[13px] font-semibold text-gray-800 mt-1 mb-2">{ex.problem}</p>
+                    <p className="text-[12px] text-gray-600 border-t border-current/10 pt-2">{ex.solution}</p>
+                  </div>
+                </StaggerItem>
+              );
+            })}
+          </StaggerChildren>
+        </motion.div>
+      )}
+
       {/* Key points */}
       {done && response.key_points?.length > 0 && (
         <StaggerChildren className="bg-white rounded-2xl border border-gray-200/80 p-5 space-y-2.5" stagger={0.07}>
@@ -313,7 +571,7 @@ function AIResponsePanel({ response, books, mode, context }) {
             <StaggerItem key={i}>
               <div className="flex items-start gap-2.5">
                 <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
-                <p className="text-[13px] text-gray-700 leading-relaxed">{pt}</p>
+                <RichText text={pt} className="flex-1" />
               </div>
             </StaggerItem>
           ))}
@@ -341,19 +599,15 @@ function AIResponsePanel({ response, books, mode, context }) {
       {/* University-mode extras */}
       {done && mode === 'university' && (
         <AnimatePresence>
-          {(response.university_exam_tip || (response.viva_questions?.length > 0)) && (
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.3 }}
-              className="grid grid-cols-1 sm:grid-cols-2 gap-3"
-            >
-              {response.university_exam_tip && (
+          {(response.university_exam_tip || response.textbook_reference || response.viva_questions?.length > 0) && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.3 }}
+              className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {(response.university_exam_tip || response.textbook_reference) && (
                 <div className="bg-purple-50 rounded-xl border border-purple-200/60 p-4">
                   <h4 className="text-[11px] font-bold text-purple-600 uppercase tracking-wider mb-2 flex items-center gap-1">
                     <GraduationCap size={12} /> Exam Tip
                   </h4>
-                  <p className="text-[13px] text-gray-700 leading-relaxed">{response.university_exam_tip}</p>
+                  {response.university_exam_tip && <p className="text-[13px] text-gray-700 leading-relaxed">{response.university_exam_tip}</p>}
                   {response.textbook_reference && (
                     <p className="text-[11px] text-purple-500 mt-2 border-t border-purple-100 pt-2 font-medium">📖 {response.textbook_reference}</p>
                   )}
@@ -368,8 +622,7 @@ function AIResponsePanel({ response, books, mode, context }) {
                     {response.viva_questions.map((q, i) => (
                       <StaggerItem key={i}>
                         <p className="text-[12px] text-gray-700 flex items-start gap-1.5">
-                          <span className="text-rose-400 font-bold flex-shrink-0">Q{i + 1}.</span>
-                          {q}
+                          <span className="text-rose-400 font-bold flex-shrink-0">Q{i + 1}.</span> {q}
                         </p>
                       </StaggerItem>
                     ))}
