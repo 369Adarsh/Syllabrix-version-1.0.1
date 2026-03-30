@@ -1,5 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -42,7 +43,12 @@ export default function TopBar() {
   const hasPhoto = user?.profile_photo_url && !user.profile_photo_url.includes('PASTE_');
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200/80 shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
+    <motion.header
+      initial={{ y: -20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+      className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200/80 shadow-[0_1px_4px_rgba(0,0,0,0.06)]"
+    >
       <div className="flex items-center h-[56px]">
 
         {/* ── LOGO ZONE — exactly matches sidebar width ── */}
@@ -139,8 +145,15 @@ export default function TopBar() {
             </button>
 
             {/* Profile dropdown */}
+            <AnimatePresence>
             {showProfile && (
-              <div className="absolute right-3 top-[60px] w-[272px] bg-white rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.12)] border border-gray-200/80 py-2 z-50">
+              <motion.div
+                initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -4, scale: 0.97 }}
+                transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
+                className="absolute right-3 top-[60px] w-[272px] bg-white rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.12)] border border-gray-200/80 py-2 z-50"
+              >
                 {/* User info */}
                 <Link
                   href="/profile"
@@ -179,11 +192,12 @@ export default function TopBar() {
                 >
                   <LogOut size={15} /> Log Out
                 </button>
-              </div>
+              </motion.div>
             )}
+            </AnimatePresence>
           </div>
         </div>
       </div>
-    </header>
+    </motion.header>
   );
 }

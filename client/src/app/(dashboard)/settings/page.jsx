@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { FadeIn, SlideUp } from '@/components/ui/Animate';
 import { useAuth } from '@/contexts/AuthContext';
 import { profileAPI } from '@/lib/api/profile.api';
 import { uploadAPI } from '@/lib/api/upload.api';
@@ -27,11 +28,12 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-xl mx-auto space-y-5">
-      <div className="flex items-center gap-3">
+      <FadeIn className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-600 to-slate-700 flex items-center justify-center shadow-sm"><Settings size={20} className="text-white" /></div>
         <div><h1 className="font-bold text-lg text-gray-800">Settings</h1><p className="text-[11px] text-gray-400">Manage your profile and preferences</p></div>
-      </div>
+      </FadeIn>
 
+      <SlideUp delay={0.05}>
       <div className="bg-white rounded-xl border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.1)] p-6">
         <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100">
           <div className="relative">
@@ -79,6 +81,7 @@ export default function SettingsPage() {
           </button>
         </div>
       </div>
+      </SlideUp>
     </div>
   );
 }

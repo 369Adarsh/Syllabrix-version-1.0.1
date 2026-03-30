@@ -1,5 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
+import { FadeIn, SlideUp, StaggerChildren, StaggerItem } from '@/components/ui/Animate';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { searchAPI } from '@/lib/api/search.api';
@@ -28,6 +30,7 @@ export default function ExplorePage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-5">
+      <FadeIn>
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-cyan-700 via-blue-700 to-indigo-700 p-6">
         <div className="absolute top-0 right-0 w-60 h-60 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
         <div className="relative z-10">
@@ -42,39 +45,48 @@ export default function ExplorePage() {
           </form>
         </div>
       </div>
+      </FadeIn>
 
       {loading && <div className="text-center py-12"><Loader2 size={28} className="animate-spin text-blue-500 mx-auto" /></div>}
 
       {results?.users?.length > 0 && (
+        <SlideUp>
         <div className="bg-white rounded-xl border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.1)] overflow-hidden divide-y divide-gray-50">
           {results.users.map(u => (
-            <Link key={u.id} href={`/profile/${u.id}`}
-              className="flex items-center gap-3 p-4 hover:bg-blue-50/30 transition-colors">
-              <Avatar src={u.profile_photo_url} size="md" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-gray-800">{u.username}</p>
-                {u.bio && <p className="text-xs text-gray-400 truncate">{u.bio}</p>}
-              </div>
-              <span className="text-[11px] text-gray-400 font-medium capitalize bg-gray-50 px-2.5 py-1 rounded-full">{u.user_type}</span>
-            </Link>
+            <motion.div key={u.id} whileHover={{ backgroundColor: 'rgba(239,246,255,0.5)', x: 2, transition: { duration: 0.15 } }}>
+              <Link href={`/profile/${u.id}`}
+                className="flex items-center gap-3 p-4 transition-colors">
+                <Avatar src={u.profile_photo_url} size="md" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-800">{u.username}</p>
+                  {u.bio && <p className="text-xs text-gray-400 truncate">{u.bio}</p>}
+                </div>
+                <span className="text-[11px] text-gray-400 font-medium capitalize bg-gray-50 px-2.5 py-1 rounded-full">{u.user_type}</span>
+              </Link>
+            </motion.div>
           ))}
         </div>
+        </SlideUp>
       )}
 
       {!loading && !results && trending.length > 0 && (
+        <SlideUp delay={0.05}>
         <div className="bg-white rounded-xl border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.1)] p-5">
           <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400 mb-3 flex items-center gap-1.5"><TrendingUp size={11} className="text-blue-500" /> Trending</p>
-          <div className="space-y-2">
+          <StaggerChildren className="space-y-2" stagger={0.05}>
             {trending.map((t, i) => (
-              <button key={i} onClick={() => { setQuery(t.term || t); doSearch(t.term || t); }}
-                className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl hover:bg-blue-50 transition-all text-left">
-                <Hash size={14} className="text-blue-400" />
-                <span className="text-sm font-medium text-gray-700">{t.term || t}</span>
-                {t.count && <span className="text-[10px] text-gray-400 ml-auto">{t.count} posts</span>}
-              </button>
+              <StaggerItem key={i}>
+                <motion.button whileHover={{ x: 3 }} whileTap={{ scale: 0.98 }} onClick={() => { setQuery(t.term || t); doSearch(t.term || t); }}
+                  className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl hover:bg-blue-50 transition-all text-left">
+                  <Hash size={14} className="text-blue-400" />
+                  <span className="text-sm font-medium text-gray-700">{t.term || t}</span>
+                  {t.count && <span className="text-[10px] text-gray-400 ml-auto">{t.count} posts</span>}
+                </motion.button>
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerChildren>
         </div>
+        </SlideUp>
       )}
 
       {query && !loading && (!results || (results.users?.length === 0 && results.posts?.length === 0)) && (

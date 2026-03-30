@@ -1,5 +1,7 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { useInView } from 'react-intersection-observer';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,6 +24,7 @@ export default function PostCard({ post: initialPost, onDelete }) {
   const menuRef = useRef(null);
 
   const isOwn = user?.id?.toString() === post?.user_id?.toString();
+  const { ref: cardRef, inView } = useInView({ triggerOnce: true, threshold: 0.05 });
 
   // Close menu on outside click
   useEffect(() => {
@@ -96,7 +99,14 @@ export default function PostCard({ post: initialPost, onDelete }) {
   const hasMedia = post.media_url && post.media_url !== 'null' && !post.media_url.includes('PASTE_');
 
   return (
-    <div className="bg-white rounded-xl shadow-[0_1px_2px_rgba(0,0,0,0.1)] border border-gray-200/60 overflow-hidden">
+    <motion.div
+      ref={cardRef}
+      initial={{ opacity: 0, y: 16 }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+      whileHover={{ y: -1, boxShadow: '0 4px 16px rgba(0,0,0,0.08)', transition: { duration: 0.18 } }}
+      className="bg-white rounded-xl shadow-[0_1px_2px_rgba(0,0,0,0.1)] border border-gray-200/60 overflow-hidden"
+    >
       {/* Header */}
       <div className="flex items-center gap-3 px-4 pt-4 pb-2">
         <Link href={'/profile/' + post.user_id}
@@ -167,18 +177,23 @@ export default function PostCard({ post: initialPost, onDelete }) {
 
       {/* Actions */}
       <div className="flex items-center border-t border-gray-100 px-2">
-        <button onClick={handleLike} className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold rounded-lg transition-all mx-0.5 ${liked ? 'text-red-500' : 'text-gray-500 hover:bg-gray-50 hover:text-red-500'}`}>
-          <Heart size={16} fill={liked ? 'currentColor' : 'none'} /> Like
-        </button>
-        <button onClick={loadComments} className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold rounded-lg transition-all mx-0.5 ${showComments ? 'text-blue-600' : 'text-gray-500 hover:bg-gray-50 hover:text-blue-600'}`}>
+        <motion.button whileTap={{ scale: 0.9 }} onClick={handleLike} className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold rounded-lg transition-all mx-0.5 ${liked ? 'text-red-500' : 'text-gray-500 hover:bg-gray-50 hover:text-red-500'}`}>
+          <motion.span animate={liked ? { scale: [1, 1.4, 1] } : {}} transition={{ duration: 0.3 }}>
+            <Heart size={16} fill={liked ? 'currentColor' : 'none'} />
+          </motion.span>
+          Like
+        </motion.button>
+        <motion.button whileTap={{ scale: 0.9 }} onClick={loadComments} className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold rounded-lg transition-all mx-0.5 ${showComments ? 'text-blue-600' : 'text-gray-500 hover:bg-gray-50 hover:text-blue-600'}`}>
           <MessageCircle size={16} /> Comment
-        </button>
-        <button onClick={handleShare} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-gray-500 rounded-lg hover:bg-gray-50 hover:text-blue-600 transition-all mx-0.5">
+        </motion.button>
+        <motion.button whileTap={{ scale: 0.9 }} onClick={handleShare} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-gray-500 rounded-lg hover:bg-gray-50 hover:text-blue-600 transition-all mx-0.5">
           <Share2 size={16} /> Share
-        </button>
-        <button onClick={handleSave} className={`flex items-center justify-center p-2.5 rounded-lg transition-all ${saved ? 'text-amber-500' : 'text-gray-400 hover:bg-gray-50 hover:text-amber-500'}`}>
-          <Bookmark size={16} fill={saved ? 'currentColor' : 'none'} />
-        </button>
+        </motion.button>
+        <motion.button whileTap={{ scale: 0.85 }} onClick={handleSave} className={`flex items-center justify-center p-2.5 rounded-lg transition-all ${saved ? 'text-amber-500' : 'text-gray-400 hover:bg-gray-50 hover:text-amber-500'}`}>
+          <motion.span animate={saved ? { scale: [1, 1.3, 1] } : {}} transition={{ duration: 0.25 }}>
+            <Bookmark size={16} fill={saved ? 'currentColor' : 'none'} />
+          </motion.span>
+        </motion.button>
       </div>
 
       {/* Comments */}
@@ -215,6 +230,6 @@ export default function PostCard({ post: initialPost, onDelete }) {
           )}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

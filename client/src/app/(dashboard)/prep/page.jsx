@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { FadeIn, SlideUp, StaggerChildren, StaggerItem } from '@/components/ui/Animate';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { prepAPI } from '@/lib/api/prep.api';
@@ -37,6 +38,7 @@ export default function PrepPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-5">
       {/* Hero */}
+      <FadeIn>
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-800 p-6">
         <div className="absolute top-0 right-0 w-72 h-72 bg-blue-500/15 rounded-full -translate-y-1/2 translate-x-1/3" />
         <div className="absolute bottom-0 left-1/4 w-52 h-52 bg-indigo-500/10 rounded-full translate-y-1/2" />
@@ -63,9 +65,10 @@ export default function PrepPage() {
           )}
         </div>
       </div>
+      </FadeIn>
 
       {/* Quick Actions — 6 cards with Newsroom + Navigator */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <StaggerChildren className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3" stagger={0.06}>
         {[
           { href: '/newsroom', icon: Newspaper, label: 'Newsroom', desc: '54 sources', gradient: 'from-slate-700 to-blue-800', bg: 'from-slate-50 to-blue-50', border: 'border-slate-200/50' },
           { href: '/prep/current-affairs', icon: Flame, label: 'Current Affairs', desc: 'Daily updates', gradient: 'from-orange-500 to-red-500', bg: 'from-orange-50 to-red-50', border: 'border-orange-200/50' },
@@ -74,16 +77,18 @@ export default function PrepPage() {
           { href: '/prep/my-stats', icon: BarChart3, label: 'My Stats', desc: 'Performance', gradient: 'from-emerald-500 to-teal-600', bg: 'from-emerald-50 to-teal-50', border: 'border-emerald-200/50' },
           { href: '/prep/bookmarks', icon: BookMarked, label: 'Bookmarks', desc: 'Saved items', gradient: 'from-blue-500 to-indigo-600', bg: 'from-blue-50 to-indigo-50', border: 'border-blue-200/50' },
         ].map((item, i) => (
-          <Link key={i} href={item.href}
-            className={`bg-gradient-to-br ${item.bg} border ${item.border} rounded-2xl p-4 hover:shadow-lg hover:-translate-y-0.5 transition-all group`}>
-            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${item.gradient} flex items-center justify-center mb-2.5 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all`}>
-              <item.icon size={20} className="text-white" />
-            </div>
-            <p className="text-sm font-bold text-gray-800">{item.label}</p>
-            <p className="text-[10px] text-gray-400 mt-0.5">{item.desc}</p>
-          </Link>
+          <StaggerItem key={i}>
+            <Link href={item.href}
+              className={`block bg-gradient-to-br ${item.bg} border ${item.border} rounded-2xl p-4 hover:shadow-lg hover:-translate-y-0.5 transition-all group`}>
+              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${item.gradient} flex items-center justify-center mb-2.5 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all`}>
+                <item.icon size={20} className="text-white" />
+              </div>
+              <p className="text-sm font-bold text-gray-800">{item.label}</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">{item.desc}</p>
+            </Link>
+          </StaggerItem>
         ))}
-      </div>
+      </StaggerChildren>
 
       <div className="flex gap-5">
         {/* Main Column */}

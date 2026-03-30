@@ -1,4 +1,5 @@
 'use client';
+import { motion } from 'motion/react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -16,27 +17,34 @@ const NavLink = ({ href, icon: Icon, label, badge }) => {
   const active = pathname === href || (href !== '/' && pathname.startsWith(href + '/') && href.length > 1);
 
   return (
-    <Link
-      href={href}
-      className={`flex items-center gap-2.5 px-3 py-[6px] rounded-lg text-[13px] transition-all duration-100 group relative ${
-        active
-          ? 'bg-blue-50 text-blue-700 font-semibold'
-          : 'text-gray-600 hover:bg-[#F0F2F5] hover:text-gray-800 font-medium'
-      }`}
-    >
-      {active && <span className="absolute left-0 top-1 bottom-1 w-[3px] bg-blue-600 rounded-r-full" />}
-      <Icon
-        size={17}
-        strokeWidth={active ? 2.2 : 1.6}
-        className={active ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600 transition-colors'}
-      />
-      <span className="flex-1 truncate leading-none">{label}</span>
-      {badge && (
-        <span className="w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center flex-shrink-0">
-          {badge}
-        </span>
-      )}
-    </Link>
+    <motion.div whileHover={{ x: 2 }} whileTap={{ scale: 0.97 }} transition={{ duration: 0.15 }}>
+      <Link
+        href={href}
+        className={`flex items-center gap-2.5 px-3 py-[6px] rounded-lg text-[13px] transition-all duration-100 group relative ${
+          active
+            ? 'bg-blue-50 text-blue-700 font-semibold'
+            : 'text-gray-600 hover:bg-[#F0F2F5] hover:text-gray-800 font-medium'
+        }`}
+      >
+        {active && (
+          <motion.span
+            layoutId="sidebar-active-indicator"
+            className="absolute left-0 top-1 bottom-1 w-[3px] bg-blue-600 rounded-r-full"
+          />
+        )}
+        <Icon
+          size={17}
+          strokeWidth={active ? 2.2 : 1.6}
+          className={active ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600 transition-colors'}
+        />
+        <span className="flex-1 truncate leading-none">{label}</span>
+        {badge && (
+          <span className="w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center flex-shrink-0">
+            {badge}
+          </span>
+        )}
+      </Link>
+    </motion.div>
   );
 };
 
@@ -51,7 +59,12 @@ export default function Sidebar() {
   const hasPhoto = user?.profile_photo_url && !user.profile_photo_url.includes('PASTE_');
 
   return (
-    <aside className="fixed left-0 top-[56px] bottom-0 w-[220px] bg-white border-r border-gray-200/80 z-40 flex flex-col">
+    <motion.aside
+      initial={{ x: -30, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+      className="fixed left-0 top-[56px] bottom-0 w-[220px] bg-white border-r border-gray-200/80 z-40 flex flex-col"
+    >
 
       {/* ── Scrollable nav ── */}
       <div
@@ -130,6 +143,6 @@ export default function Sidebar() {
           </button>
         </div>
       )}
-    </aside>
+    </motion.aside>
   );
 }

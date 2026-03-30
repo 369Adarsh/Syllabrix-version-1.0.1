@@ -1,5 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import { motion } from 'motion/react';
+import { FadeIn, SlideInRight, StaggerChildren, StaggerItem } from '@/components/ui/Animate';
 import { useAuth } from '@/contexts/AuthContext';
 import { postsAPI } from '@/lib/api/posts.api';
 import { aiAPI } from '@/lib/api/ai.api';
@@ -58,6 +60,7 @@ export default function HomePage() {
       {/* ═══ MAIN FEED — left/center column ═══ */}
       <div className="flex-1 min-w-0 max-w-[600px] space-y-4">
         {/* Greeting */}
+        <FadeIn>
         <div className="bg-white rounded-xl shadow-[0_1px_2px_rgba(0,0,0,0.1)] border border-gray-200/60 p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -65,16 +68,21 @@ export default function HomePage() {
               <p className="text-[12px] text-gray-400 mt-0.5">Ready to learn something new today?</p>
             </div>
             {streak?.current_streak > 0 && (
-              <div className="flex items-center gap-1.5 bg-orange-50 border border-orange-200/50 rounded-lg px-3 py-1.5">
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.3, type: 'spring', stiffness: 400, damping: 25 }}
+                className="flex items-center gap-1.5 bg-orange-50 border border-orange-200/50 rounded-lg px-3 py-1.5"
+              >
                 <Flame size={16} className="text-orange-500" />
                 <span className="text-[14px] font-extrabold text-orange-600">{streak.current_streak}</span>
                 <span className="text-[9px] text-orange-400 font-medium">day streak</span>
-              </div>
+              </motion.div>
             )}
           </div>
 
           {/* Quick action chips */}
-          <div className="flex flex-wrap gap-1.5 mt-3">
+          <StaggerChildren className="flex flex-wrap gap-1.5 mt-3" stagger={0.05} delay={0.1}>
             {[
               { label: 'Daily Quiz', href: '/prep/daily-quiz', emoji: '🧠' },
               { label: 'Newsroom', href: '/newsroom', emoji: '📰' },
@@ -83,13 +91,16 @@ export default function HomePage() {
               { label: 'Arcade', href: '/arcade', emoji: '🎮' },
               { label: 'Clips', href: '/clips', emoji: '▶️' },
             ].map((a, i) => (
-              <Link key={i} href={a.href}
-                className="flex items-center gap-1 bg-[#F0F2F5] hover:bg-[#E4E6EB] rounded-full px-3 py-1.5 text-[12px] font-medium text-gray-600 transition-colors">
-                <span className="text-[13px]">{a.emoji}</span> {a.label}
-              </Link>
+              <StaggerItem key={i}>
+                <Link href={a.href}
+                  className="flex items-center gap-1 bg-[#F0F2F5] hover:bg-[#E4E6EB] rounded-full px-3 py-1.5 text-[12px] font-medium text-gray-600 transition-colors">
+                  <span className="text-[13px]">{a.emoji}</span> {a.label}
+                </Link>
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerChildren>
         </div>
+        </FadeIn>
 
         {/* Stories */}
         <StoriesBar />
@@ -128,7 +139,7 @@ export default function HomePage() {
       </div>
 
       {/* ═══ RIGHT SIDEBAR ═══ */}
-      <div className="hidden lg:flex w-[280px] flex-shrink-0 flex-col gap-3 sticky top-[72px] self-start max-h-[calc(100vh-88px)] overflow-y-auto scrollbar-hide pb-4">
+      <SlideInRight delay={0.1} className="hidden lg:flex w-[280px] flex-shrink-0 flex-col gap-3 sticky top-[72px] self-start max-h-[calc(100vh-88px)] overflow-y-auto scrollbar-hide pb-4">
 
         {/* ── News Widget — always visible ── */}
         <div className="bg-white rounded-xl shadow-[0_1px_2px_rgba(0,0,0,0.1)] border border-gray-200/60 overflow-hidden">
@@ -268,7 +279,7 @@ export default function HomePage() {
           </p>
           <p className="text-[9px] text-gray-300 mt-1">© 2026 Syllabrix</p>
         </div>
-      </div>
+      </SlideInRight>
     </div>
   );
 }

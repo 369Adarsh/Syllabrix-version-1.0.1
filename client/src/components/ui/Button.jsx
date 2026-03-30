@@ -1,4 +1,5 @@
 'use client';
+import { motion } from 'motion/react';
 
 const variants = {
   primary: 'btn-primary',
@@ -15,7 +16,10 @@ const sizes = {
 
 export default function Button({ children, variant = 'primary', size = 'md', className = '', loading, disabled, ...props }) {
   return (
-    <button
+    <motion.button
+      whileTap={disabled || loading ? {} : { scale: 0.97 }}
+      whileHover={disabled || loading ? {} : { scale: 1.01 }}
+      transition={{ duration: 0.12 }}
       className={`${variants[variant]} ${sizes[size]} inline-flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
       disabled={disabled || loading}
       {...props}
@@ -27,6 +31,6 @@ export default function Button({ children, variant = 'primary', size = 'md', cla
         </svg>
       )}
       {children}
-    </button>
+    </motion.button>
   );
 }

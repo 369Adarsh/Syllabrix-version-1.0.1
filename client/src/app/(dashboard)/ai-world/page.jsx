@@ -1,4 +1,6 @@
 'use client';
+import { motion } from 'motion/react';
+import { FadeIn, StaggerChildren, StaggerItem } from '@/components/ui/Animate';
 import Link from 'next/link';
 import {
   Sparkles, Bot, Compass, Map, FlaskConical, BookOpenCheck,
@@ -98,7 +100,7 @@ export default function AIWorldPage() {
       </div>
 
       {/* Page header */}
-      <div className="mb-8">
+      <FadeIn className="mb-8">
         <h1 className="flex items-center gap-2.5 text-[26px] font-extrabold text-gray-900 leading-tight">
           <Sparkles size={26} className="text-blue-500" />
           AI World
@@ -106,39 +108,41 @@ export default function AIWorldPage() {
         <p className="text-[14px] text-gray-500 mt-1">
           Your intelligent learning toolkit — powered by Syllabrix AI
         </p>
-      </div>
+      </FadeIn>
 
       {/* Cards grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {TOOLS.map((tool, i) => {
+      <StaggerChildren className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5" stagger={0.06}>
+        {TOOLS.map((tool) => {
           const c = COLOR[tool.color];
           const Icon = tool.icon;
           return (
-            <Link
-              key={tool.name}
-              href={tool.href}
-              className={`opacity-0 group bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4 transition-all duration-200 hover:shadow-md hover:scale-[1.03] ${c.border}`}
-              style={{ animation: 'flyIn 0.4s ease-out forwards', animationDelay: `${i * 80}ms` }}
-            >
-              {/* Icon */}
-              <div className={`w-12 h-12 rounded-2xl ${c.bg} flex items-center justify-center flex-shrink-0`}>
-                <Icon size={24} className={c.icon} strokeWidth={1.8} />
-              </div>
+            <StaggerItem key={tool.name}>
+              <motion.div whileHover={{ y: -4, scale: 1.02, boxShadow: '0 8px 28px rgba(0,0,0,0.10)', transition: { duration: 0.18 } }}>
+                <Link
+                  href={tool.href}
+                  className={`group bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col gap-4 transition-colors ${c.border}`}
+                >
+                  {/* Icon */}
+                  <div className={`w-12 h-12 rounded-2xl ${c.bg} flex items-center justify-center flex-shrink-0`}>
+                    <Icon size={24} className={c.icon} strokeWidth={1.8} />
+                  </div>
 
-              {/* Text */}
-              <div className="flex-1">
-                <p className="text-[15px] font-bold text-gray-900 mb-1">{tool.name}</p>
-                <p className="text-[12px] text-gray-500 leading-relaxed line-clamp-2">{tool.description}</p>
-              </div>
+                  {/* Text */}
+                  <div className="flex-1">
+                    <p className="text-[15px] font-bold text-gray-900 mb-1">{tool.name}</p>
+                    <p className="text-[12px] text-gray-500 leading-relaxed line-clamp-2">{tool.description}</p>
+                  </div>
 
-              {/* CTA */}
-              <div className={`flex items-center gap-1 text-[12px] font-semibold ${c.link}`}>
-                Open <ChevronRight size={13} className="transition-transform group-hover:translate-x-0.5" />
-              </div>
-            </Link>
+                  {/* CTA */}
+                  <div className={`flex items-center gap-1 text-[12px] font-semibold ${c.link}`}>
+                    Open <ChevronRight size={13} className="transition-transform group-hover:translate-x-1" />
+                  </div>
+                </Link>
+              </motion.div>
+            </StaggerItem>
           );
         })}
-      </div>
+      </StaggerChildren>
     </div>
   );
 }
