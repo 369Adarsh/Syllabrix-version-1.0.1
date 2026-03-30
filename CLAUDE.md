@@ -78,486 +78,428 @@ Syllabrix ID format: S-XXXXXXXXXX (10 chars after dash = first3+lastInitial+phon
 
 need to start form here 
 
+Extend the AI Library database with a complete 
+Indian University + Higher Education layer.
 
-Build the complete competitive exam + private publisher database 
-for Syllabrix AI Library. No shortcuts, fully dynamic, production-ready.
+═══════════════════════════════════════════════
+MIGRATIONS (continue from 094)
+═══════════════════════════════════════════════
 
-═══════════════════════════════════════════════════
-STEP 1: MIGRATION FILES
-═══════════════════════════════════════════════════
-Create in database/migrations/phase-session2/ 
-continuing from 087 (next is 088):
-
-── 088_create_publishers.sql ──
-CREATE TABLE publishers (
-  id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  name                VARCHAR(200) NOT NULL,
-  short_name          VARCHAR(50),           -- 'S.Chand', 'Arihant'
-  focus_area          VARCHAR(300),          -- 'School + Competitive'
-  website             VARCHAR(300),
-  amazon_search_url   VARCHAR(500),          -- for affiliate links
-  flipkart_search_url VARCHAR(500),
-  partnership_status  ENUM('none','contacted','licensed') DEFAULT 'none',
-  is_active           TINYINT(1) DEFAULT 1,
-  created_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+── 094_create_universities.sql ──
+CREATE TABLE universities (
+  id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name              VARCHAR(300) NOT NULL,
+  short_name        VARCHAR(50),              -- 'IIT Bombay', 'AIIMS'
+  type              ENUM('central','state','deemed','private','iit',
+                         'nit','iim','aiims','autonomous') NOT NULL,
+  established_year  YEAR,
+  location_city     VARCHAR(100),
+  location_state    VARCHAR(100),
+  country           VARCHAR(50) DEFAULT 'India',
+  official_website  VARCHAR(300),
+  naac_grade        ENUM('A++','A+','A','B++','B+','B','C','NA') DEFAULT 'NA',
+  nirf_rank         SMALLINT UNSIGNED NULL,    -- NIRF ranking
+  is_active         TINYINT(1) DEFAULT 1,
+  created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-── 089_create_exam_categories.sql ──
-CREATE TABLE exam_categories (
-  id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  code          VARCHAR(50) UNIQUE NOT NULL,  -- 'UPSC','JEE','NEET','SSC','BANKING','NDA'
-  name          VARCHAR(200) NOT NULL,
-  type          ENUM('school','engineering','medical',
-                     'civil_services','banking','ssc',
-                     'defence','state_psc','other') NOT NULL,
-  level         ENUM('national','state') DEFAULT 'national',
-  state         VARCHAR(100) NULL,            -- for state PSC only
-  conducting_body VARCHAR(200),              -- 'UPSC', 'NTA', 'SSC Board'
-  official_website VARCHAR(300),
-  is_active     TINYINT(1) DEFAULT 1,
-  created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+── 095_create_course_categories.sql ──
+CREATE TABLE course_categories (
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name        VARCHAR(100) NOT NULL,   -- 'Engineering', 'Medical', 'Commerce'
+  type        ENUM('technical','medical','science','commerce',
+                   'arts','law','education','design',
+                   'agriculture','management','other') NOT NULL,
+  is_active   TINYINT(1) DEFAULT 1
 );
 
-── 090_create_competitive_subjects.sql ──
-CREATE TABLE competitive_subjects (
-  id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  exam_category_id INT UNSIGNED NOT NULL,
-  name            VARCHAR(200) NOT NULL,      -- 'Modern History', 'Physical Geography'
-  parent_subject  VARCHAR(100),              -- 'History', 'Geography', 'Physics'
-  sub_category    VARCHAR(100),              -- 'Ancient', 'Medieval', 'Modern'
-  description     TEXT,
-  syllabus_url    VARCHAR(300),              -- official exam syllabus link
-  weightage_percent DECIMAL(5,2),            -- % in that exam
-  is_active       TINYINT(1) DEFAULT 1,
-  FOREIGN KEY (exam_category_id) REFERENCES exam_categories(id) ON DELETE CASCADE
+── 096_create_courses.sql ──
+CREATE TABLE courses (
+  id                   INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  course_category_id   INT UNSIGNED NOT NULL,
+  name                 VARCHAR(200) NOT NULL,  -- 'Bachelor of Technology'
+  short_name           VARCHAR(50),            -- 'B.Tech'
+  level                ENUM('certificate','diploma','bachelor',
+                            'master','doctorate','integrated') NOT NULL,
+  duration_years       TINYINT UNSIGNED,        -- 4 for B.Tech, 2 for M.Tech
+  specialization       VARCHAR(200),            -- 'Computer Science', 'Mechanical'
+  is_active            TINYINT(1) DEFAULT 1,
+  FOREIGN KEY (course_category_id) REFERENCES course_categories(id)
 );
 
-── 091_create_competitive_books.sql ──
-CREATE TABLE competitive_books (
+── 097_create_university_courses.sql ──
+-- Which universities offer which courses
+CREATE TABLE university_courses (
+  id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  university_id  INT UNSIGNED NOT NULL,
+  course_id      INT UNSIGNED NOT NULL,
+  intake         SMALLINT UNSIGNED,     -- number of seats
+  is_active      TINYINT(1) DEFAULT 1,
+  FOREIGN KEY (university_id) REFERENCES universities(id),
+  FOREIGN KEY (course_id) REFERENCES courses(id),
+  UNIQUE KEY (university_id, course_id)
+);
+
+── 098_create_university_subjects.sql ──
+-- Semester-wise subjects for each course
+CREATE TABLE university_subjects (
   id                    INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  publisher_id          INT UNSIGNED NOT NULL,
-  competitive_subject_id INT UNSIGNED NULL,   -- NULL = general/multi-subject
-  title                 VARCHAR(500) NOT NULL,
-  author                VARCHAR(300),
-  edition               VARCHAR(50),
-  publication_year      YEAR,
-  is_copyrighted        TINYINT(1) DEFAULT 1,
-  is_available_free     TINYINT(1) DEFAULT 0,
-  google_books_id       VARCHAR(100),
-  open_library_id       VARCHAR(100),
-  amazon_affiliate_url  VARCHAR(500),
+  course_id             INT UNSIGNED NOT NULL,
+  university_id         INT UNSIGNED NULL,     -- NULL = common across universities
+  name                  VARCHAR(200) NOT NULL, -- 'Engineering Mathematics I'
+  subject_code          VARCHAR(50),           -- 'MA101'
+  semester              TINYINT UNSIGNED,      -- 1-8 for B.Tech
+  year                  TINYINT UNSIGNED,      -- 1-4
+  subject_type          ENUM('core','elective','lab','project',
+                             'internship','audit') DEFAULT 'core',
+  credits               TINYINT UNSIGNED,      -- credit hours
+  is_common_across_uni  TINYINT(1) DEFAULT 0,  -- same across all universities
+  syllabus_body         VARCHAR(100),          -- 'GTU', 'Mumbai University', 'VTU'
+  is_active             TINYINT(1) DEFAULT 1,
+  FOREIGN KEY (course_id) REFERENCES courses(id),
+  FOREIGN KEY (university_id) REFERENCES universities(id)
+);
+
+── 099_create_university_books.sql ──
+CREATE TABLE university_books (
+  id                     INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  publisher_id           INT UNSIGNED NULL,
+  university_subject_id  INT UNSIGNED NULL,   -- NULL = multi-subject reference
+  title                  VARCHAR(500) NOT NULL,
+  author                 VARCHAR(300),
+  edition                VARCHAR(50),
+  publication_year       YEAR,
+  isbn                   VARCHAR(20),
+  book_type              ENUM('textbook','reference','lab_manual',
+                              'question_bank','notes') DEFAULT 'textbook',
+  is_prescribed          TINYINT(1) DEFAULT 0, -- officially prescribed by university
+  is_copyrighted         TINYINT(1) DEFAULT 1,
+  is_available_free      TINYINT(1) DEFAULT 0,
+  google_books_id        VARCHAR(100),
+  open_library_id        VARCHAR(100),
+  amazon_affiliate_url   VARCHAR(500),
   flipkart_affiliate_url VARCHAR(500),
   google_books_preview_url VARCHAR(300),
-  cover_image_url       VARCHAR(300),
-  priority_rank         TINYINT UNSIGNED DEFAULT 1, -- 1=must read, 2=recommended, 3=optional
-  usage_tip             TEXT,               -- "Read after NCERT", "Only for advanced"
-  is_active             TINYINT(1) DEFAULT 1,
-  created_at            TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  cover_image_url        VARCHAR(300),
+  priority_rank          TINYINT UNSIGNED DEFAULT 1,
+  usage_tip              TEXT,
+  is_active              TINYINT(1) DEFAULT 1,
+  created_at             TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (publisher_id) REFERENCES publishers(id),
-  FOREIGN KEY (competitive_subject_id) REFERENCES competitive_subjects(id)
+  FOREIGN KEY (university_subject_id) REFERENCES university_subjects(id)
 );
 
-── 092_create_book_exam_links.sql ──
--- Many-to-many: one book can serve multiple exams
-CREATE TABLE book_exam_links (
-  id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  competitive_book_id INT UNSIGNED NOT NULL,
-  exam_category_id  INT UNSIGNED NOT NULL,
-  relevance         ENUM('primary','secondary','supplementary') DEFAULT 'primary',
-  FOREIGN KEY (competitive_book_id) REFERENCES competitive_books(id) ON DELETE CASCADE,
-  FOREIGN KEY (exam_category_id) REFERENCES exam_categories(id) ON DELETE CASCADE,
-  UNIQUE KEY unique_book_exam (competitive_book_id, exam_category_id)
+── 100_create_university_book_links.sql ──
+-- One book can serve multiple subjects/courses
+CREATE TABLE university_book_subject_links (
+  id                    INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  university_book_id    INT UNSIGNED NOT NULL,
+  university_subject_id INT UNSIGNED NOT NULL,
+  relevance             ENUM('primary','reference','supplementary') DEFAULT 'primary',
+  FOREIGN KEY (university_book_id) REFERENCES university_books(id),
+  FOREIGN KEY (university_subject_id) REFERENCES university_subjects(id),
+  UNIQUE KEY (university_book_id, university_subject_id)
 );
 
-── 093_alter_books_add_competitive_fields.sql ──
--- Extend existing school books table for competitive context
-ALTER TABLE books 
-  ADD COLUMN publisher_id INT UNSIGNED NULL,
-  ADD COLUMN exam_category_id INT UNSIGNED NULL,
-  ADD COLUMN priority_rank TINYINT UNSIGNED DEFAULT 1,
-  ADD COLUMN affiliate_link VARCHAR(500) NULL,
-  ADD COLUMN google_books_preview_url VARCHAR(300) NULL,
-  ADD FOREIGN KEY (publisher_id) REFERENCES publishers(id),
-  ADD FOREIGN KEY (exam_category_id) REFERENCES exam_categories(id);
+═══════════════════════════════════════════════
+SEEDS
+═══════════════════════════════════════════════
 
-═══════════════════════════════════════════════════
-STEP 2: SEED FILES
-═══════════════════════════════════════════════════
-Create in server/src/database/seeds/
+── universities.seed.js ──
+Seed top 100 Indian universities:
 
-── publishers.seed.js ──
-Seed ALL publishers below (INSERT IGNORE, idempotent):
+IITs (23): IIT Bombay, Delhi, Madras, Kanpur, 
+Kharagpur, Roorkee, Guwahati, Hyderabad, 
+BHU, Indore, Mandi, Patna, Jodhpur, Gandhinagar,
+Bhubaneswar, Ropar, Tirupati, Dhanbad (ISM),
+Palakkad, Varanasi, Jammu, Dharwad, Bhilai
 
-SCHOOL PUBLISHERS:
-1.  S. Chand & Company — focus: School + Competitive — website: schandpublishing.com
-2.  R.S. Aggarwal (S. Chand) — focus: Mathematics + Reasoning
-3.  R.D. Sharma (Dhanpat Rai) — focus: School Mathematics
-4.  Wren & Martin (S. Chand) — focus: English Grammar
-5.  Sumita Arora (Dhanpat Rai) — focus: Computer Science
-6.  Lakhmir Singh (S. Chand) — focus: School Science
-7.  Trueman's (Trueman Publication) — focus: Biology
+NITs (31): NIT Trichy, Warangal, Surathkal, Calicut,
+Allahabad, Rourkela, Jaipur, Surat, Kurukshetra,
+Durgapur, Silchar, Hamirpur, and all remaining NITs
 
-COMPETITIVE PUBLISHERS:
-8.  Arihant Publications — focus: All competitive exams — website: arihantbooks.com
-9.  Disha Publications — focus: UPSC + State PSC + Banking
-10. MTG Learning Media — focus: NEET + JEE + Olympiad
-11. Cengage Learning India — focus: JEE Advanced
-12. DC Pandey (Arihant) — focus: Physics (JEE/NEET)
-13. HC Verma (Bharati Bhawan) — focus: Physics Concepts
-14. Bharati Bhawan — focus: School + Competitive
-15. Lucent Publications — focus: GK + SSC + Banking
-16. Kiran Prakashan — focus: SSC + Banking
-17. Rakesh Yadav Readers — focus: SSC Mathematics
-18. Spectrum Books — focus: Modern History (UPSC)
-19. Shankar IAS Academy — focus: Environment + UPSC
-20. Vision IAS — focus: UPSC Current Affairs + GS
-21. Insights IAS — focus: UPSC
-22. Unique Publications — focus: GPSC + Gujarat State PSC
-23. Target Publications — focus: MPSC + Maharashtra
-24. Sura Books — focus: TNPSC + Tamil Nadu
-25. Sapna Book House — focus: KPSC + Karnataka
-26. GC Leong (ELBS/Longman) — focus: Geography
-27. Orient BlackSwan — focus: History + Social Science
-28. TMH (Tata McGraw Hill) — focus: UPSC General Studies
-29. Vajiram & Ravi — focus: UPSC coaching notes
-30. Pathfinder Academy — focus: NDA + CDS
+AIIMS (8): AIIMS Delhi, Jodhpur, Bhopal, Patna,
+Raipur, Rishikesh, Bhubaneswar, Nagpur
 
-── exam_categories.seed.js ──
-Seed ALL exam categories:
+Central Universities (20): Delhi University, JNU,
+BHU, Hyderabad University, Jadavpur, Pune,
+Jamia Millia, AMU, TISS, EFLU
 
-ENGINEERING:
-- JEE_MAIN: Joint Entrance Examination Main — national — NTA
-- JEE_ADV: Joint Entrance Examination Advanced — national — IIT
-- BITSAT: BITS Admission Test — national — BITS Pilani
-- VITEEE: VIT Engineering Entrance — national
-- MHT_CET: Maharashtra CET Engineering — state — Maharashtra
+IIMs (21): IIM Ahmedabad, Bangalore, Calcutta,
+Lucknow, Kozhikode, Indore, Shillong, Rohtak,
+Ranchi, Raipur, Kashipur, Trichy, Udaipur,
+Bodhgaya, Amritsar, Nagpur, Sambalpur,
+Visakhapatnam, Jammu, Mumbai, Sirmaur
 
-MEDICAL:
-- NEET_UG: National Eligibility cum Entrance Test UG — national — NTA
-- AIIMS: AIIMS MBBS (now merged with NEET) — national
-- JIPMER: JIPMER MBBS — national
+Top Deemed/Private: 
+BITS Pilani/Goa/Hyderabad, VIT Vellore/Chennai,
+Manipal, SRM, Amity, Symbiosis, Christ University,
+Lovely Professional, Chandigarh University,
+NMIMS, FLAME, Ashoka University, OP Jindal,
+Shiv Nadar, Azim Premji, CEPT Ahmedabad,
+NID Ahmedabad, NIFT Delhi, MICA Ahmedabad
 
-CIVIL SERVICES:
-- UPSC_IAS: UPSC Civil Services (IAS/IPS/IFS) — national — UPSC
-- UPSC_CDS: Combined Defence Services — national — UPSC
-- UPSC_CAPF: Central Armed Police Forces — national — UPSC
+State Universities: Mumbai University, Pune University,
+Gujarat University, Anna University, Osmania,
+Rajasthan University, Lucknow University,
+Calcutta University, Madras University,
+Bangalore University, Kerala University,
+Mysore University, Vikram University
 
-STATE PSC:
-- GPSC: Gujarat Public Service Commission — state — Gujarat
-- MPSC: Maharashtra Public Service Commission — state — Maharashtra
-- UPPSC: Uttar Pradesh PSC — state — Uttar Pradesh
-- TNPSC: Tamil Nadu PSC — state — Tamil Nadu
-- KPSC: Karnataka PSC — state — Karnataka
-- RPSC: Rajasthan PSC — state — Rajasthan
-- BPSC: Bihar PSC — state — Bihar
-- MPPSC: Madhya Pradesh PSC — state — Madhya Pradesh
-- WBPSC: West Bengal PSC — state — West Bengal
-- HPSC: Haryana PSC — state — Haryana
-- PPSC: Punjab PSC — state — Punjab
-- APPSC: Andhra Pradesh PSC — state — Andhra Pradesh
-- TSPSC: Telangana PSC — state — Telangana
+── course_categories.seed.js ──
+Seed all course categories:
+Engineering, Medical, Dental, Nursing, Pharmacy,
+Ayurveda, Homeopathy, Science, Commerce, Arts,
+Law, Education, Management, Agriculture, Design,
+Architecture, Hotel Management, Media & Journalism,
+Social Work, Fine Arts, Physical Education
 
-BANKING:
-- SBI_PO: SBI Probationary Officer — national — SBI
-- IBPS_PO: IBPS PO — national — IBPS
-- IBPS_CLERK: IBPS Clerk — national — IBPS
-- RBI_GRADE_B: RBI Grade B Officer — national — RBI
-- NABARD: NABARD Grade A — national
+── courses.seed.js ──
+Seed all courses with level + duration:
 
-SSC:
-- SSC_CGL: SSC Combined Graduate Level — national — SSC
-- SSC_CHSL: SSC Combined Higher Secondary Level — national — SSC
-- SSC_GD: SSC GD Constable — national — SSC
-- SSC_CPO: SSC Central Police Organisation — national — SSC
+BACHELOR:
+B.Tech (4yr), B.E (4yr), B.Arch (5yr), MBBS (5.5yr),
+BDS (5yr), B.Pharm (4yr), B.Sc Nursing (4yr),
+BAMS (5.5yr), BHMS (5.5yr), BPT (4.5yr),
+B.Sc (3yr), B.Com (3yr), BA (3yr), LLB (3yr),
+BA LLB (5yr), BBA (3yr), BCA (3yr), B.Ed (2yr),
+BHM (3yr), BJMC (3yr), B.Des (4yr), BFA (4yr),
+BSW (3yr), B.Sc Agriculture (4yr)
 
-DEFENCE:
-- NDA: National Defence Academy — national — UPSC
-- CDS: Combined Defence Services — national — UPSC
-- AFCAT: Air Force Common Admission Test — national — IAF
-- MNS: Military Nursing Service — national
+MASTER:
+M.Tech (2yr), M.E (2yr), M.Arch (2yr),
+MD (3yr), MS Surgery (3yr), MDS (3yr),
+M.Pharm (2yr), M.Sc Nursing (2yr),
+M.Sc (2yr), M.Com (2yr), MA (2yr),
+LLM (1yr), MBA (2yr), MCA (2yr), M.Ed (2yr),
+MJMC (2yr), M.Des (2yr), MFA (2yr), MSW (2yr)
 
-── competitive_subjects.seed.js ──
-Seed ALL subjects for ALL exam categories:
+INTEGRATED:
+B.Tech + M.Tech (5yr), BA + LLB (5yr),
+B.Sc + M.Sc (5yr), MBBS + MD (7yr)
 
-FOR UPSC_IAS — seed these subjects:
-1.  History → Ancient India (sub_category: ancient, weightage: 8%)
-2.  History → Medieval India (sub_category: medieval, weightage: 6%)
-3.  History → Modern India (sub_category: modern, weightage: 12%)
-4.  History → World History (sub_category: world, weightage: 5%)
-5.  History → Art & Culture (sub_category: culture, weightage: 8%)
-6.  Geography → Indian Geography (sub_category: indian, weightage: 10%)
-7.  Geography → World Geography (sub_category: world, weightage: 6%)
-8.  Geography → Physical Geography (sub_category: physical, weightage: 5%)
-9.  Geography → Human & Economic Geography (sub_category: human, weightage: 4%)
-10. Polity → Indian Constitution & Governance (weightage: 15%)
-11. Polity → Parliamentary System (weightage: 5%)
-12. Economy → Indian Economy (weightage: 12%)
-13. Economy → Economic Survey & Budget (weightage: 5%)
-14. Environment → Environment & Ecology (weightage: 8%)
-15. Science → Science & Technology (weightage: 6%)
-16. Ethics → Ethics, Integrity & Aptitude (weightage: 10%)
-17. Current Affairs → National & International Events (weightage: 15%)
-18. Disaster Management → (weightage: 3%)
-19. Internal Security → (weightage: 4%)
-20. Social Issues → Social Justice & Welfare (weightage: 5%)
+── university_subjects.seed.js ──
+Seed semester-wise subjects for top courses:
 
-FOR JEE_MAIN + JEE_ADV — seed:
-1. Physics → Mechanics (weightage: 25%)
-2. Physics → Thermodynamics (weightage: 10%)
-3. Physics → Electromagnetism (weightage: 20%)
-4. Physics → Optics & Modern Physics (weightage: 15%)
-5. Chemistry → Physical Chemistry (weightage: 35%)
-6. Chemistry → Organic Chemistry (weightage: 35%)
-7. Chemistry → Inorganic Chemistry (weightage: 30%)
-8. Mathematics → Algebra (weightage: 30%)
-9. Mathematics → Calculus (weightage: 25%)
-10. Mathematics → Coordinate Geometry (weightage: 20%)
-11. Mathematics → Trigonometry & Vectors (weightage: 15%)
+B.TECH COMPUTER SCIENCE (8 semesters):
+Sem 1: Engineering Mathematics I, Engineering Physics,
+       Engineering Chemistry, Programming in C,
+       Engineering Graphics, English Communication
+Sem 2: Engineering Mathematics II, Data Structures,
+       Digital Electronics, OOP with Java/C++,
+       Environmental Science, Engineering Mechanics
+Sem 3: Discrete Mathematics, Computer Organization,
+       Operating Systems, Database Management,
+       Software Engineering, Theory of Computation
+Sem 4: Algorithm Analysis, Computer Networks,
+       Microprocessors, Web Technologies,
+       Probability & Statistics, Compiler Design
+Sem 5: Artificial Intelligence, Machine Learning,
+       Computer Graphics, System Programming,
+       Information Security, Elective I
+Sem 6: Big Data Analytics, Cloud Computing,
+       Mobile Computing, Software Testing,
+       Distributed Systems, Elective II
+Sem 7: Deep Learning, Natural Language Processing,
+       IoT, Project Management, Elective III, 
+       Minor Project
+Sem 8: Major Project, Industry Internship,
+       Technical Seminar, Elective IV
 
-FOR NEET_UG — seed:
-1. Physics → full NEET Physics (weightage: 25%)
-2. Chemistry → Physical Chemistry (weightage: 12%)
-3. Chemistry → Organic Chemistry (weightage: 15%)
-4. Chemistry → Inorganic Chemistry (weightage: 8%)
-5. Biology → Botany (weightage: 25%)
-6. Biology → Zoology (weightage: 25%)
+B.TECH MECHANICAL ENGINEERING (8 semesters):
+Sem 1-2: Same as CS (Math, Physics, Chemistry, Graphics)
+Sem 3: Engineering Thermodynamics, Fluid Mechanics,
+       Materials Science, Manufacturing Technology,
+       Kinematics of Machines, Strength of Materials
+Sem 4: Heat Transfer, Machine Design, Metrology,
+       Industrial Engineering, Dynamics of Machines
+Sem 5-8: Advanced Manufacturing, CAD/CAM, 
+         Automobile Engineering, Robotics, 
+         Finite Element Analysis, etc.
 
-FOR SSC_CGL — seed:
-1. Quantitative Aptitude → (weightage: 25%)
-2. Reasoning → Verbal & Non-Verbal (weightage: 25%)
-3. English → Comprehension & Grammar (weightage: 25%)
-4. General Awareness → History, Geography, Polity, Science (weightage: 25%)
+B.TECH ELECTRICAL ENGINEERING:
+Sem 3+: Circuit Theory, Electrical Machines,
+        Power Systems, Control Systems,
+        Power Electronics, Signal Processing,
+        Electromagnetic Theory, etc.
 
-FOR BANKING (SBI_PO, IBPS_PO) — seed:
-1. Quantitative Aptitude → (weightage: 20%)
-2. Reasoning → Logical & Verbal (weightage: 20%)
-3. English → (weightage: 20%)
-4. General Awareness → Banking + Current Affairs (weightage: 20%)
-5. Computer Awareness → (weightage: 10%)
-6. Data Interpretation → (weightage: 10%)
+MBBS (9 semesters + internship):
+Phase I (Sem 1-2): Anatomy, Physiology, Biochemistry
+Phase II (Sem 3-5): Pathology, Pharmacology,
+                    Microbiology, Forensic Medicine,
+                    Community Medicine
+Phase III Part 1 (Sem 5-6): Ophthalmology, ENT,
+                              Community Medicine
+Phase III Part 2 (Sem 7-9): General Medicine,
+                              General Surgery, Obstetrics,
+                              Gynaecology, Paediatrics,
+                              Orthopaedics, Psychiatry,
+                              Dermatology, Radiology
 
-FOR NDA/CDS — seed:
-1. Mathematics → (weightage: 30%)
-2. General Ability → English (weightage: 20%)
-3. General Ability → Physics (weightage: 10%)
-4. General Ability → Chemistry (weightage: 8%)
-5. General Ability → History & Polity (weightage: 12%)
-6. General Ability → Geography (weightage: 10%)
-7. General Ability → Current Affairs (weightage: 10%)
+MBA (4 semesters):
+Sem 1: Management Concepts, Managerial Economics,
+       Accounting, Organizational Behaviour,
+       Business Statistics, Business Communication
+Sem 2: Marketing Management, Financial Management,
+       Human Resource Management, Operations,
+       Business Law, Research Methodology
+Sem 3-4: Specialization electives (Finance/Marketing/HR/Operations)
+         Strategic Management, Internship
 
-FOR ALL STATE PSCs (GPSC, MPSC, UPPSC, TNPSC, KPSC, RPSC, BPSC) — seed:
-1. General Studies → History (national + state specific)
-2. General Studies → Geography (national + state specific)
-3. General Studies → Polity
-4. General Studies → Economy
-5. General Studies → Science & Tech
-6. General Studies → Current Affairs
-7. State Specific → State History (name dynamically per state)
-8. State Specific → State Geography
-9. State Specific → State Culture & Heritage
-10. State Specific → State Economy & Development
+B.COM (6 semesters):
+Sem 1-2: Financial Accounting, Business Economics,
+         Business Law, Mathematics, English
+Sem 3-4: Corporate Accounting, Cost Accounting,
+         Income Tax, Business Statistics
+Sem 5-6: Auditing, Financial Management,
+         Management Accounting, Indirect Tax
 
-── competitive_books.seed.js ──
-Seed ALL books mapped to correct publisher + subject:
+B.SC PHYSICS (6 semesters):
+Sem 1-2: Mechanics, Thermodynamics, Optics
+Sem 3-4: Electromagnetism, Quantum Mechanics
+Sem 5-6: Nuclear Physics, Solid State Physics,
+         Electronics, Statistical Mechanics
 
-PHYSICS BOOKS:
-1. "Concepts of Physics Vol 1" — HC Verma — Bharati Bhawan
-   → priority_rank: 1, exams: JEE_MAIN, JEE_ADV, NEET_UG
-   → usage_tip: "Bible of Physics. Read cover to cover before any other book."
-2. "Concepts of Physics Vol 2" — HC Verma — Bharati Bhawan
-   → priority_rank: 1, exams: JEE_MAIN, JEE_ADV, NEET_UG
-3. "DC Pandey Physics Series" — DC Pandey — Arihant
-   → priority_rank: 2, exams: JEE_MAIN, JEE_ADV, NEET_UG
-4. "Lakhmir Singh Physics Class 9" — Lakhmir Singh — S.Chand
-   → priority_rank: 1, exams: SCHOOL_CBSE
-5. "Lakhmir Singh Physics Class 10" — Lakhmir Singh — S.Chand
-   → priority_rank: 1, exams: SCHOOL_CBSE
-6. "Problems in General Physics" — IE Irodov — Mir Publishers
-   → priority_rank: 3, exams: JEE_ADV
-   → usage_tip: "Only for JEE Advanced aspirants. Very challenging."
+── university_books.seed.js ──
+Seed prescribed + reference books per subject:
 
-CHEMISTRY BOOKS:
-7.  "Physical Chemistry" — P Bahadur — GRB Publishers
-    → priority_rank: 2, exams: JEE_MAIN, JEE_ADV
-8.  "Organic Chemistry" — MS Chauhan — Balaji Publications
-    → priority_rank: 1, exams: JEE_MAIN, JEE_ADV, NEET_UG
-9.  "Concise Inorganic Chemistry" — JD Lee — Wiley
-    → priority_rank: 2, exams: JEE_ADV
-10. "O.P. Tandon Physical Chemistry" — O.P. Tandon — GRB
-    → priority_rank: 2, exams: JEE_MAIN, NEET_UG
-11. "Lakhmir Singh Chemistry" — Lakhmir Singh — S.Chand
-    → priority_rank: 1, exams: SCHOOL_CBSE
+ENGINEERING MATHEMATICS:
+- "Higher Engineering Mathematics" — B.S. Grewal — Khanna Publishers
+  (rank 1 — "Standard for all engineering universities in India")
+- "Advanced Engineering Mathematics" — Erwin Kreyszig — Wiley
+  (rank 2 — "For deeper understanding, preferred in IITs")
+- "Engineering Mathematics" — H.K. Dass — S.Chand
 
-MATHEMATICS BOOKS:
-12. "Mathematics Class 9" — R.D. Sharma — Dhanpat Rai
-    → priority_rank: 1, exams: SCHOOL_CBSE
-13. "Mathematics Class 10" — R.D. Sharma — Dhanpat Rai
-    → priority_rank: 1, exams: SCHOOL_CBSE
-14. "Quantitative Aptitude" — R.S. Aggarwal — S.Chand
-    → priority_rank: 1, exams: SSC_CGL, SBI_PO, IBPS_PO, NDA
-    → usage_tip: "Standard book for all aptitude exams. Start here."
-15. "Fast Track Objective Arithmetic" — Rajesh Verma — Arihant
-    → priority_rank: 2, exams: SSC_CGL, SSC_CHSL
-16. "Advance Maths" — Rakesh Yadav — Rakesh Yadav Readers
-    → priority_rank: 1, exams: SSC_CGL
-    → usage_tip: "Best for SSC CGL Tier 2 Mathematics."
+DATA STRUCTURES:
+- "Data Structures and Algorithms" — Narasimha Karumanchi — CareerMonk
+  (rank 1 — "Best for placements + understanding")
+- "Introduction to Algorithms" — CLRS — MIT Press
+  (rank 2 — "IIT standard. Dense but comprehensive")
+- "Data Structures" — Reema Thareja — Oxford
 
-BIOLOGY BOOKS:
-17. "Trueman's Elementary Biology Vol 1" — Trueman — Trueman Publication
-    → priority_rank: 1, exams: NEET_UG, SCHOOL_CBSE
-18. "Trueman's Elementary Biology Vol 2" — Trueman — Trueman Publication
-    → priority_rank: 1, exams: NEET_UG
-19. "MTG Fingertips Biology" — MTG — MTG Learning Media
-    → priority_rank: 2, exams: NEET_UG
-    → usage_tip: "Best for quick revision and MCQ practice."
+OPERATING SYSTEMS:
+- "Operating System Concepts" — Silberschatz (Dinosaur Book) — Wiley
+  (rank 1 — "Standard OS book across all universities")
+- "Modern Operating Systems" — Andrew Tanenbaum — Pearson
 
-HISTORY BOOKS (UPSC):
-20. "India's Struggle for Independence" — Bipin Chandra — Penguin
-    → priority_rank: 1, subject: Modern India, exams: UPSC_IAS, GPSC, MPSC
-    → usage_tip: "Must read for Modern History. Non-negotiable."
-21. "Spectrum Modern History" — Rajiv Ahir — Spectrum
-    → priority_rank: 1, subject: Modern India, exams: UPSC_IAS, all State PSC
-    → usage_tip: "Best single book for Modern History revision."
-22. "Medieval India" — Satish Chandra — NCERT/McGraw Hill
-    → priority_rank: 1, subject: Medieval India, exams: UPSC_IAS
-23. "Ancient India" — R.S. Sharma — NCERT Old
-    → priority_rank: 1, subject: Ancient India, exams: UPSC_IAS
-24. "Indian Art & Culture" — Nitin Singhania — McGraw Hill
-    → priority_rank: 1, subject: Art & Culture, exams: UPSC_IAS, all State PSC
-    → usage_tip: "Only dedicated Art & Culture book for UPSC. Must read."
-25. "World History" — Jain & Mathur — New Age International
-    → priority_rank: 1, subject: World History, exams: UPSC_IAS
+DBMS:
+- "Database System Concepts" — Silberschatz, Korth — McGraw Hill
+  (rank 1 — "Standard DBMS textbook in India")
+- "Fundamentals of Database Systems" — Elmasri & Navathe — Pearson
 
-GEOGRAPHY BOOKS (UPSC):
-26. "Certificate Physical & Human Geography" — GC Leong — Oxford
-    → priority_rank: 1, subject: World Geography, exams: UPSC_IAS, all State PSC
-    → usage_tip: "Bible of Geography. Read fully before anything else."
-27. "Indian Geography" — Majid Husain — McGraw Hill
-    → priority_rank: 1, subject: Indian Geography, exams: UPSC_IAS
-28. "Geography of India" — Majid Husain — McGraw Hill
-    → priority_rank: 1, subject: Indian Geography, exams: UPSC_IAS, GPSC, MPSC
+COMPUTER NETWORKS:
+- "Computer Networks" — Andrew Tanenbaum — Pearson
+  (rank 1 — "Bible of networking")
+- "Data Communications and Networking" — Forouzan — McGraw Hill
+  (rank 2 — "Easier to understand than Tanenbaum")
 
-POLITY BOOKS (UPSC):
-29. "Indian Polity" — M. Laxmikanth — McGraw Hill
-    → priority_rank: 1, subject: Indian Polity, exams: UPSC_IAS, all State PSC
-    → usage_tip: "THE Bible of Indian Polity. Read at least twice."
-30. "Introduction to Constitution of India" — DD Basu — LexisNexis
-    → priority_rank: 2, subject: Indian Polity, exams: UPSC_IAS
-31. "Our Parliament" — Subhash Kashyap — NBT
-    → priority_rank: 2, subject: Parliamentary System, exams: UPSC_IAS
+MACHINE LEARNING:
+- "Pattern Recognition and Machine Learning" — Bishop — Springer
+- "Hands-On Machine Learning" — Aurélien Géron — O'Reilly
+  (rank 1 — "Best practical ML book")
+- "Introduction to Statistical Learning" — James et al. — Springer (free)
 
-ECONOMY BOOKS (UPSC):
-32. "Indian Economy" — Ramesh Singh — McGraw Hill
-    → priority_rank: 1, subject: Indian Economy, exams: UPSC_IAS, all State PSC
-    → usage_tip: "Most comprehensive economy book for UPSC."
-33. "Indian Economy" — Sanjiv Verma — Unique Publications
-    → priority_rank: 2, subject: Indian Economy, exams: UPSC_IAS, GPSC
+FLUID MECHANICS:
+- "Fluid Mechanics" — R.K. Bansal — Laxmi Publications
+  (rank 1 — "Standard for Indian engineering colleges")
+- "Fluid Mechanics" — Frank White — McGraw Hill
 
-ENVIRONMENT BOOKS (UPSC):
-34. "Environment" — Shankar IAS Academy — Shankar IAS
-    → priority_rank: 1, subject: Environment, exams: UPSC_IAS, all State PSC
-    → usage_tip: "Most popular environment book. Covers everything for UPSC."
+THERMODYNAMICS:
+- "Engineering Thermodynamics" — P.K. Nag — McGraw Hill
+  (rank 1 — "Gold standard for Indian engineering")
+- "Thermodynamics" — Cengel & Boles — McGraw Hill
 
-SCIENCE & TECH (UPSC):
-35. "Science & Technology" — Ravi Agrahari — McGraw Hill
-    → priority_rank: 1, subject: Science & Technology, exams: UPSC_IAS
+ANATOMY (MBBS):
+- "Gray's Anatomy" — Gray — Elsevier (rank 1)
+- "BD Chaurasia Human Anatomy" — BD Chaurasia — CBS
+  (rank 1 India — "Standard for Indian MBBS students")
+- "Snell's Clinical Anatomy" — Snell — Wolters Kluwer
 
-ETHICS (UPSC):
-36. "Lexicon for Ethics" — Chronicle Publications
-    → priority_rank: 1, subject: Ethics, exams: UPSC_IAS
-37. "Ethics in Governance" — ARC Report
-    → priority_rank: 2, subject: Ethics, exams: UPSC_IAS
+PHYSIOLOGY (MBBS):
+- "Textbook of Medical Physiology" — Guyton & Hall — Elsevier
+  (rank 1 — "Bible of Physiology worldwide")
+- "Review of Medical Physiology" — Ganong — McGraw Hill
+- "Essentials of Medical Physiology" — K. Sembulingam — Jaypee
 
-REASONING BOOKS:
-38. "A Modern Approach to Verbal & Non-Verbal Reasoning" — RS Aggarwal — S.Chand
-    → priority_rank: 1, exams: SSC_CGL, SBI_PO, IBPS_PO, NDA, CDS
-    → usage_tip: "Standard reasoning book. Cover fully."
-39. "Analytical Reasoning" — MK Pandey — BSC Publishing
-    → priority_rank: 2, exams: SBI_PO, IBPS_PO
+BIOCHEMISTRY (MBBS):
+- "Harper's Illustrated Biochemistry" — Harper — McGraw Hill
+- "Biochemistry" — U. Satyanarayana — Books & Allied
+  (rank 1 India — "Standard for Indian MBBS")
 
-ENGLISH BOOKS:
-40. "High School English Grammar & Composition" — Wren & Martin — S.Chand
-    → priority_rank: 1, exams: SSC_CGL, SBI_PO, SCHOOL_CBSE
-    → usage_tip: "Standard English grammar reference. Keep handy."
-41. "Objective General English" — SP Bakshi — Arihant
-    → priority_rank: 1, exams: SSC_CGL, SBI_PO, IBPS_PO, UPSC_IAS
-    → usage_tip: "Best for competitive exam English preparation."
+PHARMACOLOGY (MBBS):
+- "Pharmacology" — KD Tripathi — Jaypee
+  (rank 1 India — "Most prescribed pharmacology book")
+- "Goodman & Gilman's Pharmacology" — Brunton — McGraw Hill
 
-GENERAL AWARENESS:
-42. "Lucent's General Knowledge" — Lucent — Lucent Publications
-    → priority_rank: 1, exams: SSC_CGL, SSC_CHSL, SBI_PO, NDA
-    → usage_tip: "Most popular GK book. Must for any competitive exam."
+PATHOLOGY (MBBS):
+- "Robbins Basic Pathology" — Kumar — Elsevier (rank 1)
+- "Harsh Mohan Textbook of Pathology" — Harsh Mohan — Jaypee
 
-COMPUTER SCIENCE (School):
-43. "Computer Science with Python" — Sumita Arora — Dhanpat Rai
-    → priority_rank: 1, exams: SCHOOL_CBSE
+FINANCIAL ACCOUNTING:
+- "Financial Accounting" — R.L. Gupta & V.K. Gupta — S.Chand
+- "Advanced Accountancy" — Maheshwari & Maheshwari — Vikas
+  (rank 1 — "Standard for B.Com across India")
 
-DEFENCE BOOKS:
-44. "Pathfinder NDA & NA Entrance Examination" — Pathfinder — Arihant
-    → priority_rank: 1, exams: NDA
-45. "CDS Pathfinder" — Pathfinder — Arihant
-    → priority_rank: 1, exams: CDS
+MARKETING MANAGEMENT:
+- "Marketing Management" — Philip Kotler — Pearson
+  (rank 1 — "Bible of Marketing globally")
+- "Marketing Management" — Rajan Saxena — McGraw Hill
 
-STATE PSC SPECIFIC:
-46. "GPSC Exam Guide" — Unique Publications
-    → priority_rank: 1, exams: GPSC
-47. "MPSC Rajyaseva Guide" — Target Publications
-    → priority_rank: 1, exams: MPSC
-48. "TNPSC Group Exam Guide" — Sura Books
-    → priority_rank: 1, exams: TNPSC
+HUMAN RESOURCE MANAGEMENT:
+- "Human Resource Management" — Gary Dessler — Pearson
+- "Personnel Management" — C.B. Mamoria — Himalaya Publishing
 
-═══════════════════════════════════════════════════
-STEP 3: API ROUTES
-═══════════════════════════════════════════════════
-Add to server/src/features/library/library.routes.js:
+FINANCIAL MANAGEMENT:
+- "Financial Management" — I.M. Pandey — Vikas Publishing
+  (rank 1 — "Standard for MBA Finance India")
+- "Principles of Corporate Finance" — Brealey & Myers — McGraw Hill
 
-GET /api/library/exams                        → all exam categories grouped by type
-GET /api/library/exams/:examCode              → single exam details
-GET /api/library/exams/:examCode/subjects     → all subjects for that exam
-GET /api/library/exams/:examCode/books        → all books for that exam (with priority)
-GET /api/library/publishers                   → all publishers
-GET /api/library/publishers/:id/books         → all books by publisher
-GET /api/library/subjects/:subjectId/books    → best books for competitive subject
-GET /api/library/books/recommend              → smart book recommendation
-  Query params: ?examCode=UPSC_IAS&subject=History&subCategory=Modern&classLevel=beginner
+MICROECONOMICS:
+- "Microeconomics" — Pindyck & Rubinfeld — Pearson
+- "Indian Economy" — Mishra & Puri — Himalaya
 
-Add to library.service.js — all DB queries for above routes.
+═══════════════════════════════════════════════
+API ROUTES
+═══════════════════════════════════════════════
+Add to library.routes.js:
 
-GET /api/library/books/recommend logic:
-  1. Accept examCode + subject + subCategory + classLevel
-  2. Query competitive_books joined with book_exam_links
-  3. Filter by exam + subject
-  4. Order by priority_rank ASC
-  5. Return books with: title, author, publisher, 
-     usage_tip, priority_rank, affiliate_link, google_books_preview_url
+GET /api/library/universities                    → all universities (grouped by type)
+GET /api/library/universities/:id                → single university
+GET /api/library/universities/:id/courses        → courses offered
+GET /api/library/course-categories               → all course categories
+GET /api/library/courses                         → all courses (filter by ?level=bachelor)
+GET /api/library/courses/:id/subjects            → semester-wise subjects
+GET /api/library/courses/:id/subjects?semester=3 → specific semester
+GET /api/library/university-subjects/:id/books   → prescribed books
+GET /api/library/university-books/recommend      
+  → ?courseId=&subjectName=&university=&semester=
 
-═══════════════════════════════════════════════════
-STEP 4: UPDATE AI PROMPT BUILDER
-═══════════════════════════════════════════════════
-Update server/src/services/ai-prompt-builder.service.js
+═══════════════════════════════════════════════
+UPDATE AI PROMPT BUILDER
+═══════════════════════════════════════════════
+Add university mode to ai-prompt-builder.service.js:
 
-Add dynamic book reference injection:
-1. When building prompt, call 
-   getRecommendedBooks(examCode, subject, subCategory) from library.service.js
-2. Inject into SECTION 4 of prompt dynamically from DB
-   (not from static config — 100% DB driven)
-3. Format as:
-   "Recommended books for this topic:
-    1. [Book Title] by [Author] — [usage_tip]
-    2. ..."
+When context has university + course + semester:
+Role: "You are a senior professor at [university] 
+      teaching [subject] for [course] Semester [X]"
+Depth: University level — technical, detailed
+Books: Prescribed textbooks for that subject
+Style: Match university exam pattern
+       (IIT style vs regular university style differ)
 
-═══════════════════════════════════════════════════
-IMPORTANT NOTES:
-═══════════════════════════════════════════════════
-- All seed files: INSERT IGNORE (idempotent, safe to re-run)
-- Follow existing pool/connection pattern from database/connection.js
-- Follow existing API response format: { success: true, data: ... }
-- Add all new routes to src/routes/index.js under /library
-- Migrations numbered 088-093 in phase-session2 folder
-- Run order: publishers → exam_categories → competitive_subjects 
-  → competitive_books → book_exam_links
-- Seed order: publishers.seed.js → exam_categories.seed.js 
-  → competitive_subjects.seed.js → competitive_books.seed.js
-- console.log('[SEED]') prefix on all seed operations for tracking
+Add to JSON response:
+"university_exam_tip": "How this topic appears in [uni] exams",
+"textbook_reference": "Chapter X of [Prescribed Book]",
+"viva_questions": ["Q1", "Q2", "Q3"]
 
-Execute all steps completely. Start with Step 1 migrations.
+## University Layer (Next Build)
+Tables: universities, course_categories, courses, 
+        university_courses, university_subjects,
+        university_books, university_book_subject_links
+Migrations: 094-100
+Seeds run order: universities → course_categories → 
+                 courses → university_courses → 
+                 university_subjects → university_books
+Priority universities to seed first:
+  IITs (23), NITs (31), AIIMS (8), top private (VIT, BITS, Manipal)
+Priority courses: B.Tech CS, B.Tech Mech, MBBS, MBA, B.Com, B.Sc

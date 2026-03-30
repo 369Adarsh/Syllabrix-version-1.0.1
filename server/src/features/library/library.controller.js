@@ -122,6 +122,76 @@ const recommendBooks = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// ─── University Layer ─────────────────────────────────────────────────────────
+
+const getUniversities = async (req, res, next) => {
+  try {
+    const data = await service.getUniversities();
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+const getUniversity = async (req, res, next) => {
+  try {
+    const uni = await service.getUniversity(Number(req.params.id));
+    if (!uni) return res.status(404).json({ success: false, message: 'University not found' });
+    res.json({ success: true, data: uni });
+  } catch (err) { next(err); }
+};
+
+const getUniversityCourses = async (req, res, next) => {
+  try {
+    const data = await service.getUniversityCourses(Number(req.params.id));
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+const getCourseCategories = async (req, res, next) => {
+  try {
+    const data = await service.getCourseCategories();
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+const getCourses = async (req, res, next) => {
+  try {
+    const { level } = req.query;
+    const data = await service.getCourses(level || null);
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+const getCourseSubjects = async (req, res, next) => {
+  try {
+    const { semester } = req.query;
+    const data = await service.getCourseSubjects(
+      Number(req.params.id),
+      semester ? Number(semester) : null
+    );
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+const getUniversitySubjectBooks = async (req, res, next) => {
+  try {
+    const data = await service.getUniversitySubjectBooks(Number(req.params.id));
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+const getUniversityBooksRecommend = async (req, res, next) => {
+  try {
+    const { courseId, subjectName, university, semester } = req.query;
+    const data = await service.getUniversityBooksRecommend({
+      courseId:    courseId    ? Number(courseId)    : null,
+      subjectName: subjectName || null,
+      university:  university  || null,
+      semester:    semester    ? Number(semester)    : null,
+    });
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
 // ─── AI Ask ──────────────────────────────────────────────────────────────────
 
 const askAI = async (req, res, next) => {
@@ -134,25 +204,27 @@ const askAI = async (req, res, next) => {
       chapterId,
       topicId,
       examCode,
+      universitySubjectId,
       studentQuery,
       studentClass,
     } = req.body;
 
-    if (!studentQuery || (!subjectId && !examCode)) {
+    if (!studentQuery || (!subjectId && !examCode && !universitySubjectId)) {
       return res.status(400).json({
         success: false,
-        message: 'studentQuery and either subjectId or examCode are required',
+        message: 'studentQuery and one of subjectId, examCode, or universitySubjectId are required',
       });
     }
 
     const result = await aiLibraryService.ask({
       boardCode,
-      syllabusVersionId: syllabusVersionId ? Number(syllabusVersionId) : null,
-      grade:     grade     ? Number(grade)     : null,
-      subjectId: subjectId ? Number(subjectId) : null,
-      chapterId: chapterId ? Number(chapterId) : null,
-      topicId:   topicId   ? Number(topicId)   : null,
+      syllabusVersionId:    syllabusVersionId    ? Number(syllabusVersionId)    : null,
+      grade:                grade                ? Number(grade)                : null,
+      subjectId:            subjectId            ? Number(subjectId)            : null,
+      chapterId:            chapterId            ? Number(chapterId)            : null,
+      topicId:              topicId              ? Number(topicId)              : null,
       examCode,
+      universitySubjectId:  universitySubjectId  ? Number(universitySubjectId)  : null,
       studentQuery,
       studentClass,
       userId: req.user?.id,
@@ -168,5 +240,9 @@ module.exports = {
   getExams, getExamByCode, getExamSubjects, getExamBooks,
   getPublishers, getPublisherBooks,
   recommendBooks,
+  // university layer
+  getUniversities, getUniversity, getUniversityCourses,
+  getCourseCategories, getCourses, getCourseSubjects,
+  getUniversitySubjectBooks, getUniversityBooksRecommend,
   askAI,
 };

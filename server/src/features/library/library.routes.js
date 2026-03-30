@@ -67,6 +67,36 @@ router.get('/publishers', controller.getPublishers);
 router.get('/publishers/:id/books', controller.getPublisherBooks);
 
 // ─────────────────────────────────────────────────────────────────────────────
+// UNIVERSITY LAYER — universities, courses, subjects, books
+// All public (no auth required for browsing)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// GET /api/library/universities
+router.get('/universities', controller.getUniversities);
+
+// GET /api/library/universities/:id
+router.get('/universities/:id', controller.getUniversity);
+
+// GET /api/library/universities/:id/courses
+router.get('/universities/:id/courses', controller.getUniversityCourses);
+
+// GET /api/library/course-categories
+router.get('/course-categories', controller.getCourseCategories);
+
+// GET /api/library/courses  [?level=bachelor|master|...]
+router.get('/courses', controller.getCourses);
+
+// GET /api/library/courses/:id/subjects  [?semester=3]
+router.get('/courses/:id/subjects', controller.getCourseSubjects);
+
+// GET /api/library/university-books/recommend  [?courseId=&subjectName=&university=&semester=]
+// IMPORTANT: static route must come before /:id
+router.get('/university-books/recommend', controller.getUniversityBooksRecommend);
+
+// GET /api/library/university-subjects/:id/books
+router.get('/university-subjects/:id/books', controller.getUniversitySubjectBooks);
+
+// ─────────────────────────────────────────────────────────────────────────────
 // AI ENDPOINTS — require authentication
 // ─────────────────────────────────────────────────────────────────────────────
 

@@ -21,7 +21,10 @@
  */
 
 const { generateJSON } = require('./ai.service');
-const { getAIContext, getAIExamContext, getRecommendedBooks } = require('../features/library/library.service');
+const {
+  getAIContext, getAIExamContext, getRecommendedBooks,
+  getAIUniversityContext, getUniversitySubjectBooks,
+} = require('../features/library/library.service');
 
 /**
  * @param {object} params
@@ -31,13 +34,14 @@ const { getAIContext, getAIExamContext, getRecommendedBooks } = require('../feat
  * @param {number|null}  params.subjectId
  * @param {number|null}  params.chapterId
  * @param {number|null}  params.topicId
- * @param {string|null}  params.examCode        — for competitive exam mode
+ * @param {string|null}  params.examCode              — for competitive exam mode
+ * @param {number|null}  params.universitySubjectId   — for university mode
  * @param {string}       params.studentQuery
  * @param {string|null}  params.studentClass
  * @param {number|null}  params.userId
  */
 async function ask(params) {
-  const { subjectId, chapterId, topicId, examCode, studentQuery, studentClass, boardCode } = params;
+  const { subjectId, chapterId, topicId, examCode, universitySubjectId, studentQuery, studentClass, boardCode } = params;
 
   // ── 1. Fetch DB context ──────────────────────────────────────────────────────
   const { ctx, chapter, topic } = await getAIContext({
@@ -49,9 +53,16 @@ async function ask(params) {
   // Competitive exam context (if examCode provided)
   const examCtx = examCode ? await getAIExamContext(examCode) : null;
 
+  // University context (if universitySubjectId provided)
+  const uniCtx = universitySubjectId ? await getAIUniversityContext(universitySubjectId) : null;
+
   // ── 2. Fetch recommended books (DB-driven, injected into prompt) ────────────
   let recommendedBooks = [];
-  if (examCode) {
+  if (uniCtx) {
+    // University mode: get books prescribed for this subject
+    const uniBooks = await getUniversitySubjectBooks(universitySubjectId);
+    recommendedBooks = uniBooks.slice(0, 5);
+  } else if (examCode) {
     // For competitive mode: get top priority books for this exam
     // Optionally filter by subject if chapter/topic gives us a hint
     const subjectHint = ctx?.subject_name || chapter?.title || null;
@@ -78,7 +89,7 @@ async function ask(params) {
 
   // ── 3. Build prompt ──────────────────────────────────────────────────────────
   const prompt = buildPrompt({
-    ctx, chapter, topic, examCtx, recommendedBooks,
+    ctx, chapter, topic, examCtx, uniCtx, recommendedBooks,
     studentQuery, studentClass, boardCode,
   });
 
@@ -87,31 +98,51 @@ async function ask(params) {
 
   // ── 5. Normalize output ──────────────────────────────────────────────────────
   return {
-    explanation:        result.explanation        || '',
-    key_points:         Array.isArray(result.key_points)      ? result.key_points      : [],
-    real_life_example:  result.real_life_example  || '',
-    remember_this:      result.remember_this      || '',
-    follow_up_question: result.follow_up_question || '',
-    related_topics:     Array.isArray(result.related_topics)  ? result.related_topics  : [],
-    syllabus_note:      result.syllabus_note      || '',
-    recommended_books:  recommendedBooks.map(b => ({
+    explanation:            result.explanation            || '',
+    key_points:             Array.isArray(result.key_points)      ? result.key_points      : [],
+    real_life_example:      result.real_life_example      || '',
+    remember_this:          result.remember_this          || '',
+    follow_up_question:     result.follow_up_question     || '',
+    related_topics:         Array.isArray(result.related_topics)  ? result.related_topics  : [],
+    syllabus_note:          result.syllabus_note          || '',
+    // University-mode extras (empty strings in non-university mode)
+    university_exam_tip:    result.university_exam_tip    || '',
+    textbook_reference:     result.textbook_reference     || '',
+    viva_questions:         Array.isArray(result.viva_questions)  ? result.viva_questions  : [],
+    recommended_books:      recommendedBooks.map(b => ({
       title:         b.title,
       author:        b.author,
       publisher:     b.publisher_name || b.publisher_short,
       usage_tip:     b.usage_tip,
       priority_rank: b.priority_rank,
+      is_prescribed: b.is_prescribed,
     })),
   };
 }
 
 // ── Prompt Builder ─────────────────────────────────────────────────────────────
 
-function buildPrompt({ ctx, chapter, topic, examCtx, recommendedBooks, studentQuery, studentClass, boardCode }) {
+function buildPrompt({ ctx, chapter, topic, examCtx, uniCtx, recommendedBooks, studentQuery, studentClass, boardCode }) {
   const lines = [];
+  const isUniversityMode = !!uniCtx;
 
-  lines.push('You are a friendly, expert AI tutor on the Syllabrix education platform.');
-  lines.push('Answer the student\'s question using the syllabus context provided below.');
-  lines.push('Use simple, clear language appropriate for school and competitive exam students.');
+  if (isUniversityMode) {
+    const uniName  = uniCtx.university_name  || 'the university';
+    const uniType  = uniCtx.university_type  || '';
+    const course   = `${uniCtx.course_name} (${uniCtx.course_short})`;
+    const semLabel = uniCtx.semester         ? `Semester ${uniCtx.semester}` : '';
+    lines.push(`You are a senior professor at ${uniName} teaching ${uniCtx.subject_name} for ${course}${semLabel ? ' ' + semLabel : ''}.`);
+    lines.push('Answer at university level — technical, detailed, exam-oriented.');
+    if (uniType === 'iit') {
+      lines.push('Style: IIT-level rigor. Use first-principles thinking. Include mathematical derivations where relevant.');
+    } else {
+      lines.push('Style: Match typical university exam pattern. Cover theory, derivations, and application.');
+    }
+  } else {
+    lines.push('You are a friendly, expert AI tutor on the Syllabrix education platform.');
+    lines.push('Answer the student\'s question using the syllabus context provided below.');
+    lines.push('Use simple, clear language appropriate for school and competitive exam students.');
+  }
   lines.push('');
 
   // ── Section 1: Syllabus / Exam context ──────────────────────────────────────
@@ -137,6 +168,20 @@ function buildPrompt({ ctx, chapter, topic, examCtx, recommendedBooks, studentQu
   }
 
   if (studentClass) lines.push(`Student\'s class (self-reported): ${studentClass}`);
+
+  // University context block
+  if (uniCtx) {
+    lines.push('');
+    lines.push('=== UNIVERSITY CONTEXT ===');
+    if (uniCtx.university_name)  lines.push(`University: ${uniCtx.university_name} (${uniCtx.university_short || ''}) — Type: ${uniCtx.university_type}`);
+    lines.push(`Course: ${uniCtx.course_name} (${uniCtx.course_short})${uniCtx.specialization ? ' — ' + uniCtx.specialization : ''}`);
+    lines.push(`Level: ${uniCtx.course_level}`);
+    if (uniCtx.semester)       lines.push(`Semester: ${uniCtx.semester}`);
+    if (uniCtx.year)           lines.push(`Year: ${uniCtx.year}`);
+    lines.push(`Subject: ${uniCtx.subject_name}${uniCtx.subject_code ? ' (' + uniCtx.subject_code + ')' : ''}`);
+    lines.push(`Subject Type: ${uniCtx.subject_type} | Credits: ${uniCtx.credits}`);
+    if (uniCtx.syllabus_body)  lines.push(`Syllabus Body: ${uniCtx.syllabus_body}`);
+  }
 
   // ── Section 2: Chapter / Topic ───────────────────────────────────────────────
   if (chapter) {
@@ -186,13 +231,22 @@ function buildPrompt({ ctx, chapter, topic, examCtx, recommendedBooks, studentQu
   lines.push('=== INSTRUCTIONS ===');
   lines.push('Respond with ONLY a JSON object matching this exact schema:');
   lines.push('{');
-  lines.push('  "explanation": "Clear step-by-step explanation. Use simple language.",');
+  lines.push('  "explanation": "Clear step-by-step explanation.",');
   lines.push('  "key_points": ["Point 1", "Point 2", "Point 3"],');
-  lines.push('  "real_life_example": "A relatable real-life example that makes the concept stick.",');
-  lines.push('  "remember_this": "Short memory trick, mnemonic, or one-liner to retain the key idea.",');
-  lines.push('  "follow_up_question": "One simple question to check if the student understood.",');
+  lines.push('  "real_life_example": "A relatable real-life example.",');
+  lines.push('  "remember_this": "Short memory trick or one-liner.",');
+  lines.push('  "follow_up_question": "One question to check understanding.",');
   lines.push('  "related_topics": ["Topic A", "Topic B"],');
-  lines.push('  "syllabus_note": "Any syllabus warning (deleted topic, old version, state-specific note). Empty string if none."');
+  lines.push('  "syllabus_note": "Any syllabus warning. Empty string if none.",');
+  if (isUniversityMode) {
+    lines.push('  "university_exam_tip": "How this topic typically appears in university exams (question patterns, marks weightage). Empty string if unknown.",');
+    lines.push('  "textbook_reference": "Chapter or section reference from the prescribed textbook. Empty string if unknown.",');
+    lines.push('  "viva_questions": ["Viva Q1", "Viva Q2", "Viva Q3"]');
+  } else {
+    lines.push('  "university_exam_tip": "",');
+    lines.push('  "textbook_reference": "",');
+    lines.push('  "viva_questions": []');
+  }
   lines.push('}');
   lines.push('');
   lines.push('CRITICAL: Return ONLY the JSON object. No markdown. No extra text before or after.');

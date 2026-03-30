@@ -264,6 +264,170 @@ async function getRecommendedBooks({ examCode, subject, subCategory, classLevel 
   return rows;
 }
 
+// ─── UNIVERSITY LAYER ─────────────────────────────────────────────────────────
+
+async function getUniversities() {
+  const [rows] = await pool.execute(
+    `SELECT id, name, short_name, type, established_year,
+            location_city, location_state, country, official_website,
+            naac_grade, nirf_rank
+     FROM universities WHERE is_active = 1
+     ORDER BY type ASC, nirf_rank ASC, name ASC`
+  );
+  const grouped = {};
+  for (const row of rows) {
+    if (!grouped[row.type]) grouped[row.type] = [];
+    grouped[row.type].push(row);
+  }
+  return grouped;
+}
+
+async function getUniversity(id) {
+  const [rows] = await pool.execute(
+    `SELECT id, name, short_name, type, established_year,
+            location_city, location_state, country, official_website,
+            naac_grade, nirf_rank, is_active, created_at
+     FROM universities WHERE id = ? LIMIT 1`,
+    [id]
+  );
+  return rows[0] || null;
+}
+
+async function getUniversityCourses(universityId) {
+  const [rows] = await pool.execute(
+    `SELECT c.id, c.name, c.short_name, c.level, c.duration_years,
+            c.specialization, cc.name AS category, uc.intake
+     FROM university_courses uc
+     JOIN courses c ON c.id = uc.course_id
+     JOIN course_categories cc ON cc.id = c.course_category_id
+     WHERE uc.university_id = ? AND uc.is_active = 1 AND c.is_active = 1
+     ORDER BY c.level ASC, c.short_name ASC`,
+    [universityId]
+  );
+  return rows;
+}
+
+async function getCourseCategories() {
+  const [rows] = await pool.execute(
+    `SELECT id, name, type FROM course_categories WHERE is_active = 1
+     ORDER BY type ASC, name ASC`
+  );
+  return rows;
+}
+
+async function getCourses(level = null) {
+  let sql = `
+    SELECT c.id, c.name, c.short_name, c.level, c.duration_years,
+           c.specialization, cc.name AS category, cc.type AS category_type
+    FROM courses c
+    JOIN course_categories cc ON cc.id = c.course_category_id
+    WHERE c.is_active = 1
+  `;
+  const params = [];
+  if (level) { sql += ' AND c.level = ?'; params.push(level); }
+  sql += ' ORDER BY c.level ASC, cc.name ASC, c.short_name ASC';
+  const [rows] = await pool.execute(sql, params);
+  return rows;
+}
+
+async function getCourseSubjects(courseId, semester = null) {
+  let sql = `
+    SELECT id, name, subject_code, semester, year, subject_type,
+           credits, is_common_across_uni, syllabus_body
+    FROM university_subjects
+    WHERE course_id = ? AND is_active = 1
+  `;
+  const params = [courseId];
+  if (semester) { sql += ' AND semester = ?'; params.push(semester); }
+  sql += ' ORDER BY semester ASC, year ASC, name ASC';
+  const [rows] = await pool.execute(sql, params);
+
+  if (semester) return rows;
+
+  // Group by semester
+  const grouped = {};
+  for (const row of rows) {
+    const key = row.semester || 'common';
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(row);
+  }
+  return grouped;
+}
+
+async function getUniversitySubjectBooks(subjectId) {
+  const [rows] = await pool.execute(
+    `SELECT ub.id, ub.title, ub.author, ub.edition, ub.publication_year,
+            ub.book_type, ub.is_prescribed, ub.is_available_free,
+            ub.priority_rank, ub.usage_tip,
+            ub.amazon_affiliate_url, ub.flipkart_affiliate_url,
+            ub.google_books_preview_url, ub.cover_image_url,
+            p.name AS publisher_name, p.short_name AS publisher_short,
+            ubsl.relevance
+     FROM university_book_subject_links ubsl
+     JOIN university_books ub ON ub.id = ubsl.university_book_id
+     LEFT JOIN publishers p ON p.id = ub.publisher_id
+     WHERE ubsl.university_subject_id = ? AND ub.is_active = 1
+     ORDER BY ub.is_prescribed DESC, ub.priority_rank ASC, ub.title ASC`,
+    [subjectId]
+  );
+  return rows;
+}
+
+async function getUniversityBooksRecommend({ courseId, subjectName, university, semester }) {
+  let sql = `
+    SELECT ub.id, ub.title, ub.author, ub.edition, ub.publication_year,
+           ub.book_type, ub.is_prescribed, ub.is_available_free,
+           ub.priority_rank, ub.usage_tip,
+           ub.amazon_affiliate_url, ub.flipkart_affiliate_url,
+           ub.google_books_preview_url, ub.cover_image_url,
+           p.name AS publisher_name, p.short_name AS publisher_short,
+           us.name AS subject_name, us.semester, us.subject_code
+    FROM university_books ub
+    JOIN university_book_subject_links ubsl ON ubsl.university_book_id = ub.id
+    JOIN university_subjects us ON us.id = ubsl.university_subject_id
+    LEFT JOIN publishers p ON p.id = ub.publisher_id
+    WHERE ub.is_active = 1
+  `;
+  const params = [];
+
+  if (courseId) {
+    sql += ' AND us.course_id = ?';
+    params.push(courseId);
+  }
+  if (subjectName) {
+    sql += ' AND us.name LIKE ?';
+    params.push(`%${subjectName}%`);
+  }
+  if (semester) {
+    sql += ' AND us.semester = ?';
+    params.push(semester);
+  }
+
+  sql += ' ORDER BY ub.is_prescribed DESC, ub.priority_rank ASC, ub.title ASC';
+
+  const [rows] = await pool.execute(sql, params);
+  return rows;
+}
+
+async function getAIUniversityContext(universitySubjectId) {
+  if (!universitySubjectId) return null;
+  const [rows] = await pool.execute(
+    `SELECT us.id AS subject_id, us.name AS subject_name, us.subject_code,
+            us.semester, us.year, us.subject_type, us.credits,
+            us.is_common_across_uni, us.syllabus_body,
+            c.id AS course_id, c.name AS course_name, c.short_name AS course_short,
+            c.level AS course_level, c.specialization,
+            u.id AS university_id, u.name AS university_name,
+            u.short_name AS university_short, u.type AS university_type
+     FROM university_subjects us
+     JOIN courses c ON c.id = us.course_id
+     LEFT JOIN universities u ON u.id = us.university_id
+     WHERE us.id = ? LIMIT 1`,
+    [universitySubjectId]
+  );
+  return rows[0] || null;
+}
+
 // ─── AI CONTEXT (used by ai-library.service.js) ───────────────────────────────
 
 async function getAIContext({ subjectId, chapterId, topicId }) {
@@ -347,6 +511,10 @@ module.exports = {
   getPublishers, getPublisherBooks,
   // recommendation
   getRecommendedBooks,
+  // university layer
+  getUniversities, getUniversity, getUniversityCourses,
+  getCourseCategories, getCourses, getCourseSubjects,
+  getUniversitySubjectBooks, getUniversityBooksRecommend,
   // AI context
-  getAIContext, getAIExamContext,
+  getAIContext, getAIExamContext, getAIUniversityContext,
 };
