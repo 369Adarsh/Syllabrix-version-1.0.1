@@ -72,7 +72,7 @@ Rules:
 - Be accurate and complete`;
 
   try {
-    const result = await generateJSON(prompt, { temperature: 0.1, maxTokens: 2000 });
+    const result = await generateJSON(prompt, { temperature: 0.2, maxTokens: 8000 });
     if (result?.chapters?.length > 0) {
       const out = {
         source:     'ai',
@@ -82,7 +82,9 @@ Rules:
       _cacheSet(cacheKey, out);
       return out;
     }
-  } catch { /* fall through */ }
+  } catch (err) {
+    console.error('[Smart Chapters] AI generation failed:', err.message);
+  }
 
   return { source: 'none', bookTitle: '', chapters: [] };
 }

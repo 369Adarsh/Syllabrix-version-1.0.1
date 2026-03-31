@@ -1,26 +1,21 @@
 'use client';
-/**
- * AI Library v4.0 — Mobile-First 3-Panel Layout
- * ─────────────────────────────────────────────────────────────────────────────
- * Desktop: [Center reading flex-1] | [Right shelf w-72]
- * Mobile:  Tab bar at bottom — "Browse shelf" tab | "Read" tab
- *
- * This page is full-bleed (layout.jsx skips padding for /ai-library).
- * Heights are calculated as: 100dvh - 56px topbar
- */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import {
   GraduationCap, Trophy, Building2, ChevronDown, ChevronRight,
   BookOpen, Brain, Download, Loader2, Sparkles, Copy, Check,
   MessageSquare, FileText, Target, Send, X,
-  BookMarked, List, Layers, Search, LayoutList,
+  BookMarked, List, Layers, Search, LayoutList, Image as ImageIcon, AlertCircle
 } from 'lucide-react';
 import { libraryAPI } from '@/lib/api/library.api';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const H = 'h-[calc(100dvh-56px)]';   // full height minus topbar
-const H_MOBILE_WITH_BTMNAV = 'h-[calc(100dvh-56px-64px)]'; // minus topbar + bottom nav
+const H = 'h-[calc(100dvh-56px)]';
+const H_MOBILE_WITH_BTMNAV = 'h-[calc(100dvh-56px-64px)]';
 
 // ─── PDF Generator ────────────────────────────────────────────────────────────
 async function generateStudyPDF({ response, context }) {
@@ -40,7 +35,7 @@ async function generateStudyPDF({ response, context }) {
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(18);
   doc.setFont(undefined, 'bold');
-  doc.text('Syllabrix AI Library', margin, 38);
+  doc.text('Syllabrix Premium AI Library', margin, 38);
   doc.setFontSize(9);
   doc.setFont(undefined, 'normal');
   const crumb = [context?.board || context?.exam, context?.subject, context?.chapter, context?.topic].filter(Boolean).join(' › ');
@@ -67,6 +62,7 @@ async function generateStudyPDF({ response, context }) {
 
   if (response?.explanation) writeSection('Explanation', response.explanation);
   if (response?.key_points?.length) writeSection('Key Points', response.key_points.map((p, i) => `${i + 1}. ${p}`).join('\n'), [22, 163, 74]);
+  if (response?.exam_pattern_note) writeSection('Exam Pattern', response.exam_pattern_note, [225, 29, 72]); // Red
   if (response?.formula || response?.derivation) writeSection('Formula / Derivation', response.formula || response.derivation, [168, 85, 247]);
   if (response?.code_example) writeSection('Code Example', response.code_example, [15, 118, 110]);
   if (response?.viva_questions?.length) writeSection('Viva Questions', response.viva_questions.map((q, i) => `Q${i + 1}. ${q}`).join('\n'), [234, 88, 12]);
@@ -80,23 +76,27 @@ function Spinner({ size = 16 }) {
   return <Loader2 size={size} className="animate-spin flex-shrink-0" />;
 }
 
-// ─── SHELF COMPONENTS (School / Competitive / University) ─────────────────────
+// ─── SHELF COMPONENTS ─────────────────────────────────────────────────────────
 
 function ShelfItem({ label, sublabel, isSelected, onClick, indent = 0 }) {
   return (
     <button
       onClick={onClick}
-      className={`w-full text-left py-2.5 sm:py-1.5 transition-colors border-l-2 active:opacity-70 ${
+      className={`w-full text-left py-2.5 sm:py-2 transition-all relative overflow-hidden group ${
         isSelected
-          ? 'border-blue-500 bg-blue-50 text-blue-700'
-          : 'border-transparent hover:bg-gray-100 text-gray-600'
+          ? 'bg-gradient-to-r from-blue-50 to-transparent'
+          : 'hover:bg-gray-50/50'
       }`}
-      style={{ paddingLeft: `${12 + indent * 12}px`, paddingRight: '12px' }}
+      style={{ paddingLeft: `${16 + indent * 14}px`, paddingRight: '12px' }}
     >
-      <div className={`text-[12px] sm:text-[11px] font-medium leading-tight ${isSelected ? 'text-blue-700' : 'text-gray-700'}`}>
+      {isSelected && (
+        <motion.div layoutId="shelf-indicator" className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-indigo-600 rounded-r-md" />
+      )}
+      {/* whitespace-normal and break-words fixes long Indian university names getting cut off on mobile */}
+      <div className={`text-[13px] sm:text-[12px] font-medium leading-tight whitespace-normal break-words ${isSelected ? 'text-blue-700 font-semibold' : 'text-gray-700 group-hover:text-gray-900'}`}>
         {label}
       </div>
-      {sublabel && <div className="text-[11px] sm:text-[10px] text-gray-400 mt-0.5">{sublabel}</div>}
+      {sublabel && <div className="text-[11px] sm:text-[10px] text-gray-400 mt-0.5 whitespace-normal break-words">{sublabel}</div>}
     </button>
   );
 }
@@ -124,7 +124,16 @@ function SchoolShelf({ onSelect, selected }) {
     if (!classes[board.id]) {
       try {
         const r = await libraryAPI.getClasses(board.code);
-        setClasses(c => ({ ...c, [board.id]: r.data?.data || [] }));
+        let data = r.data?.data || [];
+        if (data.length === 0) {
+          data = Array.from({ length: 12 }, (_, i) => ({
+             id: `fb-${board.id}-${i+1}`,
+             grade: i + 1,
+             grade_label: `Class ${i + 1}`,
+             is_fallback: true
+          }));
+        }
+        setClasses(c => ({ ...c, [board.id]: data }));
       } catch {}
     }
   };
@@ -133,45 +142,64 @@ function SchoolShelf({ onSelect, selected }) {
     const key = `c-${cls.id}`;
     setExpanded(e => ({ ...e, [key]: !e[key] }));
     if (!subjects[cls.id]) {
-      try {
-        const r = await libraryAPI.getSubjects(cls.id);
-        setSubjects(s => ({ ...s, [cls.id]: r.data?.data || [] }));
-      } catch {}
+      let data = [];
+      if (!cls.is_fallback) {
+        try {
+          const r = await libraryAPI.getSubjects(cls.id);
+          data = r.data?.data || [];
+        } catch {}
+      }
+      if (data.length === 0) {
+        const stdSubjects = cls.grade <= 5 
+           ? ['Mathematics', 'English', 'Hindi', 'Environmental Studies'] 
+           : cls.grade <= 10 
+              ? ['Mathematics', 'Science', 'Social Science', 'English', 'Hindi']
+              : ['Physics', 'Chemistry', 'Mathematics', 'Biology', 'Accountancy', 'Economics', 'Business Studies', 'English'];
+        
+        data = stdSubjects.map((s, i) => ({
+           id: `fbs-${cls.id}-${i}`,
+           name: s,
+           is_fallback: true
+        }));
+      }
+      setSubjects(s => ({ ...s, [cls.id]: data }));
     }
   };
 
-  if (loading) return <div className="p-4 flex justify-center"><Spinner /></div>;
+  if (loading) return <div className="p-6 flex justify-center"><Spinner size={20}/></div>;
 
   return (
-    <div>
+    <div className="py-2">
       {boards.map(board => (
         <div key={board.id}>
-          <ShelfItem label={board.name || board.code} sublabel={board.code} isSelected={false} onClick={() => toggleBoard(board)} indent={0} />
-          {expanded[`b-${board.id}`] && (
-            <div>
-              {(classes[board.id] || []).map(cls => (
-                <div key={cls.id}>
-                  <ShelfItem label={cls.grade_label || `Class ${cls.grade}`} isSelected={false} onClick={() => toggleClass(board.id, cls)} indent={1} />
-                  {expanded[`c-${cls.id}`] && (
-                    <div>
-                      {(subjects[cls.id] || []).map(sub => (
-                        <ShelfItem
-                          key={sub.id}
-                          label={sub.name}
-                          isSelected={selected?.type === 'school' && selected?.subjectId === sub.id}
-                          onClick={() => onSelect({ type: 'school', subjectId: sub.id, subjectName: sub.name, board: board.code, boardName: board.name, grade: cls.grade, gradeLabel: cls.grade_label })}
-                          indent={2}
-                        />
-                      ))}
-                      {subjects[cls.id]?.length === 0 && <div className="px-6 py-2 text-[11px] text-gray-400">No subjects</div>}
-                      {!subjects[cls.id] && <div className="px-4 py-2 flex justify-center"><Spinner size={14} /></div>}
-                    </div>
-                  )}
-                </div>
-              ))}
-              {!classes[board.id] && <div className="px-4 py-2 flex justify-center"><Spinner size={14} /></div>}
-            </div>
-          )}
+          <ShelfItem label={board.name || board.code} sublabel={`Board Code: ${board.code}`} isSelected={false} onClick={() => toggleBoard(board)} indent={0} />
+          <AnimatePresence>
+            {expanded[`b-${board.id}`] && (
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                {(classes[board.id] || []).map(cls => (
+                  <div key={cls.id}>
+                    <ShelfItem label={cls.grade_label || `Class ${cls.grade}`} isSelected={false} onClick={() => toggleClass(board.id, cls)} indent={1} />
+                    {expanded[`c-${cls.id}`] && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}>
+                        {(subjects[cls.id] || []).map(sub => (
+                          <ShelfItem
+                            key={sub.id}
+                            label={sub.name}
+                            isSelected={selected?.type === 'school' && selected?.subjectId === sub.id}
+                            onClick={() => onSelect({ type: 'school', subjectId: sub.id, subjectName: sub.name, board: board.code, boardName: board.name, grade: cls.grade, gradeLabel: cls.grade_label })}
+                            indent={2}
+                          />
+                        ))}
+                        {subjects[cls.id]?.length === 0 && <div className="px-8 py-2 text-[11px] text-gray-400">No subjects yet...</div>}
+                        {!subjects[cls.id] && <div className="px-8 py-2 flex justify-start"><Spinner size={14} /></div>}
+                      </motion.div>
+                    )}
+                  </div>
+                ))}
+                {!classes[board.id] && <div className="px-6 py-2 flex justify-start"><Spinner size={14} /></div>}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       ))}
     </div>
@@ -202,30 +230,31 @@ function CompetitiveShelf({ onSelect, selected }) {
     }
   };
 
-  if (loading) return <div className="p-4 flex justify-center"><Spinner /></div>;
-
+  if (loading) return <div className="p-6 flex justify-center"><Spinner size={20}/></div>;
   const allExams = Object.values(exams).flat();
 
   return (
-    <div>
+    <div className="py-2">
       {allExams.map(exam => (
         <div key={exam.code}>
           <ShelfItem label={exam.name || exam.code} sublabel={exam.code} isSelected={false} onClick={() => toggleExam(exam)} indent={0} />
-          {expanded[`e-${exam.code}`] && (
-            <div>
-              {(subjects[exam.code] || []).map(sub => (
-                <ShelfItem
-                  key={sub.id || sub.name}
-                  label={sub.name}
-                  sublabel={sub.parent_subject || ''}
-                  isSelected={selected?.type === 'exam' && selected?.examCode === exam.code && selected?.subjectName === sub.name}
-                  onClick={() => onSelect({ type: 'exam', examCode: exam.code, examName: exam.name, subjectId: sub.id, subjectName: sub.name })}
-                  indent={1}
-                />
-              ))}
-              {!subjects[exam.code] && <div className="px-4 py-2 flex justify-center"><Spinner size={14} /></div>}
-            </div>
-          )}
+          <AnimatePresence>
+            {expanded[`e-${exam.code}`] && (
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                {(subjects[exam.code] || []).map(sub => (
+                  <ShelfItem
+                    key={sub.id || sub.name}
+                    label={sub.name}
+                    sublabel={sub.parent_subject || ''}
+                    isSelected={selected?.type === 'exam' && selected?.examCode === exam.code && selected?.subjectName === sub.name}
+                    onClick={() => onSelect({ type: 'exam', examCode: exam.code, examName: exam.name, subjectId: sub.id, subjectName: sub.name })}
+                    indent={1}
+                  />
+                ))}
+                {!subjects[exam.code] && <div className="px-6 py-2 flex justify-start"><Spinner size={14} /></div>}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       ))}
     </div>
@@ -233,32 +262,48 @@ function CompetitiveShelf({ onSelect, selected }) {
 }
 
 function UniversityShelf({ onSelect, selected }) {
-  const [courses, setCourses] = useState([]);
+  const [categories, setCategories] = useState({});
   const [expanded, setExpanded] = useState({});
-  const [subjects, setSubjects] = useState({});
+  const [courseSubjects, setCourseSubjects] = useState({});
   const [loading, setLoading] = useState(true);
 
+  // 1. Fetch Courses and group by Category (Engineering, Medical, Commerce, etc.)
   useEffect(() => {
     libraryAPI.getCourses()
-      .then(r => setCourses(r.data?.data || []))
+      .then(r => {
+        const data = Array.isArray(r.data?.data) ? r.data.data : Object.values(r.data?.data || {}).flat();
+        const grouped = {};
+        data.forEach(c => {
+          const cat = c.category || 'General';
+          if (!grouped[cat]) grouped[cat] = [];
+          grouped[cat].push(c);
+        });
+        setCategories(grouped);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
+  const toggleCategory = (catName) => {
+    const key = `cat-${catName}`;
+    setExpanded(e => ({ ...e, [key]: !e[key] }));
+  };
+
   const toggleCourse = async (course) => {
     const key = `c-${course.id}`;
     setExpanded(e => ({ ...e, [key]: !e[key] }));
-    if (!subjects[course.id]) {
+
+    if (!courseSubjects[course.id]) {
       try {
         const r = await libraryAPI.getCourseSubjects(course.id);
-        const subs = r.data?.data || [];
+        const subs = Array.isArray(r.data?.data) ? r.data.data : Object.values(r.data?.data || {}).flat();
         const grouped = {};
         subs.forEach(s => {
           const sem = s.semester || 0;
           if (!grouped[sem]) grouped[sem] = [];
           grouped[sem].push(s);
         });
-        setSubjects(s => ({ ...s, [course.id]: grouped }));
+        setCourseSubjects(s => ({ ...s, [course.id]: grouped }));
       } catch {}
     }
   };
@@ -268,48 +313,86 @@ function UniversityShelf({ onSelect, selected }) {
     setExpanded(e => ({ ...e, [key]: !e[key] }));
   };
 
-  if (loading) return <div className="p-4 flex justify-center"><Spinner /></div>;
+  if (loading) return <div className="p-6 flex justify-center"><Spinner size={20}/></div>;
 
   return (
-    <div>
-      {courses.map(course => (
-        <div key={course.id}>
+    <div className="py-2">
+      {Object.entries(categories).map(([catName, coursesList]) => (
+        <div key={`cat-${catName}`}>
+          {/* Layer 1: Course Category */}
           <ShelfItem
-            label={course.short_name || course.name}
-            sublabel={`${course.level} · ${course.duration_years || '?'}yr`}
+            label={catName}
+            sublabel={`${coursesList.length} Technical/Degree Programs`}
             isSelected={false}
-            onClick={() => toggleCourse(course)}
+            onClick={() => toggleCategory(catName)}
             indent={0}
           />
-          {expanded[`c-${course.id}`] && (
-            subjects[course.id] ? (
-              Object.entries(subjects[course.id])
-                .sort(([a], [b]) => Number(a) - Number(b))
-                .map(([sem, subs]) => (
-                  <div key={sem}>
-                    <button
-                      onClick={() => toggleSem(course.id, sem)}
-                      className="w-full flex items-center gap-1.5 px-5 py-2 sm:py-1 hover:bg-gray-100 text-[11px] sm:text-[10px] text-gray-500 font-semibold"
-                    >
-                      <ChevronRight size={10} className={`transition-transform ${expanded[`s-${course.id}-${sem}`] ? 'rotate-90' : ''}`} />
-                      {sem === '0' ? 'General' : `Semester ${sem}`}
-                    </button>
-                    {expanded[`s-${course.id}-${sem}`] && subs.map(sub => (
-                      <ShelfItem
-                        key={sub.id}
-                        label={sub.name}
-                        sublabel={sub.subject_code || ''}
-                        isSelected={selected?.type === 'university' && selected?.subjectId === sub.id}
-                        onClick={() => onSelect({ type: 'university', subjectId: sub.id, subjectName: sub.name, courseId: course.id, courseName: course.name || course.short_name, semester: sub.semester })}
-                        indent={3}
-                      />
-                    ))}
+          <AnimatePresence>
+            {expanded[`cat-${catName}`] && (
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                {coursesList.map(course => (
+                  <div key={`c-${course.id}`}>
+                    {/* Layer 2: Course */}
+                    <ShelfItem
+                      label={course.short_name || course.name}
+                      sublabel={`${course.level} · ${course.duration_years || '?'}yr`}
+                      isSelected={false}
+                      onClick={() => toggleCourse(course)}
+                      indent={1}
+                    />
+                    <AnimatePresence>
+                      {expanded[`c-${course.id}`] && (
+                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                          {courseSubjects[course.id] ? (
+                            Object.entries(courseSubjects[course.id])
+                              .sort(([a], [b]) => Number(a) - Number(b))
+                              .map(([sem, subs]) => (
+                                <div key={sem}>
+                                  {/* Layer 3: Semester Dropdown */}
+                                  <button
+                                    onClick={() => toggleSem(course.id, sem)}
+                                    className="w-full flex items-center gap-1.5 py-2 sm:py-1.5 hover:bg-gray-50 text-[11px] sm:text-[10px] text-gray-500 font-semibold uppercase tracking-wider pl-11"
+                                  >
+                                    <ChevronRight size={12} className={`transition-transform duration-300 ${expanded[`s-${course.id}-${sem}`] ? 'rotate-90' : ''}`} />
+                                    {sem === '0' ? 'General' : `Semester ${sem}`}
+                                  </button>
+                                  <AnimatePresence>
+                                    {expanded[`s-${course.id}-${sem}`] && (
+                                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}>
+                                        {/* Layer 4: Final Subjects */}
+                                        {subs.map(sub => (
+                                          <ShelfItem
+                                            key={sub.id}
+                                            label={sub.name}
+                                            sublabel={sub.subject_code || ''}
+                                            isSelected={selected?.type === 'university' && selected?.subjectId === sub.id}
+                                            onClick={() => onSelect({ 
+                                              type: 'university', 
+                                              subjectId: sub.id, 
+                                              subjectName: sub.name, 
+                                              courseId: course.id, 
+                                              courseName: course.short_name || course.name, 
+                                              semester: sub.semester 
+                                            })}
+                                            indent={3}
+                                          />
+                                        ))}
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
+                                </div>
+                              ))
+                          ) : (
+                            <div className="pl-[52px] py-3 flex justify-start"><Spinner size={14} /></div>
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
-                ))
-            ) : (
-              <div className="px-4 py-2 flex justify-center"><Spinner size={14} /></div>
-            )
-          )}
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       ))}
     </div>
@@ -322,66 +405,50 @@ function RightShelf({ onSelect, selected }) {
   const [section, setSection] = useState('school');
 
   const TABS = [
-    { id: 'school',      icon: GraduationCap, label: 'School',      color: 'bg-blue-500' },
-    { id: 'competitive', icon: Trophy,        label: 'Exams',       color: 'bg-orange-500' },
-    { id: 'university',  icon: Building2,     label: 'University',  color: 'bg-purple-500' },
+    { id: 'school',      icon: GraduationCap, label: 'School',      gradient: 'from-blue-500 to-indigo-600', shadow: 'shadow-blue-500/30' },
+    { id: 'competitive', icon: Trophy,        label: 'Exams',       gradient: 'from-orange-400 to-rose-500', shadow: 'shadow-orange-500/30' },
+    { id: 'university',  icon: Building2,     label: 'University',  gradient: 'from-fuchsia-500 to-purple-600', shadow: 'shadow-purple-500/30' },
   ];
 
   return (
-    <div className="w-72 bg-white border-l border-gray-200 flex flex-col h-full flex-shrink-0 shadow-[-1px_0_4px_rgba(0,0,0,0.06)]">
+    <div className="w-80 bg-white/70 backdrop-blur-xl border-l border-white/40 flex flex-col h-full flex-shrink-0 shadow-[-10px_0_30px_rgba(0,0,0,0.02)]">
       {/* Header */}
-      <div className="px-3 py-3 border-b border-gray-200 flex-shrink-0">
-        <div className="flex items-center gap-2 mb-2">
-          <BookOpen size={14} className="text-gray-500" />
-          <span className="text-[12px] font-bold text-gray-700">Library Shelf</span>
+      <div className="px-4 py-5 pb-3 border-b border-gray-100 flex-shrink-0">
+        <div className="flex items-center gap-2 mb-4 px-1">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+            <BookOpen size={16} className="text-white" />
+          </div>
+          <span className="text-[15px] font-bold text-gray-800 tracking-tight">Library Shelf</span>
         </div>
-        <div className="flex gap-1">
-          {TABS.map(({ id, icon: Icon, label, color }) => (
+        <div className="flex gap-1.5 bg-gray-100/80 p-1 rounded-xl">
+          {TABS.map(({ id, icon: Icon, label, gradient, shadow }) => (
             <button
               key={id}
               onClick={() => setSection(id)}
-              className={`flex-1 flex flex-col items-center gap-0.5 py-1.5 rounded-lg text-[9px] font-semibold transition-all ${
-                section === id ? `${color} text-white` : 'text-gray-500 hover:bg-gray-100'
+              className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-lg text-[10px] font-bold transition-all duration-300 relative ${
+                section === id ? 'text-white' : 'text-gray-500 hover:text-gray-800 hover:bg-white/50'
               }`}
             >
-              <Icon size={13} />
-              {label}
+              {section === id && (
+                <motion.div layoutId="tab-bg-shelf" className={`absolute inset-0 bg-gradient-to-br ${gradient} rounded-lg shadow-md ${shadow}`} />
+              )}
+              <Icon size={16} className="relative z-10" />
+              <span className="relative z-10 uppercase tracking-wide">{label}</span>
             </button>
           ))}
         </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-        {section === 'school'      && <SchoolShelf      onSelect={onSelect} selected={selected} />}
-        {section === 'competitive' && <CompetitiveShelf onSelect={onSelect} selected={selected} />}
-        {section === 'university'  && <UniversityShelf  onSelect={onSelect} selected={selected} />}
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <AnimatePresence mode="wait">
+          <motion.div key={section} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
+            {section === 'school'      && <SchoolShelf      onSelect={onSelect} selected={selected} />}
+            {section === 'competitive' && <CompetitiveShelf onSelect={onSelect} selected={selected} />}
+            {section === 'university'  && <UniversityShelf  onSelect={onSelect} selected={selected} />}
+          </motion.div>
+        </AnimatePresence>
       </div>
-
-      {/* Selected subject footer */}
-      {selected && (
-        <div className="border-t border-gray-200 p-3 flex-shrink-0">
-          <div className="flex items-start gap-2">
-            <div className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 mt-0.5 ${
-              selected.type === 'school' ? 'bg-blue-100' : selected.type === 'exam' ? 'bg-orange-100' : 'bg-purple-100'
-            }`}>
-              {selected.type === 'school'      && <GraduationCap size={11} className="text-blue-600"   />}
-              {selected.type === 'exam'        && <Trophy        size={11} className="text-orange-600" />}
-              {selected.type === 'university'  && <Building2     size={11} className="text-purple-600" />}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-[11px] font-semibold text-gray-700 truncate">{selected.subjectName}</div>
-              <div className="text-[10px] text-gray-400 truncate">
-                {selected.boardName || selected.examName || selected.courseName}
-                {selected.grade ? ` · Class ${selected.grade}` : ''}
-              </div>
-            </div>
-            <button onClick={() => onSelect(null)} className="p-1 rounded hover:bg-gray-100 text-gray-400 transition-colors">
-              <X size={13} />
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -392,47 +459,53 @@ function MobileSheetShelf({ onSelect, selected, onClose }) {
   const [section, setSection] = useState('school');
 
   const TABS = [
-    { id: 'school',      icon: GraduationCap, label: 'School',     color: 'bg-blue-500' },
-    { id: 'competitive', icon: Trophy,        label: 'Exams',      color: 'bg-orange-500' },
-    { id: 'university',  icon: Building2,     label: 'University', color: 'bg-purple-500' },
+    { id: 'school',      icon: GraduationCap, label: 'School',     gradient: 'from-blue-500 to-indigo-600' },
+    { id: 'competitive', icon: Trophy,        label: 'Exams',      gradient: 'from-orange-400 to-rose-500' },
+    { id: 'university',  icon: Building2,     label: 'University', gradient: 'from-fuchsia-500 to-purple-600' },
   ];
 
   return (
-    <div className="flex flex-col h-full bg-white">
-      {/* Sheet handle + header */}
-      <div className="flex-shrink-0 pt-3 pb-2 px-4 border-b border-gray-100">
-        <div className="w-10 h-1 rounded-full bg-gray-300 mx-auto mb-3" />
-        <div className="flex items-center justify-between mb-2">
+    <div className="flex flex-col h-full bg-white rounded-t-3xl overflow-hidden">
+      <div className="flex-shrink-0 pt-4 pb-3 px-5 border-b border-gray-100 bg-white/80 backdrop-blur-md">
+        <div className="w-12 h-1.5 rounded-full bg-gray-200 mx-auto mb-4" />
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <BookOpen size={16} className="text-gray-600" />
-            <span className="text-[14px] font-bold text-gray-800">Library Shelf</span>
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+              <BookOpen size={16} className="text-white" />
+            </div>
+            <span className="text-[16px] font-bold text-gray-800 tracking-tight">Library Shelf</span>
           </div>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200">
-            <X size={18} className="text-gray-500" />
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 active:bg-gray-300">
+            <X size={18} className="text-gray-600" />
           </button>
         </div>
-        {/* Section tabs */}
-        <div className="flex gap-2">
-          {TABS.map(({ id, icon: Icon, label, color }) => (
+        <div className="flex gap-2 bg-gray-100/80 p-1.5 rounded-2xl">
+          {TABS.map(({ id, icon: Icon, label, gradient }) => (
             <button
               key={id}
               onClick={() => setSection(id)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-semibold transition-all ${
-                section === id ? `${color} text-white shadow-sm` : 'bg-gray-100 text-gray-600'
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[12px] font-bold transition-all relative ${
+                section === id ? 'text-white' : 'text-gray-500'
               }`}
             >
-              <Icon size={13} />
-              {label}
+              {section === id && (
+                <motion.div layoutId="tab-bg-mobile" className={`absolute inset-0 bg-gradient-to-br ${gradient} rounded-xl shadow-md`} />
+              )}
+              <Icon size={14} className="relative z-10" />
+              <span className="relative z-10">{label}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Shelf content */}
       <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-        {section === 'school'      && <SchoolShelf      onSelect={(s) => { onSelect(s); onClose(); }} selected={selected} />}
-        {section === 'competitive' && <CompetitiveShelf onSelect={(s) => { onSelect(s); onClose(); }} selected={selected} />}
-        {section === 'university'  && <UniversityShelf  onSelect={(s) => { onSelect(s); onClose(); }} selected={selected} />}
+        <AnimatePresence mode="wait">
+          <motion.div key={section} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+            {section === 'school'      && <SchoolShelf      onSelect={(s) => { onSelect(s); onClose(); }} selected={selected} />}
+            {section === 'competitive' && <CompetitiveShelf onSelect={(s) => { onSelect(s); onClose(); }} selected={selected} />}
+            {section === 'university'  && <UniversityShelf  onSelect={(s) => { onSelect(s); onClose(); }} selected={selected} />}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );
@@ -452,11 +525,15 @@ function AIResponse({ response, context, isLoading }) {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-36 gap-3">
-        <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
-          <Sparkles size={20} className="text-blue-500 animate-pulse" />
-        </div>
-        <p className="text-[12px] text-gray-400">AI is thinking...</p>
+      <div className="flex flex-col items-center justify-center py-16 gap-5">
+        <motion.div 
+          animate={{ scale: [1, 1.2, 1], rotate: [0, 180, 360] }}
+          transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+          className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center shadow-lg shadow-blue-500/30"
+        >
+          <Sparkles size={28} className="text-white" />
+        </motion.div>
+        <p className="text-[14px] font-medium text-gray-500 animate-pulse tracking-wide">AI is deeply analyzing this topic...</p>
       </div>
     );
   }
@@ -464,106 +541,145 @@ function AIResponse({ response, context, isLoading }) {
   if (!response) return null;
 
   return (
-    <div className="space-y-3">
-      {/* Toolbar */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <div className="w-5 h-5 rounded bg-blue-500 flex items-center justify-center">
-            <Sparkles size={11} className="text-white" />
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 mt-6">
+      {/* Visual Diagram Layer (New Feature!) */}
+      {response.diagram_url && (
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} className="bg-white/80 backdrop-blur-md rounded-2xl p-4 shadow-xl shadow-blue-900/5 ring-1 ring-white">
+          <div className="flex items-center gap-2 mb-3 px-1">
+            <ImageIcon size={16} className="text-blue-500" />
+            <span className="text-[13px] font-bold text-gray-800 uppercase tracking-wide">Visual Diagram</span>
           </div>
-          <span className="text-[11px] font-semibold text-gray-700">AI Explanation</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => { navigator.clipboard.writeText(response.explanation || ''); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-            className="flex items-center gap-1 px-2 py-1.5 rounded-md text-[10px] text-gray-500 hover:bg-gray-100 active:bg-gray-200 transition-colors"
-          >
-            {copied ? <Check size={11} className="text-green-500" /> : <Copy size={11} />}
-            {copied ? 'Copied' : 'Copy'}
-          </button>
-          <button
-            onClick={handlePDF}
-            disabled={downloading}
-            className="flex items-center gap-1 px-2 py-1.5 rounded-md text-[10px] bg-blue-50 text-blue-600 hover:bg-blue-100 active:bg-blue-200 transition-colors disabled:opacity-50"
-          >
-            {downloading ? <Spinner size={11} /> : <Download size={11} />}
-            PDF
-          </button>
-        </div>
-      </div>
+          <div className="relative w-full rounded-xl overflow-hidden bg-gray-50 border border-gray-100 flex items-center justify-center p-4">
+            <img src={response.diagram_url} alt="AI Diagram" className="max-w-full max-h-[400px] object-contain rounded-lg shadow-sm mix-blend-multiply" />
+          </div>
+        </motion.div>
+      )}
 
+      {/* Exam Pattern Notification */}
+      {response.exam_pattern_note && (
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} className="bg-gradient-to-r from-rose-50 to-orange-50 rounded-2xl p-5 border border-rose-100 shadow-md shadow-rose-500/10">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertCircle size={18} className="text-rose-600" />
+            <span className="text-[14px] font-bold text-rose-800 tracking-tight">Exam Pattern Alert</span>
+          </div>
+          <p className="text-[13px] text-rose-700 leading-relaxed font-medium">
+            {response.exam_pattern_note}
+          </p>
+        </motion.div>
+      )}
+
+      {/* Main Explanation Block */}
       {response.explanation && (
-        <div className="text-[13px] text-gray-700 leading-relaxed bg-white rounded-xl p-4 shadow-[0_1px_2px_rgba(0,0,0,0.1)]">
-          {response.explanation}
+        <div className="relative group">
+          <div className="absolute inset-0 bg-gradient-to-b from-blue-50 to-indigo-50/50 rounded-3xl transform -rotate-1 scale-[1.02] -z-10 transition-transform group-hover:rotate-0 group-hover:scale-100 opacity-50"></div>
+          <div className="bg-white/90 backdrop-blur-xl rounded-3xl p-6 sm:p-8 shadow-xl shadow-indigo-900/5 border border-white">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md">
+                  <Sparkles size={14} className="text-white" />
+                </div>
+                <span className="text-[15px] font-bold text-gray-800 tracking-tight">AI Detailed Explanation</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { navigator.clipboard.writeText(response.explanation || ''); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-semibold text-gray-500 hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                >
+                  {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                  <span className="hidden sm:inline">{copied ? 'Copied' : 'Copy'}</span>
+                </button>
+                <button
+                  onClick={handlePDF}
+                  disabled={downloading}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-bold bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:shadow-lg hover:shadow-indigo-500/30 transition-all disabled:opacity-50"
+                >
+                  {downloading ? <Spinner size={14} /> : <Download size={14} />}
+                  <span className="hidden sm:inline">Save PDF</span>
+                </button>
+              </div>
+            </div>
+            <div className="prose prose-blue prose-sm sm:prose-base max-w-none text-gray-700">
+              <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                {response.explanation}
+              </ReactMarkdown>
+            </div>
+          </div>
         </div>
       )}
 
+      {/* Key Points */}
       {response.key_points?.length > 0 && (
-        <div className="bg-green-50 rounded-xl p-4 shadow-[0_1px_2px_rgba(0,0,0,0.1)]">
-          <div className="flex items-center gap-1.5 mb-2">
-            <Target size={13} className="text-green-600" />
-            <span className="text-[11px] font-semibold text-green-700">Key Points</span>
+        <div className="bg-gradient-to-br from-emerald-50/80 to-teal-50/80 rounded-3xl p-6 sm:p-8 border border-emerald-100 shadow-lg shadow-emerald-500/5">
+          <div className="flex items-center gap-2.5 mb-5">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-md shadow-emerald-500/20">
+              <Target size={16} className="text-white" />
+            </div>
+            <span className="text-[15px] font-bold text-emerald-800 tracking-tight">Key Takeaways</span>
           </div>
-          <ul className="space-y-2">
+          <ul className="space-y-4">
             {response.key_points.map((pt, i) => (
-              <li key={i} className="flex items-start gap-2 text-[12px] text-gray-700">
-                <span className="w-4 h-4 rounded-full bg-green-200 text-green-700 text-[9px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
-                {pt}
-              </li>
+              <motion.li initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 * i }} key={i} className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-lg bg-emerald-200 text-emerald-700 text-[11px] font-black flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">{i + 1}</span>
+                <span className="text-[14px] text-emerald-900 leading-relaxed font-medium">{pt}</span>
+              </motion.li>
             ))}
           </ul>
         </div>
       )}
 
+      {/* Formula/Derivation Grid Block */}
       {(response.formula || response.derivation) && (
-        <div className="bg-purple-50 rounded-xl p-4 shadow-[0_1px_2px_rgba(0,0,0,0.1)]">
-          <div className="flex items-center gap-1.5 mb-2">
-            <FileText size={13} className="text-purple-600" />
-            <span className="text-[11px] font-semibold text-purple-700">Formula / Derivation</span>
+        <div className="bg-gradient-to-br from-fuchsia-50/80 to-purple-50/80 rounded-3xl p-6 sm:p-8 border border-fuchsia-100 shadow-lg shadow-fuchsia-500/5">
+          <div className="flex items-center gap-2.5 mb-4">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center shadow-md shadow-purple-500/20">
+              <FileText size={16} className="text-white" />
+            </div>
+            <span className="text-[15px] font-bold text-purple-800 tracking-tight">Derivations & Formulas</span>
           </div>
-          <pre className="text-[12px] text-gray-700 whitespace-pre-wrap font-mono bg-white rounded-lg p-3 overflow-x-auto">
-            {response.formula || response.derivation}
-          </pre>
+          <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-5 shadow-inner border border-purple-100">
+            <pre className="text-[14px] text-purple-900 whitespace-pre-wrap font-mono leading-relaxed">
+              {response.formula || response.derivation}
+            </pre>
+          </div>
         </div>
       )}
 
+      {/* Code Snippet */}
       {response.code_example && (
-        <div className="bg-gray-900 rounded-xl overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.1)]">
-          <div className="flex items-center justify-between px-4 py-2 border-b border-white/10">
-            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Code</span>
-            <button onClick={() => navigator.clipboard.writeText(response.code_example)} className="p-1 rounded hover:bg-white/10">
-              <Copy size={13} className="text-white/60" />
+        <div className="bg-[#0B1121] rounded-3xl overflow-hidden shadow-2xl shadow-blue-900/20 ring-1 ring-white/10">
+          <div className="flex items-center justify-between px-6 py-3 border-b border-white/5 bg-white/5">
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-rose-500" />
+                <div className="w-3 h-3 rounded-full bg-amber-500" />
+                <div className="w-3 h-3 rounded-full bg-emerald-500" />
+              </div>
+              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-3">Implementation</span>
+            </div>
+            <button onClick={() => navigator.clipboard.writeText(response.code_example)} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
+              <Copy size={14} className="text-white/60 hover:text-white" />
             </button>
           </div>
-          <pre className="text-[12px] text-green-400 p-4 overflow-x-auto leading-relaxed">
+          <pre className="text-[13px] text-emerald-400 p-6 overflow-x-auto leading-relaxed font-mono">
             {response.code_example}
           </pre>
         </div>
       )}
 
-      {response.viva_questions?.length > 0 && (
-        <div className="bg-orange-50 rounded-xl p-4 shadow-[0_1px_2px_rgba(0,0,0,0.1)]">
-          <div className="flex items-center gap-1.5 mb-2">
-            <MessageSquare size={13} className="text-orange-600" />
-            <span className="text-[11px] font-semibold text-orange-700">Viva Questions</span>
+      {/* memory Mnemonic */}
+      {response.mnemonic && (
+        <motion.div whileHover={{ scale: 1.02 }} className="bg-gradient-to-r from-amber-400 to-orange-500 rounded-2xl p-6 shadow-xl shadow-orange-500/20 text-white relative overflow-hidden">
+          <div className="absolute right-0 top-0 opacity-10">
+            <Brain size={120} className="transform translate-x-4 -translate-y-4" />
           </div>
-          <ol className="space-y-2">
-            {response.viva_questions.map((q, i) => (
-              <li key={i} className="text-[12px] text-gray-700">
-                <span className="font-semibold text-orange-600">Q{i + 1}.</span> {q}
-              </li>
-            ))}
-          </ol>
-        </div>
+          <div className="relative z-10 flex flex-col gap-2">
+            <span className="text-[11px] font-black tracking-widest uppercase text-amber-100 drop-shadow-sm">Memory Hack</span>
+            <span className="text-[16px] font-bold leading-relaxed">{response.mnemonic}</span>
+          </div>
+        </motion.div>
       )}
 
-      {response.mnemonic && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-          <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Memory Tip · </span>
-          <span className="text-[12px] text-amber-800">{response.mnemonic}</span>
-        </div>
-      )}
-    </div>
+    </motion.div>
   );
 }
 
@@ -599,17 +715,24 @@ function ReaderPanel({ selected, isMobile = false }) {
       .finally(() => setChaptersLoading(false));
   }, [selected]);
 
-  const handleAsk = useCallback(async (topicOverride) => {
-    const q = topicOverride ? `Explain "${topicOverride}" in detail` : query.trim();
+  const handleAsk = useCallback(async (topicOverride, mode = 'explain') => {
+    const chapterCtx = selectedChapter?.name ? ` from the chapter "${selectedChapter.name}"` : '';
+    let q = topicOverride ? `Explain the topic "${topicOverride}"${chapterCtx} conceptually in detail.` : query.trim();
+    if (topicOverride && mode === 'diagram') {
+       q = `Explain the topic "${topicOverride}"${chapterCtx} conceptually and provide a detailed diagram or sketch representation to make it impactful.`;
+    } else if (topicOverride && mode === 'pattern') {
+       q = `Discuss the exam pattern and highly tested questions regarding the topic "${topicOverride}"${chapterCtx}.`;
+    }
+
     if (!q || !selected) return;
     setAiLoading(true);
     setAiResponse(null);
     if (!topicOverride) setQuery('');
 
     const payload = { studentQuery: q };
-    if (selected.type === 'school') { payload.subjectId = selected.subjectId; payload.boardCode = selected.board; payload.grade = selected.grade; }
-    else if (selected.type === 'exam') { payload.examCode = selected.examCode; payload.subjectId = selected.subjectId; }
-    else if (selected.type === 'university') { payload.universitySubjectId = selected.subjectId; }
+    if (selected.type === 'school') { payload.subjectId = selected.subjectId; payload.boardCode = selected.board; payload.grade = selected.grade; payload.subjectName = selected.subjectName; }
+    else if (selected.type === 'exam') { payload.examCode = selected.examCode; payload.subjectId = selected.subjectId; payload.subjectName = selected.subjectName; }
+    else if (selected.type === 'university') { payload.universitySubjectId = selected.subjectId; payload.subjectName = selected.subjectName; }
     if (selectedChapter) payload.chapterId = selectedChapter?.dbId;
 
     try {
@@ -635,77 +758,86 @@ function ReaderPanel({ selected, isMobile = false }) {
   ].filter(Boolean);
 
   if (!selected) {
-    // Welcome state (only shown in desktop center)
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-6 text-center px-8">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
-          <BookOpen size={32} className="text-white" />
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center h-full gap-8 text-center px-8">
+        <div className="relative">
+          <div className="absolute inset-0 bg-blue-500 blur-3xl opacity-20 rounded-full"></div>
+          <div className="w-24 h-24 rounded-3xl bg-white/60 backdrop-blur-xl border border-white/40 flex items-center justify-center shadow-2xl">
+            <Sparkles size={48} className="text-blue-600 drop-shadow-md" />
+          </div>
         </div>
-        <div>
-          <h2 className="text-[18px] font-bold text-gray-800 mb-2">Your AI Library</h2>
-          <p className="text-[13px] text-gray-500 leading-relaxed max-w-xs">
-            Select a subject from the shelf on the right to explore chapters and get AI explanations.
+        <div className="max-w-md">
+          <h2 className="text-[28px] font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-800 mb-3 tracking-tight">Syllabrix AI Library</h2>
+          <p className="text-[15px] text-gray-500 leading-relaxed font-medium">
+            Dive into any syllabus globally. Select from the shelf to instantly generate rich, interactive diagrams, exact exam patterns, and conceptual breakdowns.
           </p>
         </div>
-        <div className="grid grid-cols-3 gap-3 w-full max-w-sm">
+        <div className="grid grid-cols-3 gap-4 w-full max-w-lg mt-4">
           {[
-            { icon: GraduationCap, label: 'School', sublabel: 'Classes 1–12', color: 'bg-blue-100 text-blue-600' },
-            { icon: Trophy, label: 'Competitive', sublabel: 'JEE, NEET, UPSC', color: 'bg-orange-100 text-orange-600' },
-            { icon: Building2, label: 'University', sublabel: 'B.Tech, MBBS, MBA', color: 'bg-purple-100 text-purple-600' },
-          ].map(({ icon: Icon, label, sublabel, color }) => (
-            <div key={label} className="bg-white rounded-xl p-3 shadow-[0_1px_2px_rgba(0,0,0,0.1)] text-center">
-              <div className={`w-8 h-8 rounded-lg ${color} flex items-center justify-center mx-auto mb-1.5`}><Icon size={16} /></div>
-              <div className="text-[11px] font-semibold text-gray-700">{label}</div>
-              <div className="text-[10px] text-gray-400">{sublabel}</div>
+            { icon: GraduationCap, label: 'K-12 Boards', color: 'from-blue-400 to-blue-600', shadow: 'shadow-blue-500/20' },
+            { icon: Trophy, label: 'Entrance Exams', color: 'from-orange-400 to-red-500', shadow: 'shadow-orange-500/20' },
+            { icon: Building2, label: 'Universities', color: 'from-fuchsia-500 to-purple-600', shadow: 'shadow-purple-500/20' },
+          ].map(({ icon: Icon, label, color, shadow }) => (
+            <div key={label} className="bg-white/80 backdrop-blur-md border border-white/50 rounded-2xl p-4 text-center shadow-xl shadow-blue-900/5 group hover:-translate-y-1 transition-transform">
+              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center mx-auto mb-3 shadow-lg ${shadow} group-hover:scale-110 transition-transform`}>
+                <Icon size={20} className="text-white" />
+              </div>
+              <div className="text-[12px] font-bold text-gray-800 tracking-tight">{label}</div>
             </div>
           ))}
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="p-4 space-y-4">
-      {/* Breadcrumb */}
-      {breadcrumb.length > 0 && (
-        <div className="flex items-center gap-1 text-[11px] text-gray-400 flex-wrap">
-          {breadcrumb.map((item, i) => (
-            <span key={i} className="flex items-center gap-1">
-              {i > 0 && <ChevronRight size={9} />}
-              <span className={i === breadcrumb.length - 1 ? 'text-blue-600 font-medium' : ''}>{item}</span>
-            </span>
-          ))}
-        </div>
-      )}
+    <div className="p-6 md:p-10 space-y-8 max-w-4xl mx-auto pb-32">
+      {/* Header Info Layer */}
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+        {breadcrumb.length > 0 && (
+          <div className="flex items-center gap-2 text-[12px] font-medium text-gray-500 flex-wrap">
+            {breadcrumb.map((item, i) => (
+              <span key={i} className="flex items-center gap-2">
+                {i > 0 && <ChevronRight size={12} className="text-gray-300" />}
+                <span className={i === breadcrumb.length - 1 ? 'text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-md' : ''}>{item}</span>
+              </span>
+            ))}
+          </div>
+        )}
 
-      {bookTitle && (
-        <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-50 rounded-lg w-fit">
-          <BookMarked size={12} className="text-blue-500 flex-shrink-0" />
-          <span className="text-[11px] text-blue-600 font-medium truncate max-w-[240px] sm:max-w-none">{bookTitle}</span>
-        </div>
-      )}
+        {bookTitle && (
+          <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl w-fit shadow-sm">
+            <BookMarked size={14} className="text-blue-600 flex-shrink-0" />
+            <span className="text-[13px] text-blue-800 font-bold truncate max-w-[280px] sm:max-w-none">Curriculum: {bookTitle}</span>
+          </div>
+        )}
+      </motion.div>
 
-      {/* Chapters */}
-      <div className="bg-white rounded-xl p-4 shadow-[0_1px_2px_rgba(0,0,0,0.1)]">
-        <div className="flex items-center gap-2 mb-3">
-          <List size={14} className="text-gray-500" />
-          <span className="text-[12px] font-semibold text-gray-700">Chapters</span>
-          {chaptersLoading && <Spinner size={12} />}
+      {/* Chapters Carousel */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white/80 backdrop-blur-xl rounded-3xl p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center">
+            <List size={16} className="text-blue-600" />
+          </div>
+          <span className="text-[16px] font-black text-gray-800 tracking-tight">Syllabus Chapters</span>
+          {chaptersLoading && <Spinner size={14} />}
         </div>
+        
         {chaptersLoading ? (
-          <div className="flex items-center gap-2 text-[12px] text-gray-400 py-2">
-            <Spinner size={14} /> Loading chapters...
+          <div className="flex items-center justify-center gap-3 text-[13px] text-gray-400 py-8 font-medium">
+             <div className="animate-pulse flex gap-2"><div className="w-2 h-2 rounded-full bg-blue-400"></div><div className="w-2 h-2 rounded-full bg-blue-400 animation-delay-200"></div><div className="w-2 h-2 rounded-full bg-blue-400 animation-delay-400"></div></div>
+             Fetching complete syllabus structure...
           </div>
         ) : chapters.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2.5">
             {chapters.map((ch, i) => (
               <button
                 key={i}
                 onClick={() => { setSelectedChapter(ch); setSelectedTopic(null); setAiResponse(null); }}
-                className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all border active:scale-95 ${
+                className={`px-4 py-2.5 rounded-xl text-[13px] font-bold transition-all duration-300 border-2 active:scale-95 ${
                   selectedChapter?.num === ch.num
-                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300 hover:text-blue-600'
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/20'
+                    : 'bg-white text-gray-600 border-gray-100 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700'
                 }`}
               >
                 {ch.num}. {ch.name}
@@ -713,82 +845,81 @@ function ReaderPanel({ selected, isMobile = false }) {
             ))}
           </div>
         ) : (
-          <p className="text-[12px] text-gray-400">No chapters found.</p>
+          <div className="py-6 text-center text-[13px] text-gray-400 font-medium">AI is preparing chapters for this subject.</div>
         )}
-      </div>
+      </motion.div>
 
       {/* Topics */}
-      {selectedChapter?.topics?.length > 0 && (
-        <div className="bg-white rounded-xl p-4 shadow-[0_1px_2px_rgba(0,0,0,0.1)]">
-          <div className="flex items-center gap-2 mb-3">
-            <Layers size={14} className="text-gray-500" />
-            <span className="text-[12px] font-semibold text-gray-700">Ch.{selectedChapter.num} — {selectedChapter.name}</span>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {selectedChapter.topics.map((topic, i) => (
-              <button
-                key={i}
-                onClick={() => { setSelectedTopic(topic); handleAsk(topic); }}
-                className={`px-2 py-1.5 rounded-md text-[11px] font-medium transition-all border active:scale-95 ${
-                  selectedTopic === topic
-                    ? 'bg-indigo-600 text-white border-indigo-600'
-                    : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-300 hover:text-indigo-600'
-                }`}
-              >
-                {topic}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      <AnimatePresence mode="popLayout">
+        {selectedChapter?.topics?.length > 0 && (
+          <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} className="bg-gradient-to-br from-indigo-50/50 to-purple-50/50 backdrop-blur-xl rounded-3xl p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-indigo-100/50">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md">
+                <Layers size={16} className="text-white" />
+              </div>
+              <span className="text-[16px] font-black text-gray-800 tracking-tight">Select a Topic to Dive Deep</span>
+            </div>
+            <div className="flex flex-col gap-3">
+              {selectedChapter.topics.map((topic, i) => (
+                <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-white/60 hover:bg-white rounded-2xl border border-white transition-colors group shadow-sm">
+                  <div className="flex-1 font-bold text-gray-700 text-[14px] px-2">{topic}</div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => { setSelectedTopic(topic); handleAsk(topic, 'explain'); }} className="flex-1 sm:flex-none px-4 py-2 rounded-xl text-[11px] font-bold bg-indigo-100 text-indigo-700 hover:bg-indigo-600 hover:text-white transition-colors flex justify-center">
+                       Explain deeply
+                    </button>
+                    <button onClick={() => { setSelectedTopic(topic); handleAsk(topic, 'diagram'); }} className="flex-1 sm:flex-none px-4 py-2 rounded-xl text-[11px] font-bold bg-emerald-100 text-emerald-700 hover:bg-emerald-600 hover:text-white transition-colors flex justify-center gap-1.5 items-center">
+                       <ImageIcon size={12}/> Visual Diagram
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* AI Chat Input */}
-      <div className="bg-white rounded-xl p-4 shadow-[0_1px_2px_rgba(0,0,0,0.1)]">
-        <div className="flex items-center gap-2 mb-2">
-          <Sparkles size={14} className="text-blue-500" />
-          <span className="text-[12px] font-semibold text-gray-700">Ask AI</span>
-          {selectedChapter && <span className="text-[10px] text-gray-400">about {selectedChapter.name}</span>}
-        </div>
-        <div className="flex gap-2">
+      {/* Custom AI Chat Input Layer */}
+      <motion.div layout className="bg-white/80 backdrop-blur-xl rounded-3xl p-6 shadow-xl shadow-blue-900/5 border border-white relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500"></div>
+        <div className="flex gap-3">
           <input
             ref={inputRef}
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAsk(); } }}
-            placeholder={selectedChapter ? `Ask about ${selectedChapter.name}...` : `Ask anything about ${selected.subjectName}...`}
-            className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-[13px] focus:outline-none focus:border-blue-400 bg-gray-50 min-w-0"
+            placeholder={selectedChapter ? `Ask a specific question about ${selectedChapter.name}...` : `Ask anything related to ${selected.subjectName}...`}
+            className="flex-1 px-5 py-4 rounded-2xl border-2 border-gray-100 text-[15px] font-medium text-gray-800 focus:outline-none focus:border-indigo-400 bg-gray-50/50 hover:bg-white transition-colors placeholder:text-gray-400 shadow-inner"
           />
           <button
             onClick={() => handleAsk()}
             disabled={!query.trim() || aiLoading}
-            className="px-3 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 flex-shrink-0"
+            className="w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white hover:shadow-lg hover:shadow-indigo-500/40 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex flex-shrink-0"
           >
-            {aiLoading ? <Spinner size={14} /> : <Send size={14} />}
-            <span className="text-[11px] font-medium hidden sm:inline">Ask</span>
+            {aiLoading ? <Spinner size={20} /> : <Send size={20} className="ml-1" />}
           </button>
         </div>
-        <div className="flex gap-1.5 mt-2 flex-wrap">
-          {['Explain this', 'Give examples', 'Key formulas', 'Exam questions'].map(s => (
+        <div className="flex gap-2 mt-4 flex-wrap px-1">
+          {['Draw a diagram', 'What is the exam pattern?', 'Solve an example', 'Provide cheat codes'].map(s => (
             <button
               key={s}
               onClick={() => { setQuery(s); inputRef.current?.focus(); }}
-              className="px-2 py-1 rounded-md bg-gray-100 text-[10px] text-gray-600 hover:bg-gray-200 active:bg-gray-300 transition-colors"
+              className="px-4 py-2 rounded-xl bg-gray-100 text-[11px] font-bold text-gray-600 hover:bg-gray-200 active:bg-gray-300 transition-colors tracking-wide"
             >
               {s}
             </button>
           ))}
         </div>
-      </div>
+      </motion.div>
 
-      {/* AI Response */}
-      {(aiLoading || aiResponse) && (
-        <div className="bg-white rounded-xl p-4 shadow-[0_1px_2px_rgba(0,0,0,0.1)]">
-          <AIResponse response={aiResponse} context={pdfContext} isLoading={aiLoading} />
-        </div>
-      )}
+      {/* Rendering the Response Layer */}
+      <AnimatePresence>
+        {(aiLoading || aiResponse) && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+            <AIResponse response={aiResponse} context={pdfContext} isLoading={aiLoading} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Spacer for mobile bottom nav */}
-      {isMobile && <div className="h-4" />}
     </div>
   );
 }
@@ -797,98 +928,80 @@ function ReaderPanel({ selected, isMobile = false }) {
 
 export default function AILibraryPage() {
   const [selected, setSelected] = useState(null);
-  const [mobileTab, setMobileTab] = useState('browse'); // 'browse' | 'read'
+  const [mobileTab, setMobileTab] = useState('browse');
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  // When subject is selected on mobile, switch to read tab
   const handleSelect = (s) => {
     setSelected(s);
     if (s) setMobileTab('read');
   };
 
   return (
-    // Full-bleed: escape layout's padding with negative margins
-    // Layout gives px-4 py-4 pb-24 — we cancel that here
-    <div className="-mx-4 lg:-mx-6 -mt-4 -mb-24 md:-mb-6">
+    <div className="-mx-4 lg:-mx-6 -mt-4 -mb-24 md:-mb-6 min-h-screen relative overflow-hidden">
+      
+      {/* Absolute background blobs for glassmorphism effect */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-400/20 blur-[120px] rounded-full pointer-events-none z-[-1]" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[50%] bg-purple-400/20 blur-[120px] rounded-full pointer-events-none z-[-1]" />
+      <div className="absolute top-[40%] right-[10%] w-[20%] h-[20%] bg-orange-400/10 blur-[100px] rounded-full pointer-events-none z-[-1]" />
 
       {/* ── DESKTOP LAYOUT ─────────────────────────────────────────────── */}
-      <div className={`hidden md:flex ${H} overflow-hidden bg-[#F0F2F5]`}>
+      <div className={`hidden md:flex ${H} overflow-hidden bg-transparent`}>
         {/* Center reading space */}
-        <div className="flex-1 flex flex-col h-full overflow-hidden">
-          {/* Header */}
-          <div className="bg-white border-b border-gray-200 px-5 py-3 flex items-center gap-3 flex-shrink-0 shadow-[0_1px_2px_rgba(0,0,0,0.1)]">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-              <Brain size={14} className="text-white" />
+        <div className="flex-1 flex flex-col h-full overflow-hidden relative z-10">
+          <div className="bg-white/40 backdrop-blur-md border-b border-white/50 px-6 py-4 flex items-center justify-between flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                <Brain size={20} className="text-white" />
+              </div>
+              <div>
+                <h1 className="text-[17px] font-black text-gray-800 tracking-tight">AI Library Studio</h1>
+                <p className="text-[11px] text-gray-500 font-medium">Any Syllabus. Anywhere. Animated visually.</p>
+              </div>
             </div>
-            <h1 className="text-[13px] font-bold text-gray-800">AI Library</h1>
           </div>
-          {/* Scrollable reader */}
-          <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-            <div className="max-w-3xl">
-              <ReaderPanel selected={selected} isMobile={false} />
-            </div>
+          <div className="flex-1 overflow-y-auto custom-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
+             <ReaderPanel selected={selected} isMobile={false} />
           </div>
         </div>
-
-        {/* Right shelf */}
+        {/* Right shelf panel */}
         <RightShelf onSelect={setSelected} selected={selected} />
       </div>
 
       {/* ── MOBILE LAYOUT ──────────────────────────────────────────────── */}
-      <div className="md:hidden flex flex-col bg-[#F0F2F5]" style={{ minHeight: 'calc(100dvh - 56px)' }}>
-
-        {/* Mobile top bar with breadcrumb / shelf toggle */}
-        <div className="bg-white border-b border-gray-200 px-4 py-2.5 flex items-center gap-3 flex-shrink-0 shadow-[0_1px_2px_rgba(0,0,0,0.1)]">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
-            <Brain size={14} className="text-white" />
+      <div className="md:hidden flex flex-col bg-transparent relative z-10 h-[calc(100dvh-56px)]">
+        <div className="bg-white/60 backdrop-blur-xl border-b border-white/50 px-5 py-3.5 flex items-center gap-3 flex-shrink-0 shadow-sm sticky top-0 z-20">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-md">
+            <Brain size={18} className="text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-[13px] font-bold text-gray-800">AI Library</h1>
+            <h1 className="text-[15px] font-black text-gray-800 tracking-tight">AI Library Studio</h1>
             {selected && (
-              <p className="text-[10px] text-gray-400 truncate">
-                {selected.boardName || selected.examName || selected.courseName} · {selected.subjectName}
+              <p className="text-[11px] text-gray-500 truncate font-semibold">
+                {selected.subjectName}
               </p>
             )}
           </div>
-          {/* Browse shelf button */}
           <button
             onClick={() => setSheetOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-50 text-blue-600 text-[11px] font-semibold active:bg-blue-100 transition-colors flex-shrink-0"
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-md text-white text-[12px] font-bold active:scale-95 transition-all flex-shrink-0"
           >
-            <LayoutList size={14} />
-            {selected ? 'Change' : 'Browse'}
+            <LayoutList size={16} />
+            {selected ? 'Syllabus' : 'Browse'}
           </button>
         </div>
 
-        {/* Scrollable reader — full width on mobile */}
-        <div className="flex-1 overflow-y-auto pb-20" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="flex-1 overflow-y-auto pb-24" style={{ WebkitOverflowScrolling: 'touch' }}>
           {!selected ? (
-            // Mobile welcome state
-            <div className="flex flex-col items-center justify-center gap-5 text-center px-6 py-12">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
-                <BookOpen size={32} className="text-white" />
+            <div className="flex flex-col items-center justify-center gap-6 text-center px-6 py-16">
+              <div className="relative">
+                <div className="absolute inset-0 bg-blue-500 blur-2xl opacity-20 rounded-full"></div>
+                <div className="w-20 h-20 rounded-3xl bg-white/80 backdrop-blur-lg border border-white/50 flex items-center justify-center shadow-2xl relative z-10">
+                  <Sparkles size={36} className="text-blue-600" />
+                </div>
               </div>
               <div>
-                <h2 className="text-[18px] font-bold text-gray-800 mb-2">Your AI Library</h2>
-                <p className="text-[13px] text-gray-500 leading-relaxed">
-                  Tap <strong>Browse</strong> above to pick a subject from School, Competitive, or University.
-                </p>
-              </div>
-              <div className="grid grid-cols-3 gap-3 w-full">
-                {[
-                  { icon: GraduationCap, label: 'School',      color: 'bg-blue-100 text-blue-600' },
-                  { icon: Trophy,        label: 'Competitive', color: 'bg-orange-100 text-orange-600' },
-                  { icon: Building2,     label: 'University',  color: 'bg-purple-100 text-purple-600' },
-                ].map(({ icon: Icon, label, color }) => (
-                  <button
-                    key={label}
-                    onClick={() => setSheetOpen(true)}
-                    className="bg-white rounded-xl p-3 shadow-[0_1px_2px_rgba(0,0,0,0.1)] text-center active:scale-95 transition-transform"
-                  >
-                    <div className={`w-9 h-9 rounded-lg ${color} flex items-center justify-center mx-auto mb-1.5`}><Icon size={18} /></div>
-                    <div className="text-[11px] font-semibold text-gray-700">{label}</div>
-                  </button>
-                ))}
+                <h2 className="text-[24px] font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-800 mb-2 leading-tight">Welcome to the<br/>Future of Learning</h2>
+                <p className="text-[14px] text-gray-500 font-medium">Tap Browse above to enter any syllabus and generate visual diagrams instantly.</p>
               </div>
             </div>
           ) : (
@@ -897,26 +1010,35 @@ export default function AILibraryPage() {
         </div>
 
         {/* Mobile bottom shelf sheet */}
-        {sheetOpen && (
-          <>
-            {/* Backdrop */}
-            <div
-              className="fixed inset-0 bg-black/50 z-40"
-              onClick={() => setSheetOpen(false)}
-            />
-            {/* Sheet */}
-            <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-2xl"
-              style={{ height: '75vh', paddingBottom: 'env(safe-area-inset-bottom)' }}
-            >
-              <MobileSheetShelf
-                onSelect={handleSelect}
-                selected={selected}
-                onClose={() => setSheetOpen(false)}
+        <AnimatePresence>
+          {sheetOpen && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-40"
+                onClick={() => setSheetOpen(false)}
               />
-            </div>
-          </>
-        )}
+              <motion.div
+                initial={{ y: '100%' }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                className="fixed bottom-0 left-0 right-0 z-50 shadow-2xl"
+                style={{ height: '80vh', paddingBottom: 'env(safe-area-inset-bottom)' }}
+              >
+                <MobileSheetShelf
+                  onSelect={handleSelect}
+                  selected={selected}
+                  onClose={() => setSheetOpen(false)}
+                />
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
       </div>
+      
     </div>
   );
 }

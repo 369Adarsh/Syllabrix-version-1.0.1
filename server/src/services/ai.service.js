@@ -124,13 +124,27 @@ const providers = {
   },
 };
 
-const PROVIDER_ORDER = ['gemini', 'groq', 'together', 'cohere'];
+const TASK_PROFILES = {
+  reasoning: ['gemini', 'cohere', 'groq', 'together'],
+  coding:    ['gemini', 'cohere', 'groq', 'together'],
+  fast:      ['groq', 'together', 'gemini', 'cohere'],
+  json:      ['groq', 'together', 'gemini', 'cohere'],
+  chat:      ['together', 'groq', 'cohere', 'gemini'],
+  default:   ['gemini', 'groq', 'together', 'cohere']
+};
+
+const getProviderQueue = (task) => {
+  const queue = TASK_PROFILES[task] || TASK_PROFILES.default;
+  return queue.filter(name => providers[name] && providers[name].available);
+};
 
 const generateText = async (prompt, opts = {}) => {
+  const queue = getProviderQueue(opts.task);
+  if (queue.length === 0) throw new Error('No AI providers configured in env.');
+
   const errors = [];
-  for (const name of PROVIDER_ORDER) {
+  for (const name of queue) {
     const p = providers[name];
-    if (!p.available) continue;
     try {
       console.log(`[AI] Trying ${p.name}...`);
       const result = await p.generate(prompt, opts);
@@ -147,9 +161,10 @@ const generateText = async (prompt, opts = {}) => {
 };
 
 const generateJSON = async (prompt, opts = {}) => {
+  const updatedOpts = { ...opts, task: opts.task || 'json' };
   const text = await generateText(
     prompt + '\n\nCRITICAL: Respond with ONLY valid JSON. No markdown backticks. No text before or after the JSON.',
-    opts
+    updatedOpts
   );
   let cleaned = text.trim();
   // Remove markdown fences
@@ -175,11 +190,13 @@ const generateJSON = async (prompt, opts = {}) => {
   }
 };
 
-const chat = async (history, message, systemPrompt) => {
+const chat = async (history, message, systemPrompt, opts = {}) => {
+  const queue = getProviderQueue(opts.task || 'chat');
+  if (queue.length === 0) throw new Error('No AI providers available for chat.');
+
   const errors = [];
-  for (const name of PROVIDER_ORDER) {
+  for (const name of queue) {
     const p = providers[name];
-    if (!p.available) continue;
     try {
       console.log(`[AI Chat] Trying ${p.name}...`);
       const result = await p.chat(history, message, systemPrompt);
@@ -195,6 +212,6 @@ const chat = async (history, message, systemPrompt) => {
   throw new Error('All AI providers failed: ' + errors.join(' | '));
 };
 
-console.log('[AI] Providers:', PROVIDER_ORDER.filter(n => providers[n].available).map(n => providers[n].name).join(', ') || 'NONE');
+console.log('[AI] Default Queue:', TASK_PROFILES.default.filter(n => providers[n].available).map(n => providers[n].name).join(', ') || 'NONE');
 
 module.exports = { generateText, generateJSON, chat };

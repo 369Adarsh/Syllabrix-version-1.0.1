@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node src/database/migrate.js)"
+      "Bash(node src/database/migrate.js)",
+      "Bash(npx next:*)"
     ]
   }
 }

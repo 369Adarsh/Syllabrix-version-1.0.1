@@ -92,6 +92,44 @@ async function searchWikipedia(query) {
   }
 }
 
+/**
+ * Fetch an image url (preferably a SVG diagram or illustration) from Wikimedia Commons
+ * related to the topic.
+ */
+async function fetchWikimediaImage(topic) {
+  if (!topic) return null;
+  try {
+    const encoded = encodeURIComponent(topic + " diagram OR illustration OR sketch OR cross section");
+    const raw = await httpsGet(
+      `https://en.wikipedia.org/w/api.php?action=query&prop=pageimages&generator=search&gsrsearch=${encoded}&gsrlimit=3&pithumbsize=800&format=json&utf8=`
+    );
+    if (!raw) return null;
+    const json = JSON.parse(raw);
+    const pages = json?.query?.pages;
+    if (!pages) return null;
+    
+    // Get the first result with a thumbnail
+    for (const key of Object.keys(pages)) {
+      if (pages[key].thumbnail && pages[key].thumbnail.source) {
+        return pages[key].thumbnail.source;
+      }
+    }
+    
+    // Fallback without "diagram" keywords if none found
+    const encodedFallback = encodeURIComponent(topic);
+    const rawFallback = await httpsGet(
+      `https://en.wikipedia.org/w/api.php?action=query&prop=pageimages&generator=search&gsrsearch=${encodedFallback}&gsrlimit=1&pithumbsize=800&format=json&utf8=`
+    );
+    const jsonFb = JSON.parse(rawFallback || '{}');
+    const pagesFb = jsonFb?.query?.pages;
+    if (!pagesFb) return null;
+    const fbKey = Object.keys(pagesFb)[0];
+    return pagesFb[fbKey]?.thumbnail?.source || null;
+  } catch {
+    return null;
+  }
+}
+
 // ─── 2. arXiv ─────────────────────────────────────────────────────────────
 
 /**
@@ -198,4 +236,8 @@ function fetchNCERTContext(grade, subject, chapterName) {
   return ncert.getChapterContext(grade, subject, chapterName);
 }
 
-module.exports = { fetchWikipediaSummary, searchWikipedia, searchArXiv, searchOpenLibraryBook, enrichContext, fetchNCERTContext };
+module.exports = {
+  fetchWikipediaSummary, searchWikipedia, searchArXiv,
+  searchOpenLibraryBook, enrichContext, fetchNCERTContext,
+  fetchWikimediaImage
+};

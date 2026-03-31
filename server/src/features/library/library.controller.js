@@ -271,6 +271,7 @@ const askAI = async (req, res, next) => {
       syllabusVersionId,
       grade,
       subjectId,
+      subjectName,
       chapterId,
       topicId,
       examCode,
@@ -280,23 +281,26 @@ const askAI = async (req, res, next) => {
       studentClass,
     } = req.body;
 
-    if (!studentQuery || (!subjectId && !examCode && !universitySubjectId && !universityTopicId)) {
+    if (!studentQuery || (!subjectId && !examCode && !universitySubjectId && !universityTopicId && !subjectName)) {
       return res.status(400).json({
         success: false,
-        message: 'studentQuery and one of subjectId, examCode, universitySubjectId, or universityTopicId are required',
+        message: 'studentQuery and at least one subject tracker (subjectId/Name, examCode, etc) are required',
       });
     }
 
+    const parseId = (val) => (val && typeof val === 'string' && val.startsWith('fb')) ? val : (val ? Number(val) : null);
+
     const result = await aiLibraryService.ask({
       boardCode,
-      syllabusVersionId:    syllabusVersionId    ? Number(syllabusVersionId)    : null,
-      grade:                grade                ? Number(grade)                : null,
-      subjectId:            subjectId            ? Number(subjectId)            : null,
-      chapterId:            chapterId            ? Number(chapterId)            : null,
-      topicId:              topicId              ? Number(topicId)              : null,
+      syllabusVersionId:    parseId(syllabusVersionId),
+      grade:                grade ? Number(grade) : null,
+      subjectId:            parseId(subjectId),
+      subjectName,
+      chapterId:            parseId(chapterId),
+      topicId:              parseId(topicId),
       examCode,
-      universitySubjectId:  universitySubjectId  ? Number(universitySubjectId)  : null,
-      universityTopicId:    universityTopicId    ? Number(universityTopicId)    : null,
+      universitySubjectId:  parseId(universitySubjectId),
+      universityTopicId:    parseId(universityTopicId),
       studentQuery,
       studentClass,
       userId: req.user?.id,

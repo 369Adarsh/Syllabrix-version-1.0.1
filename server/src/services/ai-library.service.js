@@ -28,7 +28,7 @@
  */
 
 const { generateJSON }  = require('./ai.service');
-const { enrichContext, fetchNCERTContext } = require('./web-content.service');
+const { enrichContext, fetchNCERTContext, fetchWikimediaImage } = require('./web-content.service');
 const {
   getAIContext, getAIExamContext, getRecommendedBooks,
   getAIUniversityContext, getUniversitySubjectBooks,
@@ -107,6 +107,8 @@ function buildSchema(qType, mode, domain) {
     follow_up_question: 'One probing question to test deeper understanding.',
     related_topics:     ['Related topic A', 'Related topic B'],
     syllabus_note:      'Any important syllabus/exam note. Empty string if none.',
+    diagram_search_query: 'A very short 2-3 word query to search Wikipedia images for a sketch or diagram of this topic. Provide this ONLY if a diagram or sketch is explicitly requested OR if visualizing the concept (e.g. Brain, Solar System, Circuit) is highly impactful for learning. Leave empty string otherwise.',
+    exam_pattern_note:  'A specific note on how this topic appears in exams (e.g. "Usually a 5-mark question", "Frequently asked as MCQ"). If unknown or irrelevant, leave empty.'
   };
 
   // Code questions
@@ -203,10 +205,10 @@ function buildSchema(qType, mode, domain) {
 
 async function ask(params) {
   const {
-    subjectId, chapterId, topicId,
+    subjectId, subjectName, chapterId, topicId,
     examCode,
     universitySubjectId, universityTopicId,
-    studentQuery, studentClass, boardCode,
+    studentQuery, studentClass, boardCode, grade,
   } = params;
 
   // ── 1. Detect question intelligence ─────────────────────────────────────────
@@ -215,14 +217,20 @@ async function ask(params) {
 
   // ── 2. Fetch DB context (parallel) ──────────────────────────────────────────
   const [
-    { ctx, chapter, topic },
+    dbCtx,
     examCtxResult,
     uniTopicCtxResult,
   ] = await Promise.all([
-    getAIContext({ subjectId: subjectId || null, chapterId: chapterId || null, topicId: topicId || null }),
+    getAIContext({ subjectId: typeof subjectId === 'number' ? subjectId : null, chapterId: typeof chapterId === 'number' ? chapterId : null, topicId: typeof topicId === 'number' ? topicId : null }),
     examCode         ? getAIExamContext(examCode)          : Promise.resolve(null),
     universityTopicId ? getTopicContext(universityTopicId) : Promise.resolve(null),
   ]);
+
+  let { ctx, chapter, topic } = dbCtx;
+  
+  if (!ctx && subjectName) {
+    ctx = { board_name: boardCode || 'State Board', board_code: boardCode || '', board_type: 'State', version_name: 'Current Syllabus', academic_year_start: new Date().getFullYear(), is_current: 1, grade_label: grade ? `${grade}` : '', stream: 'general', subject_name: subjectName };
+  }
 
   const examCtx     = examCtxResult;
   const uniTopicCtx = uniTopicCtxResult;
@@ -245,6 +253,7 @@ async function ask(params) {
   }
 
   // ── 4a. NCERT context — for school mode with grade/chapter info ─────────────
+  const mode = uniCtx ? 'university' : examCode ? 'competitive' : 'school';
   let ncertContext = '';
   if (mode === 'school' && ctx) {
     try {
@@ -257,9 +266,9 @@ async function ask(params) {
   }
 
   // ── 4. Determine domain for Wikipedia topic ──────────────────────────────────
-  const subjectName = uniCtx?.subject_name || ctx?.subject_name || '';
+  const resolvedSubjectName = uniCtx?.subject_name || ctx?.subject_name || subjectName || '';
   const courseName  = uniCtx?.course_name  || '';
-  const domain      = detectDomain(subjectName, courseName);
+  const domain      = detectDomain(resolvedSubjectName, courseName);
 
   // The "topic to search" for Wikipedia
   const wikiTopic = uniTopicCtx?.topic_name
@@ -279,7 +288,6 @@ async function ask(params) {
   });
 
   // ── 6. Build the mega-prompt ─────────────────────────────────────────────────
-  const mode = uniCtx ? 'university' : examCode ? 'competitive' : 'school';
   const prompt = buildPrompt({
     ctx, chapter, topic,
     examCtx, uniCtx, uniTopicCtx,
@@ -290,11 +298,19 @@ async function ask(params) {
     qType, depth, domain, mode,
   });
 
-  // ── 7. Call AI — increased tokens for richer answers ────────────────────────
+  // ── 7. Call AI — routing dynamically based on task ──────────────────────────
+  const isReasoningTask = ['code', 'derivation', 'solve', 'complexity'].includes(qType) || depth === 'advanced';
   const result = await generateJSON(prompt, {
+    task:        isReasoningTask ? 'reasoning' : 'fast',
     temperature: qType === 'code' || qType === 'derivation' ? 0.3 : 0.55,
     maxTokens:   4096,
   });
+
+  // ── 7b. Fetch diagram if requested ──────────────────────────────────────────
+  let diagramUrl = null;
+  if (result.diagram_search_query) {
+    diagramUrl = await fetchWikimediaImage(result.diagram_search_query);
+  }
 
   // ── 8. Normalize and return ──────────────────────────────────────────────────
   return {
@@ -306,6 +322,8 @@ async function ask(params) {
     follow_up_question:     result.follow_up_question     || '',
     related_topics:         Array.isArray(result.related_topics) ? result.related_topics : [],
     syllabus_note:          result.syllabus_note          || '',
+    exam_pattern_note:      result.exam_pattern_note      || '',
+    diagram_url:            diagramUrl || null,
 
     // Code
     code_example:           result.code_example           || null,
@@ -405,9 +423,9 @@ function buildPrompt({
   lines.push('══════════════════════════════════════════════════════════');
   lines.push(`DETECTED DEPTH: ${depth.toUpperCase()}`);
   lines.push('══════════════════════════════════════════════════════════');
-  if (depth === 'beginner')      lines.push('The student is a beginner. Use simple language, analogies, no jargon without explanation. Build intuition first.');
-  else if (depth === 'advanced') lines.push('The student wants deep, rigorous, research-level content. Show all steps, use formal notation, mention edge cases, refer to specific chapters in the textbook.');
-  else                           lines.push('Intermediate level. Balance intuition with precision. Show key steps without being overly verbose.');
+  if (depth === 'beginner')      lines.push('The student is a beginner (e.g. Class 6-8). Use simple language, engaging storylines, visual analogies, and no jargon without explanation. Build strong intuition and make it fun, BUT STILL PROVIDE FULL COVERAGE OF THE TOPIC.');
+  else if (depth === 'advanced') lines.push('The student wants deep, rigorous, research-level content like a UPSC exam candidate or top university student. Exclude childish analogies. Ensure immense factual depth, historical context, technical rigor, step-by-step mechanisms, formal notation, and textbook citations.');
+  else                           lines.push('Intermediate level. Balance intuition with precision. Go into factual details thoroughly, showing key steps clearly.');
 
   // ── Context ───────────────────────────────────────────────────────────────────
   lines.push('');
@@ -419,6 +437,7 @@ function buildPrompt({
     lines.push(`Exam: ${examCtx.name} (${examCtx.code})`);
     lines.push(`Type: ${examCtx.type} | Level: ${examCtx.level}${examCtx.state ? ' | State: ' + examCtx.state : ''}`);
     if (examCtx.conducting_body) lines.push(`Conducting Body: ${examCtx.conducting_body}`);
+    if (examCtx.pattern_summary) lines.push(`Exam Pattern Details: ${examCtx.pattern_summary}`);
   }
 
   if (ctx) {
@@ -520,9 +539,12 @@ function buildPrompt({
 
   lines.push('1. Answer the EXACT question asked — never deflect with "refer to your textbook".');
   lines.push('2. Use ALL your training knowledge. You know the content of every standard textbook.');
-  lines.push('3. Be comprehensive. Students come here because textbooks are confusing or incomplete.');
-  lines.push('4. Always include practical applications — what is this used for in real systems?');
+  lines.push('3. EXHAUSTIVE DETAIL & MARKDOWN REQUIRED: Students come here because textbooks are confusing. NEVER provide just a 2 to 4 line summary. Write comprehensive, deep notes covering EVERY aspect. You MUST use strict Markdown formatting with multiple `## Headings`, `- Bullet points`, and `**bold key terms**` to make the explanation readable and structured.');
+  lines.push('4. BOOKS & STUDY MATERIAL: At the end of your explanation, create a markdown heading `### Recommended Reference Material` and strictly cite 2-3 authentic textbooks, internet study resources, or official manuals exactly relevant to this topic.');
+  lines.push('5. Always include practical applications — what is this used for in real systems?');
   lines.push('5. End every response with a question that challenges the student to think deeper.');
+  lines.push('6. EXAM PATTERN FIRST: Always output an exam_pattern_note if the context involves an exam/subject.');
+  lines.push('7. DIAGRAMS MATTER: If asked for a diagram/sketch, or if explaining visual concepts (e.g. brain, plant, engine), provide a 2-3 word diagram_search_query so the system can fetch a real sketch.');
 
   if (qType === 'code') {
     lines.push('');
