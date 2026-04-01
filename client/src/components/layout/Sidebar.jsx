@@ -10,7 +10,7 @@ import {
   FlaskConical, Trophy, Bookmark, Award, Settings,
   LogOut, Gamepad2, Play,
   Mic, MessageSquare, Beaker, Building2, Store, Code, Heart, Star,
-  Home, GraduationCap, X, Newspaper, Map, Brain, Bell,
+  Home, GraduationCap, X, Newspaper, Map, Brain, Bell, Dumbbell, Compass, Network
 } from 'lucide-react';
 
 const NavLink = ({ href, icon: Icon, label, badge, onClick }) => {
@@ -100,58 +100,28 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
 
       {/* Scrollable nav */}
       <div
-        className="flex-1 overflow-y-auto py-2 px-2"
+        className="flex-1 overflow-y-auto py-4 px-2"
         style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}
       >
         <div className="space-y-[1px] mb-1">
-          <NavLink href="/home"       icon={Home}      label="Home"       {...navProps} />
-          <NavLink href="/ai-world"   icon={Sparkles}  label="AI World"   {...navProps} />
-          <NavLink href="/ai-library" icon={BookOpen}  label="AI Library" {...navProps} />
-        </div>
-
-        <SectionLabel>Social</SectionLabel>
-        <div className="space-y-[1px]">
-          <NavLink href="/groups"   icon={Users}         label="Groups"   {...navProps} />
-          <NavLink href="/jobs"     icon={Briefcase}     label="Jobs"     {...navProps} />
-          <NavLink href="/tuition"  icon={BookOpen}      label="Tuition"  {...navProps} />
-          <NavLink href="/messages" icon={MessageSquare} label="Messages" {...navProps} />
-        </div>
-
-        <SectionLabel>Learn</SectionLabel>
-        <div className="space-y-[1px]">
-          <NavLink href="/ai-study-table" icon={GraduationCap} label="AI Study Table" {...navProps} />
-          <NavLink href="/prep"           icon={Trophy}        label="Exam Prep"      {...navProps} />
-          <NavLink href="/virtual-lab"    icon={Beaker}        label="Virtual Lab"    {...navProps} />
-          <NavLink href="/mock-interview" icon={Mic}           label="Mock Interview" {...navProps} />
-          <NavLink href="/debate-arena"   icon={MessageSquare} label="Debate Arena"   {...navProps} />
-          <NavLink href="/mindmap"        icon={Brain}         label="Mind Map"       {...navProps} />
-          <NavLink href="/code-lab"       icon={Code}          label="Code Lab"       {...navProps} />
-        </div>
-
-        <SectionLabel>Explore</SectionLabel>
-        <div className="space-y-[1px]">
-          <NavLink href="/career-explorer"   icon={Map}       label="Careers"    {...navProps} />
-          <NavLink href="/business-explorer" icon={Store}     label="Business"   {...navProps} />
-          <NavLink href="/company-explorer"  icon={Building2} label="Companies"  {...navProps} />
-          <NavLink href="/newsroom"          icon={Newspaper} label="Newsroom"   {...navProps} />
-        </div>
-
-        <SectionLabel>Play</SectionLabel>
-        <div className="space-y-[1px]">
-          <NavLink href="/arcade" icon={Gamepad2}    label="Arcade" {...navProps} />
-          <NavLink href="/clips"  icon={Play}        label="Clips"  {...navProps} />
-          <NavLink href="/reels"  icon={FlaskConical} label="Reels" {...navProps} />
+          <NavLink href="/home"     icon={Home}          label="Home"     {...navProps} />
+          <NavLink href="/ai-world" icon={Sparkles}      label="AI World" {...navProps} />
+          <NavLink href="/learn"    icon={GraduationCap} label="Learn"    {...navProps} />
+          <NavLink href="/social"   icon={Users}         label="Social"   {...navProps} />
+          <NavLink href="/explore"  icon={Compass}       label="Explore"  {...navProps} />
+          <NavLink href="/play"     icon={Gamepad2}      label="Play"     {...navProps} />
         </div>
 
         <SectionLabel>More</SectionLabel>
         <div className="space-y-[1px] pb-4">
-          <NavLink href="/saved"         icon={Bookmark}    label="Saved"         {...navProps} />
-          <NavLink href="/badges"        icon={Award}       label="Badges"        {...navProps} />
-          <NavLink href="/certificates"  icon={Star}        label="Certificates"  {...navProps} />
-          <NavLink href="/leaderboard"   icon={Trophy}      label="Leaderboard"   {...navProps} />
-          <NavLink href="/notifications" icon={Bell}        label="Notifications" {...navProps} />
-          <NavLink href="/pricing"       icon={Heart}       label="Premium"       {...navProps} />
-          <NavLink href="/settings"      icon={Settings}    label="Settings"      {...navProps} />
+          <NavLink href="/messages"      icon={MessageSquare} label="Messages"    {...navProps} />
+          <NavLink href="/saved"         icon={Bookmark}      label="Saved"       {...navProps} />
+          <NavLink href="/badges"        icon={Award}         label="Badges"      {...navProps} />
+          <NavLink href="/certificates"  icon={Star}          label="Certificates"{...navProps} />
+          <NavLink href="/leaderboard"   icon={Trophy}        label="Leaderboard" {...navProps} />
+          <NavLink href="/notifications" icon={Bell}          label="Notifications"{...navProps} />
+          <NavLink href="/pricing"       icon={Heart}         label="Premium"     {...navProps} />
+          <NavLink href="/settings"      icon={Settings}      label="Settings"    {...navProps} />
         </div>
       </div>
 

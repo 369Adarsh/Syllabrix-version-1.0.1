@@ -57,4 +57,7 @@ router.use('/payments', require('../features/payments/payments.routes'));
 // AI LIBRARY — Boards, Syllabus, Chapters, AI Tutor Ask
 router.use('/library', require('../features/library/library.routes'));
 
+// FITNESS MODULE — AI Fitness Coach, Workouts, Diet, Habits, Coaches
+router.use('/fitness', require('../features/fitness/fitness.routes'));
+
 module.exports = router;

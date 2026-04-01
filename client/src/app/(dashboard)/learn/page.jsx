@@ -3,110 +3,91 @@ import { motion } from 'motion/react';
 import { FadeIn, StaggerChildren, StaggerItem } from '@/components/ui/Animate';
 import Link from 'next/link';
 import {
-  Sparkles, Bot, Compass, Map, FlaskConical, BookOpenCheck,
-  Newspaper, Dumbbell, LibraryBig, GraduationCap, ChevronRight, Home
+  GraduationCap, Trophy, Beaker, Mic, MessageSquare, Brain, Code, ChevronRight, Home, BookOpen
 } from 'lucide-react';
 
 const TOOLS = [
   {
-    name: 'AI Buddy',
-    description: 'Your personal AI learning companion — ask anything, learn everything.',
-    icon: Bot,
+    name: 'AI Study Table',
+    description: 'Collaborative AI study sessions for deeper understanding.',
+    icon: GraduationCap,
     color: 'blue',
-    href: '/ai-buddy',
+    href: '/ai-study-table',
   },
   {
-    name: 'Career Explorer',
-    description: 'Explore 1000+ career paths with AI-guided insights and roadmaps.',
-    icon: Compass,
+    name: 'Exam Prep',
+    description: 'AI-powered exam preparation tailored to your syllabus and goals.',
+    icon: Trophy,
+    color: 'orange',
+    href: '/prep',
+  },
+  {
+    name: 'Virtual Lab',
+    description: 'Hands-on simulated science experiments and lab procedures.',
+    icon: Beaker,
+    color: 'teal',
+    href: '/virtual-lab',
+  },
+  {
+    name: 'Mock Interview',
+    description: 'Practice real-world interviews with industry-specific AI personas.',
+    icon: Mic,
     color: 'purple',
-    href: '/career-explorer',
+    href: '/mock-interview',
+  },
+  {
+    name: 'Debate Arena',
+    description: 'Hone your argumentation skills against intelligent AI opponents.',
+    icon: MessageSquare,
+    color: 'rose',
+    href: '/debate-arena',
   },
   {
     name: 'Mind Map',
     description: 'Visualise ideas and concepts with AI-powered mind mapping.',
-    icon: Map,
-    color: 'teal',
+    icon: Brain,
+    color: 'indigo',
     href: '/mindmap',
   },
   {
-    name: 'Experience Lab',
-    description: 'Hands-on simulated learning across 574+ profession scenarios.',
-    icon: FlaskConical,
-    color: 'orange',
-    href: '/experience-lab',
-  },
-  {
-    name: 'PrepSmart',
-    description: 'AI-powered exam preparation tailored to your syllabus and goals.',
-    icon: BookOpenCheck,
-    color: 'green',
-    href: '/prep',
-  },
-  {
-    name: 'Newsroom',
-    description: 'Curated educational news and updates delivered by AI.',
-    icon: Newspaper,
-    color: 'rose',
-    href: '/newsroom',
-  },
-  {
-    name: 'Fitness Coach',
-    description: 'AI fitness and wellness guidance personalised for you.',
-    icon: Dumbbell,
-    color: 'amber',
-    href: '/fitness',
-  },
-  {
-    name: 'AI Library',
-    description: 'Smart resource discovery — books, papers and study material.',
-    icon: LibraryBig,
-    color: 'indigo',
-    href: '/ai-library',
-  },
-  {
-    name: 'AI Study Table',
-    description: 'Collaborative AI study sessions for deeper understanding.',
-    icon: GraduationCap,
-    color: 'cyan',
-    href: '/ai-study-table',
+    name: 'Code Lab',
+    description: 'Interactive coding environments with AI-guided tutoring.',
+    icon: Code,
+    color: 'slate',
+    href: '/code-lab',
   },
 ];
 
-// Tailwind color maps — must be full class names for JIT to include them
 const COLOR = {
   blue:   { bg: 'bg-blue-50',   icon: 'text-blue-500',   border: 'hover:border-blue-300',   link: 'text-blue-600'   },
   purple: { bg: 'bg-purple-50', icon: 'text-purple-500', border: 'hover:border-purple-300', link: 'text-purple-600' },
   teal:   { bg: 'bg-teal-50',   icon: 'text-teal-500',   border: 'hover:border-teal-300',   link: 'text-teal-600'   },
   orange: { bg: 'bg-orange-50', icon: 'text-orange-500', border: 'hover:border-orange-300', link: 'text-orange-600' },
-  green:  { bg: 'bg-green-50',  icon: 'text-green-500',  border: 'hover:border-green-300',  link: 'text-green-600'  },
   rose:   { bg: 'bg-rose-50',   icon: 'text-rose-500',   border: 'hover:border-rose-300',   link: 'text-rose-600'   },
-  amber:  { bg: 'bg-amber-50',  icon: 'text-amber-500',  border: 'hover:border-amber-300',  link: 'text-amber-600'  },
   indigo: { bg: 'bg-indigo-50', icon: 'text-indigo-500', border: 'hover:border-indigo-300', link: 'text-indigo-600' },
-  cyan:   { bg: 'bg-cyan-50',   icon: 'text-cyan-500',   border: 'hover:border-cyan-300',   link: 'text-cyan-600'   },
+  slate:  { bg: 'bg-slate-50',  icon: 'text-slate-500',  border: 'hover:border-slate-300',  link: 'text-slate-600'  },
 };
 
-export default function AIWorldPage() {
+export default function LearnHubPage() {
   return (
     <div className="max-w-5xl mx-auto">
-
       {/* Breadcrumb */}
       <div className="flex items-center gap-1.5 text-[11px] text-gray-400 mb-4">
         <Link href="/home" className="flex items-center gap-1 hover:text-gray-600 transition-colors">
           <Home size={11} /> Home
         </Link>
         <ChevronRight size={11} />
-        <span className="text-gray-600 font-medium">AI World</span>
+        <span className="text-gray-600 font-medium">Learn</span>
       </div>
 
       {/* Page header */}
       <FadeIn className="mb-8">
         <h1 className="flex items-center gap-2.5 text-[26px] font-extrabold text-gray-900 leading-tight">
-          <Sparkles size={26} className="text-blue-500" />
-          AI World
+          <BookOpen size={26} className="text-indigo-500" />
+          Learn
         </h1>
         <p className="text-[14px] text-gray-500 mt-1">
-          Your intelligent learning toolkit — powered by Syllabrix AI
+          Master new skills with AI-powered interactive learning tracks
         </p>
       </FadeIn>
 

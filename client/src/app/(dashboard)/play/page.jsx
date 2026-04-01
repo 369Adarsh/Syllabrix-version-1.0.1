@@ -3,48 +3,40 @@ import { motion } from 'motion/react';
 import { FadeIn, StaggerChildren, StaggerItem } from '@/components/ui/Animate';
 import Link from 'next/link';
 import {
-  Map, Store, Building2, Newspaper, ChevronRight, Home, Compass
+  Gamepad2, Play, Film, ChevronRight, Home, JoyStick
 } from 'lucide-react';
 
 const TOOLS = [
   {
-    name: 'Career Explorer',
-    description: 'Explore 1000+ career paths with AI-guided insights and roadmaps.',
-    icon: Map,
-    color: 'blue',
-    href: '/career-explorer',
+    name: 'Arcade',
+    description: 'Play educational games that boost cognitive skills.',
+    icon: Gamepad2,
+    color: 'purple',
+    href: '/arcade',
   },
   {
-    name: 'Business Explorer',
-    description: 'Analyze market trends, startups, and entrepreneurship guides.',
-    icon: Store,
-    color: 'orange',
-    href: '/business-explorer',
-  },
-  {
-    name: 'Company Explorer',
-    description: 'Deep dive into company profiles, interview experiences, and salaries.',
-    icon: Building2,
-    color: 'teal',
-    href: '/company-explorer',
-  },
-  {
-    name: 'Newsroom',
-    description: 'Curated educational news and updates delivered by AI.',
-    icon: Newspaper,
+    name: 'Shorts & Clips',
+    description: 'Bite-sized educational video content for quick learning.',
+    icon: Play,
     color: 'rose',
-    href: '/newsroom',
+    href: '/clips',
+  },
+  {
+    name: 'Reels',
+    description: 'Engaging, interactive stories explaining complex topics.',
+    icon: Film,
+    color: 'emerald',
+    href: '/reels',
   },
 ];
 
 const COLOR = {
-  blue:   { bg: 'bg-blue-50',   icon: 'text-blue-500',   border: 'hover:border-blue-300',   link: 'text-blue-600'   },
-  orange: { bg: 'bg-orange-50', icon: 'text-orange-500', border: 'hover:border-orange-300', link: 'text-orange-600' },
-  teal:   { bg: 'bg-teal-50',   icon: 'text-teal-500',   border: 'hover:border-teal-300',   link: 'text-teal-600'   },
-  rose:   { bg: 'bg-rose-50',   icon: 'text-rose-500',   border: 'hover:border-rose-300',   link: 'text-rose-600'   },
+  purple:  { bg: 'bg-purple-50',  icon: 'text-purple-500',  border: 'hover:border-purple-300',  link: 'text-purple-600' },
+  rose:    { bg: 'bg-rose-50',    icon: 'text-rose-500',    border: 'hover:border-rose-300',    link: 'text-rose-600'   },
+  emerald: { bg: 'bg-emerald-50', icon: 'text-emerald-500', border: 'hover:border-emerald-300', link: 'text-emerald-600' },
 };
 
-export default function ExploreHubPage() {
+export default function PlayHubPage() {
   return (
     <div className="max-w-5xl mx-auto">
       {/* Breadcrumb */}
@@ -53,17 +45,17 @@ export default function ExploreHubPage() {
           <Home size={11} /> Home
         </Link>
         <ChevronRight size={11} />
-        <span className="text-gray-600 font-medium">Explore</span>
+        <span className="text-gray-600 font-medium">Play</span>
       </div>
 
       {/* Page header */}
       <FadeIn className="mb-8">
         <h1 className="flex items-center gap-2.5 text-[26px] font-extrabold text-gray-900 leading-tight">
-          <Compass size={26} className="text-orange-500" />
-          Explore
+          <Gamepad2 size={26} className="text-purple-500" />
+          Play & Unwind
         </h1>
         <p className="text-[14px] text-gray-500 mt-1">
-          Stay updated and chart your career trajectory with data-driven insights
+          Take a break with gamified learning and immersive mini-content
         </p>
       </FadeIn>
 

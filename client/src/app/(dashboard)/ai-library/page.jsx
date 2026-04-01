@@ -125,14 +125,22 @@ function SchoolShelf({ onSelect, selected }) {
       try {
         const r = await libraryAPI.getClasses(board.code);
         let data = r.data?.data || [];
-        if (data.length === 0) {
-          data = Array.from({ length: 12 }, (_, i) => ({
-             id: `fb-${board.id}-${i+1}`,
-             grade: i + 1,
-             grade_label: `Class ${i + 1}`,
-             is_fallback: true
-          }));
+        
+        // Ensure ALL classes 1 to 12 are available, merging DB data with UI Fallbacks
+        const existingGrades = new Set(data.map(c => Number(c.grade)));
+        for (let i = 1; i <= 12; i++) {
+          if (!existingGrades.has(i)) {
+            data.push({
+               id: `fb-${board.id}-${i}`,
+               grade: i,
+               grade_label: `Class ${i}`,
+               is_fallback: true
+            });
+          }
         }
+        // Sort ascending strictly so Class 1 is always at top
+        data.sort((a, b) => Number(a.grade) - Number(b.grade));
+        
         setClasses(c => ({ ...c, [board.id]: data }));
       } catch {}
     }
@@ -223,10 +231,21 @@ function CompetitiveShelf({ onSelect, selected }) {
     const key = `e-${exam.code}`;
     setExpanded(e => ({ ...e, [key]: !e[key] }));
     if (!subjects[exam.code]) {
+      let data = [];
       try {
         const r = await libraryAPI.getExamSubjects(exam.code);
-        setSubjects(s => ({ ...s, [exam.code]: r.data?.data || [] }));
+        data = r.data?.data || [];
       } catch {}
+      
+      // Fallback injection for exams
+      if (data.length === 0) {
+        data = ['General Knowledge', 'Quantitative Aptitude', 'Logical Reasoning', 'English Language', 'Subject Specific'].map((s, i) => ({
+          id: `fbe-${exam.code}-${i}`,
+          name: s,
+          is_fallback: true
+        }));
+      }
+      setSubjects(s => ({ ...s, [exam.code]: data }));
     }
   };
 
@@ -294,17 +313,33 @@ function UniversityShelf({ onSelect, selected }) {
     setExpanded(e => ({ ...e, [key]: !e[key] }));
 
     if (!courseSubjects[course.id]) {
+      let subs = [];
       try {
         const r = await libraryAPI.getCourseSubjects(course.id);
-        const subs = Array.isArray(r.data?.data) ? r.data.data : Object.values(r.data?.data || {}).flat();
-        const grouped = {};
-        subs.forEach(s => {
-          const sem = s.semester || 0;
-          if (!grouped[sem]) grouped[sem] = [];
-          grouped[sem].push(s);
-        });
-        setCourseSubjects(s => ({ ...s, [course.id]: grouped }));
+        subs = Array.isArray(r.data?.data) ? r.data.data : Object.values(r.data?.data || {}).flat();
       } catch {}
+      
+      // Fallback injection for universities globally
+      if (subs.length === 0) {
+        for (let sem = 1; sem <= 6; sem++) {
+          ['Computer Networks', 'Operating Systems', 'Data Structures', 'Database Systems'].forEach((s, i) => {
+            subs.push({
+              id: `fbu-${course.id}-${sem}-${i}`,
+              name: s,
+              semester: sem,
+              is_fallback: true
+            });
+          });
+        }
+      }
+
+      const grouped = {};
+      subs.forEach(s => {
+        const sem = s.semester || 0;
+        if (!grouped[sem]) grouped[sem] = [];
+        grouped[sem].push(s);
+      });
+      setCourseSubjects(s => ({ ...s, [course.id]: grouped }));
     }
   };
 
@@ -411,7 +446,7 @@ function RightShelf({ onSelect, selected }) {
   ];
 
   return (
-    <div className="w-80 bg-white/70 backdrop-blur-xl border-l border-white/40 flex flex-col h-full flex-shrink-0 shadow-[-10px_0_30px_rgba(0,0,0,0.02)]">
+    <div className="w-80 bg-white/70 backdrop-blur-xl border-l border-white/40 flex flex-col h-full min-h-0 flex-shrink-0 shadow-[-10px_0_30px_rgba(0,0,0,0.02)]">
       {/* Header */}
       <div className="px-4 py-5 pb-3 border-b border-gray-100 flex-shrink-0">
         <div className="flex items-center gap-2 mb-4 px-1">
@@ -440,7 +475,7 @@ function RightShelf({ onSelect, selected }) {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar">
+      <div className="flex-1 overflow-y-auto min-h-0 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300/60 hover:[&::-webkit-scrollbar-thumb]:bg-gray-400">
         <AnimatePresence mode="wait">
           <motion.div key={section} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}>
             {section === 'school'      && <SchoolShelf      onSelect={onSelect} selected={selected} />}
@@ -759,34 +794,92 @@ function ReaderPanel({ selected, isMobile = false }) {
 
   if (!selected) {
     return (
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center justify-center h-full gap-8 text-center px-8">
-        <div className="relative">
-          <div className="absolute inset-0 bg-blue-500 blur-3xl opacity-20 rounded-full"></div>
-          <div className="w-24 h-24 rounded-3xl bg-white/60 backdrop-blur-xl border border-white/40 flex items-center justify-center shadow-2xl">
-            <Sparkles size={48} className="text-blue-600 drop-shadow-md" />
-          </div>
-        </div>
-        <div className="max-w-md">
-          <h2 className="text-[28px] font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-indigo-800 mb-3 tracking-tight">Syllabrix AI Library</h2>
-          <p className="text-[15px] text-gray-500 leading-relaxed font-medium">
-            Dive into any syllabus globally. Select from the shelf to instantly generate rich, interactive diagrams, exact exam patterns, and conceptual breakdowns.
-          </p>
-        </div>
-        <div className="grid grid-cols-3 gap-4 w-full max-w-lg mt-4">
-          {[
-            { icon: GraduationCap, label: 'K-12 Boards', color: 'from-blue-400 to-blue-600', shadow: 'shadow-blue-500/20' },
-            { icon: Trophy, label: 'Entrance Exams', color: 'from-orange-400 to-red-500', shadow: 'shadow-orange-500/20' },
-            { icon: Building2, label: 'Universities', color: 'from-fuchsia-500 to-purple-600', shadow: 'shadow-purple-500/20' },
-          ].map(({ icon: Icon, label, color, shadow }) => (
-            <div key={label} className="bg-white/80 backdrop-blur-md border border-white/50 rounded-2xl p-4 text-center shadow-xl shadow-blue-900/5 group hover:-translate-y-1 transition-transform">
-              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center mx-auto mb-3 shadow-lg ${shadow} group-hover:scale-110 transition-transform`}>
-                <Icon size={20} className="text-white" />
-              </div>
-              <div className="text-[12px] font-bold text-gray-800 tracking-tight">{label}</div>
+      <div className="flex flex-col items-center justify-center h-full px-4 sm:px-8 mt-4 sm:mt-10 overflow-hidden" style={{ perspective: '1500px' }}>
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.85, y: 30, rotateX: 20 }} 
+          animate={{ opacity: 1, scale: 1, y: 0, rotateX: 0 }} 
+          transition={{ type: "spring", bounce: 0.25, duration: 1.2 }}
+          className="relative flex w-full max-w-[700px] h-auto sm:h-[480px] rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5"
+          style={{ transformStyle: 'preserve-3d' }}
+        >
+          {/* Subtle pages stack background layer */}
+          <div className="absolute top-2 bottom-2 -left-1.5 w-full bg-slate-200 rounded-2xl -z-10 shadow-sm hidden sm:block" />
+          <div className="absolute top-1 bottom-1 -left-0.5 w-full bg-slate-100 rounded-2xl -z-10 shadow-sm hidden sm:block" />
+
+          {/* Book Spine (Middle Center Craese) - Hidden on mobile */}
+          <div className="hidden sm:block absolute left-1/2 top-0 bottom-0 w-12 -ml-6 bg-gradient-to-r from-transparent via-gray-300 to-transparent opacity-40 z-20 pointer-events-none mix-blend-multiply rounded-full blur-[1px]"></div>
+
+          {/* Left Page - Hidden on mobile */}
+          <motion.div 
+            initial={{ rotateY: 35 }}
+            animate={{ rotateY: 0 }}
+            transition={{ type: 'spring', bounce: 0.4, duration: 1.5, delay: 0.1 }}
+            className="hidden sm:flex w-1/2 h-full bg-gradient-to-br from-white to-gray-50 rounded-l-2xl origin-right p-6 sm:p-10 flex-col items-center justify-center border-r border-gray-200 shadow-[-5px_0_15px_rgba(0,0,0,0.03)] z-10 relative overflow-hidden"
+          >
+            {/* Lined paper effect */}
+            <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(transparent, transparent 27px, #000 27px, #000 28px)', backgroundPositionY: '40px' }} />
+            
+            <motion.div 
+              animate={{ y: [0, -5, 0] }}
+              transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+              className="w-24 h-24 rounded-[32px] bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30 mb-8 z-10"
+            >
+              <BookOpen size={48} className="text-white drop-shadow-md" />
+            </motion.div>
+            
+            <h2 className="text-[32px] font-black text-transparent bg-clip-text bg-gradient-to-br from-blue-700 to-indigo-900 text-center leading-tight z-10 drop-shadow-sm">Syllabrix AI</h2>
+            <h2 className="text-[20px] font-bold text-gray-400 text-center z-10 tracking-[0.2em] mt-1 uppercase">Library</h2>
+          </motion.div>
+
+          {/* Right Page - Full width on mobile */}
+          <motion.div 
+            initial={{ rotateY: -35 }}
+            animate={{ rotateY: 0 }}
+            transition={{ type: 'spring', bounce: 0.4, duration: 1.6, delay: 0.1 }}
+            className="w-full sm:w-1/2 h-full min-h-[400px] bg-gradient-to-br from-white to-slate-50 rounded-2xl sm:rounded-none sm:rounded-r-2xl origin-left p-6 sm:p-10 flex flex-col justify-center border-l border-white shadow-[5px_0_15px_rgba(0,0,0,0.03)] z-10 relative"
+          >
+            {/* Mobile Header Title */}
+            <div className="sm:hidden flex items-center gap-3 mb-6">
+               <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center shadow-md">
+                 <Sparkles size={20} className="text-white" />
+               </div>
+               <div>
+                  <h2 className="text-[18px] font-black text-gray-800 leading-none">Syllabrix AI</h2>
+                  <h2 className="text-[12px] font-bold text-gray-400 tracking-widest uppercase mt-0.5">Library</h2>
+               </div>
             </div>
-          ))}
-        </div>
-      </motion.div>
+
+            {/* Lined paper effect */}
+            <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(transparent, transparent 27px, #000 27px, #000 28px)', backgroundPositionY: '40px' }} />
+
+            <div className="relative z-10">
+              <h3 className="text-[17px] font-extrabold text-gray-800 mb-2">Welcome to the Vault</h3>
+              <p className="text-[14px] text-gray-500 leading-relaxed font-medium mb-6 sm:mb-8">
+                Dive into any syllabus globally.<br/> Select an item from the shelf to instantly generate rich diagrams, exact exam patterns, and conceptual breakdowns.
+              </p>
+
+              <div className="space-y-3 sm:space-y-4">
+                {[
+                  { icon: GraduationCap, label: 'K-12 Boards', color: 'from-blue-500 to-blue-600', shadow: 'shadow-blue-500/20' },
+                  { icon: Trophy, label: 'Entrance Exams', color: 'from-orange-500 to-red-600', shadow: 'shadow-red-500/20' },
+                  { icon: Building2, label: 'Universities', color: 'from-fuchsia-500 to-purple-600', shadow: 'shadow-purple-500/20' },
+                ].map(({ icon: Icon, label, color, shadow }, i) => (
+                  <motion.div 
+                    initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 + (i * 0.1) }}
+                    key={label} 
+                    className="flex items-center gap-4 group cursor-default"
+                  >
+                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center shadow-md ${shadow} group-hover:scale-110 transition-transform`}>
+                      <Icon size={18} className="text-white" />
+                    </div>
+                    <div className="text-[14px] font-extrabold text-gray-700 group-hover:text-gray-900 transition-colors">{label}</div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      </div>
     );
   }
 
