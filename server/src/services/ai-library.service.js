@@ -209,6 +209,7 @@ async function ask(params) {
     examCode,
     universitySubjectId, universityTopicId,
     studentQuery, studentClass, boardCode, grade,
+    version,
   } = params;
 
   // ── 1. Detect question intelligence ─────────────────────────────────────────
@@ -296,6 +297,7 @@ async function ask(params) {
     ncertContext,
     studentQuery, studentClass, boardCode,
     qType, depth, domain, mode,
+    version: version || 'latest',
   });
 
   // ── 7. Call AI — routing dynamically based on task ──────────────────────────
@@ -372,6 +374,7 @@ function buildPrompt({
   ncertContext,
   studentQuery, studentClass, boardCode,
   qType, depth, domain, mode,
+  version,
 }) {
   const lines    = [];
   const isUni    = mode === 'university';
@@ -450,6 +453,26 @@ function buildPrompt({
   }
 
   if (studentClass) lines.push(`Student's class (self-reported): ${studentClass}`);
+
+  // ── Syllabus Version Directive ─────────────────────────────────────────────
+  const isLatest = !version || version === 'latest';
+  lines.push('');
+  lines.push('══════════════════════════════════════════════════════════');
+  lines.push('SYLLABUS EDITION — CRITICAL DIRECTIVE');
+  lines.push('══════════════════════════════════════════════════════════');
+  if (isLatest) {
+    lines.push('📗 EDITION: LATEST SYLLABUS (2024-2025, NEP 2020 Rationalized)');
+    lines.push('STRICT RULE: Explain this topic ONLY as it appears in the current, rationalized NCERT/NEP 2024-25 curriculum.');
+    lines.push('- DO NOT include chapters, experiments, or topics that were REMOVED in the rationalization (e.g. periodic classification by Dobereiner/Newlands, some evolution sub-chapters, deleted History themes, etc.)');
+    lines.push('- Exam pattern notes must reflect current board exam (2024-25) marking scheme.');
+    lines.push('- Align explanations with the currently active NCERT textbook edition for this grade/subject.');
+  } else {
+    lines.push('📕 EDITION: OLD / COMPREHENSIVE SYLLABUS (Pre-2023, Full Original NCERT)');
+    lines.push('STRICT RULE: Explain this topic as it appeared in the FULL original NCERT textbook BEFORE the 2023 rationalization.');
+    lines.push('- INCLUDE all chapters, sections, and topics that were removed: e.g. Dobereiner, Newlands periodic tables, full evolution chapter, deleted geography/history units, all original science experiments, etc.');
+    lines.push('- This is the comprehensive version used before NEP cuts. Include all sub-topics, detailed treatments, and exercises from the unedited original book.');
+    lines.push('- Exam pattern notes may reflect pre-2023 board patterns (more chapters, higher marks questions on now-deleted topics).');
+  }
 
   if (uniCtx) {
     lines.push('');

@@ -248,7 +248,7 @@ const getNCERTToc = async (req, res, next) => {
 
 const getSmartChapters = async (req, res, next) => {
   try {
-    const { board, class: grade, subject, exam } = req.query;
+    const { board, class: grade, subject, exam, version } = req.query;
     if (!subject && !exam) {
       return res.status(400).json({ success: false, message: 'subject or exam is required' });
     }
@@ -257,6 +257,7 @@ const getSmartChapters = async (req, res, next) => {
       grade:   grade   ? Number(grade) : null,
       subject: subject || null,
       exam:    exam    || null,
+      version: version || 'latest',
     });
     sendSuccess(res, data, 'Chapters retrieved');
   } catch (err) { next(err); }
@@ -279,6 +280,7 @@ const askAI = async (req, res, next) => {
       universityTopicId,
       studentQuery,
       studentClass,
+      version,
     } = req.body;
 
     if (!studentQuery || (!subjectId && !examCode && !universitySubjectId && !universityTopicId && !subjectName)) {
@@ -303,6 +305,7 @@ const askAI = async (req, res, next) => {
       universityTopicId:    parseId(universityTopicId),
       studentQuery,
       studentClass,
+      version,
       userId: req.user?.id,
     });
 

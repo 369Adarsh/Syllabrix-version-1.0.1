@@ -160,8 +160,10 @@ function SchoolShelf({ onSelect, selected }) {
       if (data.length === 0) {
         const stdSubjects = cls.grade <= 5 
            ? ['Mathematics', 'English', 'Hindi', 'Environmental Studies'] 
+           : cls.grade <= 8 
+              ? ['Mathematics', 'Science', 'Social Science', 'Computer Science', 'English', 'Hindi', 'Sanskrit']
            : cls.grade <= 10 
-              ? ['Mathematics', 'Science', 'Social Science', 'English', 'Hindi']
+              ? ['Mathematics', 'Science', 'Social Science', 'English', 'Hindi', 'Information Technology']
               : ['Physics', 'Chemistry', 'Mathematics', 'Biology', 'Accountancy', 'Economics', 'Business Studies', 'English'];
         
         data = stdSubjects.map((s, i) => ({
@@ -729,6 +731,7 @@ function ReaderPanel({ selected, isMobile = false }) {
   const [aiResponse, setAiResponse] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [bookTitle, setBookTitle] = useState('');
+  const [syllabusVersion, setSyllabusVersion] = useState('latest');
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -739,7 +742,7 @@ function ReaderPanel({ selected, isMobile = false }) {
     setAiResponse(null);
     setChaptersLoading(true);
 
-    const params = {};
+    const params = { version: syllabusVersion };
     if (selected.type === 'school')      { params.board = selected.board; params.class = selected.grade; params.subject = selected.subjectName; }
     else if (selected.type === 'exam')   { params.exam = selected.examName; params.subject = selected.subjectName; }
     else if (selected.type === 'university') { params.subject = selected.subjectName; }
@@ -748,7 +751,7 @@ function ReaderPanel({ selected, isMobile = false }) {
       .then(r => { const data = r.data?.data || {}; setChapters(data.chapters || []); setBookTitle(data.bookTitle || ''); })
       .catch(() => setChapters([]))
       .finally(() => setChaptersLoading(false));
-  }, [selected]);
+  }, [selected, syllabusVersion]);
 
   const handleAsk = useCallback(async (topicOverride, mode = 'explain') => {
     const chapterCtx = selectedChapter?.name ? ` from the chapter "${selectedChapter.name}"` : '';
@@ -764,7 +767,7 @@ function ReaderPanel({ selected, isMobile = false }) {
     setAiResponse(null);
     if (!topicOverride) setQuery('');
 
-    const payload = { studentQuery: q };
+    const payload = { studentQuery: q, version: syllabusVersion };
     if (selected.type === 'school') { payload.subjectId = selected.subjectId; payload.boardCode = selected.board; payload.grade = selected.grade; payload.subjectName = selected.subjectName; }
     else if (selected.type === 'exam') { payload.examCode = selected.examCode; payload.subjectId = selected.subjectId; payload.subjectName = selected.subjectName; }
     else if (selected.type === 'university') { payload.universitySubjectId = selected.subjectId; payload.subjectName = selected.subjectName; }
@@ -906,13 +909,38 @@ function ReaderPanel({ selected, isMobile = false }) {
         )}
       </motion.div>
 
+      {/* Syllabus Era Toggle */}
+      {selected?.type === 'school' && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-center px-4">
+          <div className="bg-white/80 backdrop-blur-md border border-gray-100 p-1.5 rounded-[18px] flex flex-wrap justify-center sm:items-center shadow-[0_4px_20px_rgb(0,0,0,0.03)] w-full sm:w-fit gap-1 sm:gap-0 transition-all z-10 relative">
+             <button
+               onClick={() => setSyllabusVersion('latest')}
+               className={`flex-1 sm:flex-none px-4 sm:px-6 py-2.5 rounded-xl text-[12px] sm:text-[13px] font-bold transition-all ${syllabusVersion === 'latest' ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md shadow-blue-500/20' : 'text-gray-500 hover:bg-gray-50'}`}
+             >
+               ✨ Latest (2024+)
+             </button>
+             <button
+               onClick={() => setSyllabusVersion('old')}
+               className={`flex-1 sm:flex-none px-4 sm:px-6 py-2.5 rounded-xl text-[12px] sm:text-[13px] font-bold transition-all ${syllabusVersion === 'old' ? 'bg-gradient-to-br from-gray-700 to-gray-900 text-white shadow-md' : 'text-gray-500 hover:bg-gray-50'}`}
+             >
+               📚 Old (Pre-2023)
+             </button>
+          </div>
+        </motion.div>
+      )}
+
       {/* Chapters Carousel */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white/80 backdrop-blur-xl rounded-3xl p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center">
+        <div className="flex items-center gap-3 mb-5 flex-wrap">
+          <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
             <List size={16} className="text-blue-600" />
           </div>
           <span className="text-[16px] font-black text-gray-800 tracking-tight">Syllabus Chapters</span>
+          {selected?.type === 'school' && (
+            <span className={`ml-auto text-[11px] font-bold px-3 py-1 rounded-full ${syllabusVersion === 'latest' ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-700'}`}>
+              {syllabusVersion === 'latest' ? '✨ Latest 2024-25' : '📚 Old (Pre-2023)'}
+            </span>
+          )}
           {chaptersLoading && <Spinner size={14} />}
         </div>
         
@@ -1030,7 +1058,7 @@ export default function AILibraryPage() {
   };
 
   return (
-    <div className="-mx-4 lg:-mx-6 -mt-4 -mb-24 md:-mb-6 min-h-screen relative overflow-hidden">
+    <div className="h-[calc(100dvh-120px)] md:h-[calc(100dvh-56px)] w-full relative overflow-hidden flex flex-col">
       
       {/* Absolute background blobs for glassmorphism effect */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-400/20 blur-[120px] rounded-full pointer-events-none z-[-1]" />
@@ -1038,7 +1066,7 @@ export default function AILibraryPage() {
       <div className="absolute top-[40%] right-[10%] w-[20%] h-[20%] bg-orange-400/10 blur-[100px] rounded-full pointer-events-none z-[-1]" />
 
       {/* ── DESKTOP LAYOUT ─────────────────────────────────────────────── */}
-      <div className={`hidden md:flex ${H} overflow-hidden bg-transparent`}>
+      <div className="hidden md:flex flex-row h-full w-full overflow-hidden bg-transparent">
         {/* Center reading space */}
         <div className="flex-1 flex flex-col h-full overflow-hidden relative z-10">
           <div className="bg-white/40 backdrop-blur-md border-b border-white/50 px-6 py-4 flex items-center justify-between flex-shrink-0">
@@ -1061,7 +1089,7 @@ export default function AILibraryPage() {
       </div>
 
       {/* ── MOBILE LAYOUT ──────────────────────────────────────────────── */}
-      <div className="md:hidden flex flex-col bg-transparent relative z-10 h-[calc(100dvh-56px)]">
+      <div className="md:hidden flex flex-col bg-transparent relative z-10 h-full w-full">
         <div className="bg-white/60 backdrop-blur-xl border-b border-white/50 px-5 py-3.5 flex items-center gap-3 flex-shrink-0 shadow-sm sticky top-0 z-20">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-md">
             <Brain size={18} className="text-white" />
