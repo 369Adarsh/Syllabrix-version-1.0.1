@@ -9,7 +9,8 @@ import {
   GraduationCap, Trophy, Building2, ChevronDown, ChevronRight,
   BookOpen, Brain, Download, Loader2, Sparkles, Copy, Check,
   MessageSquare, FileText, Target, Send, X,
-  BookMarked, List, Layers, Search, LayoutList, Image as ImageIcon, AlertCircle
+  BookMarked, List, Layers, Search, LayoutList, Image as ImageIcon, AlertCircle,
+  Lightbulb, HelpCircle, Link2, BarChart2, FlaskConical, BookText, ArrowRight
 } from 'lucide-react';
 import { libraryAPI } from '@/lib/api/library.api';
 
@@ -681,37 +682,214 @@ function AIResponse({ response, context, isLoading }) {
         </div>
       )}
 
-      {/* Code Snippet */}
-      {response.code_example && (
-        <div className="bg-[#0B1121] rounded-3xl overflow-hidden shadow-2xl shadow-blue-900/20 ring-1 ring-white/10">
-          <div className="flex items-center justify-between px-6 py-3 border-b border-white/5 bg-white/5">
-            <div className="flex items-center gap-2">
-              <div className="flex gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-rose-500" />
-                <div className="w-3 h-3 rounded-full bg-amber-500" />
-                <div className="w-3 h-3 rounded-full bg-emerald-500" />
+      {/* Code Snippet — handles both object {language,code,explanation} and legacy string */}
+      {response.code_example && (() => {
+        const codeObj  = typeof response.code_example === 'object' ? response.code_example : null;
+        const codeStr  = codeObj ? (codeObj.code || '') : String(response.code_example);
+        const lang     = codeObj?.language || 'code';
+        const codeExp  = codeObj?.explanation || '';
+        const sampleIO = codeObj?.sample_io || '';
+        return (
+          <div className="rounded-3xl overflow-hidden shadow-2xl shadow-blue-900/20 ring-1 ring-white/10">
+            <div className="bg-[#0B1121] flex items-center justify-between px-6 py-3 border-b border-white/5">
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-rose-500" />
+                  <div className="w-3 h-3 rounded-full bg-amber-500" />
+                  <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                </div>
+                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-3">{lang}</span>
               </div>
-              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest ml-3">Implementation</span>
+              <button onClick={() => navigator.clipboard.writeText(codeStr)} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                <Copy size={14} className="text-white/60 hover:text-white" />
+              </button>
             </div>
-            <button onClick={() => navigator.clipboard.writeText(response.code_example)} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
-              <Copy size={14} className="text-white/60 hover:text-white" />
-            </button>
+            <pre className="bg-[#0B1121] text-[13px] text-emerald-400 p-6 overflow-x-auto leading-relaxed font-mono">
+              {codeStr}
+            </pre>
+            {codeExp && (
+              <div className="bg-[#111827] px-6 py-4 border-t border-white/5">
+                <p className="text-[12px] text-gray-300 leading-relaxed font-mono whitespace-pre-wrap">{codeExp}</p>
+              </div>
+            )}
+            {sampleIO && (
+              <div className="bg-[#0d1117] px-6 py-3 border-t border-white/5">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Sample I/O</span>
+                <pre className="text-[12px] text-sky-400 mt-1 font-mono whitespace-pre-wrap">{sampleIO}</pre>
+              </div>
+            )}
           </div>
-          <pre className="text-[13px] text-emerald-400 p-6 overflow-x-auto leading-relaxed font-mono">
-            {response.code_example}
-          </pre>
-        </div>
-      )}
+        );
+      })()}
 
-      {/* memory Mnemonic */}
-      {response.mnemonic && (
+      {/* Memory Trick / Remember This */}
+      {(response.remember_this || response.mnemonic) && (
         <motion.div whileHover={{ scale: 1.02 }} className="bg-gradient-to-r from-amber-400 to-orange-500 rounded-2xl p-6 shadow-xl shadow-orange-500/20 text-white relative overflow-hidden">
           <div className="absolute right-0 top-0 opacity-10">
             <Brain size={120} className="transform translate-x-4 -translate-y-4" />
           </div>
           <div className="relative z-10 flex flex-col gap-2">
             <span className="text-[11px] font-black tracking-widest uppercase text-amber-100 drop-shadow-sm">Memory Hack</span>
-            <span className="text-[16px] font-bold leading-relaxed">{response.mnemonic}</span>
+            <span className="text-[16px] font-bold leading-relaxed">{response.remember_this || response.mnemonic}</span>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Derivation Steps */}
+      {response.derivation_steps?.length > 0 && (
+        <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-3xl p-6 sm:p-8 border border-violet-100 shadow-lg shadow-violet-500/5">
+          <div className="flex items-center gap-2.5 mb-5">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-md shadow-purple-500/20">
+              <FlaskConical size={16} className="text-white" />
+            </div>
+            <span className="text-[15px] font-bold text-purple-800 tracking-tight">Step-by-Step Derivation</span>
+          </div>
+          <ol className="space-y-3">
+            {response.derivation_steps.map((step, i) => (
+              <motion.li initial={{ opacity:0, x:-10 }} animate={{ opacity:1, x:0 }} transition={{ delay: 0.05 * i }} key={i} className="flex items-start gap-3">
+                <span className="w-7 h-7 rounded-lg bg-violet-200 text-violet-800 text-[11px] font-black flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">{i+1}</span>
+                <span className="text-[14px] text-purple-900 leading-relaxed font-medium">{step}</span>
+              </motion.li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {/* Solved Example */}
+      {response.solved_example && (
+        <div className="bg-gradient-to-br from-cyan-50 to-sky-50 rounded-3xl p-6 sm:p-8 border border-cyan-100 shadow-lg shadow-cyan-500/5">
+          <div className="flex items-center gap-2.5 mb-5">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-500 to-sky-600 flex items-center justify-center shadow-md shadow-sky-500/20">
+              <BarChart2 size={16} className="text-white" />
+            </div>
+            <span className="text-[15px] font-bold text-sky-800 tracking-tight">Worked Example</span>
+          </div>
+          {response.solved_example.problem && <p className="text-[13px] font-semibold text-sky-900 mb-3 bg-white/70 rounded-xl p-3 border border-sky-100">{response.solved_example.problem}</p>}
+          {response.solved_example.approach && <p className="text-[12px] text-sky-700 italic mb-4">{response.solved_example.approach}</p>}
+          {response.solved_example.solution_steps?.length > 0 && (
+            <ol className="space-y-2 mb-4">
+              {response.solved_example.solution_steps.map((s, i) => (
+                <li key={i} className="flex items-start gap-2 text-[13px] text-sky-900">
+                  <ArrowRight size={14} className="mt-0.5 flex-shrink-0 text-sky-500" />
+                  <span>{s}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+          {response.solved_example.answer && (
+            <div className="bg-sky-600 text-white rounded-xl px-4 py-2 w-fit font-bold text-[14px] shadow-md">
+              ✅ {response.solved_example.answer}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Comparison Table */}
+      {response.comparison?.points?.length > 0 && (
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-6 sm:p-8 shadow-xl shadow-blue-900/5 border border-white overflow-x-auto">
+          <div className="flex items-center gap-2.5 mb-5">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-md shadow-blue-500/20">
+              <BarChart2 size={16} className="text-white" />
+            </div>
+            <span className="text-[15px] font-bold text-gray-800 tracking-tight">Comparison: {response.comparison.header_a} vs {response.comparison.header_b}</span>
+          </div>
+          <table className="w-full text-[13px] border-collapse">
+            <thead>
+              <tr>
+                <th className="text-left py-2 px-3 bg-gray-100 rounded-tl-xl font-bold text-gray-600">Aspect</th>
+                <th className="text-left py-2 px-3 bg-indigo-100 font-bold text-indigo-700">{response.comparison.header_a}</th>
+                <th className="text-left py-2 px-3 bg-blue-100 rounded-tr-xl font-bold text-blue-700">{response.comparison.header_b}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {response.comparison.points.map((pt, i) => (
+                <tr key={i} className={i % 2 === 0 ? 'bg-gray-50/50' : 'bg-white'}>
+                  <td className="py-2 px-3 font-semibold text-gray-700 border-t border-gray-100">{pt.aspect}</td>
+                  <td className="py-2 px-3 text-gray-600 border-t border-gray-100">{pt.a}</td>
+                  <td className="py-2 px-3 text-gray-600 border-t border-gray-100">{pt.b}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {(response.comparison.when_to_use_a || response.comparison.when_to_use_b) && (
+            <div className="flex flex-col sm:flex-row gap-3 mt-4">
+              {response.comparison.when_to_use_a && <div className="flex-1 bg-indigo-50 border border-indigo-100 rounded-xl p-3 text-[12px] text-indigo-800 font-medium"><span className="font-bold block mb-1">Use {response.comparison.header_a} when:</span>{response.comparison.when_to_use_a}</div>}
+              {response.comparison.when_to_use_b && <div className="flex-1 bg-blue-50 border border-blue-100 rounded-xl p-3 text-[12px] text-blue-800 font-medium"><span className="font-bold block mb-1">Use {response.comparison.header_b} when:</span>{response.comparison.when_to_use_b}</div>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Graded Examples */}
+      {response.graded_examples?.length > 0 && (
+        <div className="bg-gradient-to-br from-rose-50 to-pink-50 rounded-3xl p-6 sm:p-8 border border-rose-100 shadow-lg shadow-rose-500/5">
+          <div className="flex items-center gap-2.5 mb-5">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center shadow-md shadow-rose-500/20">
+              <Lightbulb size={16} className="text-white" />
+            </div>
+            <span className="text-[15px] font-bold text-rose-800 tracking-tight">Graded Examples</span>
+          </div>
+          <div className="space-y-4">
+            {response.graded_examples.map((ex, i) => (
+              <div key={i} className="bg-white/70 rounded-2xl p-4 border border-rose-100 shadow-sm">
+                <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${ex.level === 'Basic' ? 'bg-emerald-100 text-emerald-700' : ex.level === 'Intermediate' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>{ex.level}</span>
+                <p className="text-[13px] font-semibold text-gray-800 mt-2">{ex.problem}</p>
+                <p className="text-[13px] text-gray-600 mt-1">{ex.solution}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Viva Questions (University mode) */}
+      {response.viva_questions?.length > 0 && (
+        <div className="bg-gradient-to-br from-slate-50 to-gray-50 rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-lg shadow-slate-500/5">
+          <div className="flex items-center gap-2.5 mb-5">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-slate-600 to-gray-800 flex items-center justify-center shadow-md">
+              <BookText size={16} className="text-white" />
+            </div>
+            <span className="text-[15px] font-bold text-gray-800 tracking-tight">Viva / Oral Exam Questions</span>
+          </div>
+          <ol className="space-y-3">
+            {response.viva_questions.map((q, i) => (
+              <li key={i} className="flex items-start gap-3">
+                <span className="w-6 h-6 rounded-md bg-gray-200 text-gray-700 text-[11px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">Q{i+1}</span>
+                <span className="text-[14px] text-gray-700 leading-relaxed font-medium">{q}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {/* Real Life Example */}
+      {response.real_life_example && (
+        <div className="bg-gradient-to-r from-teal-50 to-emerald-50 rounded-2xl p-5 border border-teal-100 shadow-md shadow-teal-500/5">
+          <div className="flex items-center gap-2 mb-2">
+            <Lightbulb size={16} className="text-teal-600" />
+            <span className="text-[13px] font-bold text-teal-800">Real World Application</span>
+          </div>
+          <p className="text-[13px] text-teal-700 leading-relaxed font-medium">{response.real_life_example}</p>
+        </div>
+      )}
+
+      {/* Related Topics */}
+      {response.related_topics?.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <Link2 size={14} className="text-gray-400 flex-shrink-0" />
+          <span className="text-[12px] font-bold text-gray-400 mr-1">Related:</span>
+          {response.related_topics.map((t, i) => (
+            <span key={i} className="px-3 py-1 bg-gray-100 text-gray-600 text-[12px] font-semibold rounded-full hover:bg-indigo-100 hover:text-indigo-700 transition-colors cursor-default">{t}</span>
+          ))}
+        </div>
+      )}
+
+      {/* Follow-up Question */}
+      {response.follow_up_question && (
+        <motion.div initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} className="border-2 border-dashed border-indigo-200 rounded-2xl p-5 flex items-start gap-3">
+          <HelpCircle size={18} className="text-indigo-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-[11px] font-black uppercase tracking-widest text-indigo-400 mb-1">Think Deeper →</p>
+            <p className="text-[14px] font-semibold text-indigo-700 leading-relaxed">{response.follow_up_question}</p>
           </div>
         </motion.div>
       )}
@@ -780,7 +958,8 @@ function ReaderPanel({ selected, isMobile = false }) {
       setAiResponse({ explanation: 'Sorry, AI encountered an error. Please try again.' });
     }
     setAiLoading(false);
-  }, [query, selected, selectedChapter]);
+  // syllabusVersion MUST be in deps — without it the closure captures stale value after toggle
+  }, [query, selected, selectedChapter, syllabusVersion]);
 
   const pdfContext = {
     board: selected?.boardName || selected?.examName || selected?.courseName,
