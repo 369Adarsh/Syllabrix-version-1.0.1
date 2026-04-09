@@ -3,6 +3,7 @@
 // HTTP server + Socket.io initialization
 // ============================================================
 
+// Syllabrix Server Core — Deployment Trigger: v2026.04.09.2
 const http = require('http');
 const app = require('./app');
 const config = require('./config/env');
