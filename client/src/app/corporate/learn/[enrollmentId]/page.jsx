@@ -1,20 +1,19 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import LD_API from '@/lib/api/ld.api';
 import toast from 'react-hot-toast';
 import {
   BookOpen, CheckCircle, ArrowLeft, Loader2, Sparkles, Send, Lock,
-  PlayCircle, X, Bot, User, Target, Menu, ChevronDown
+  PlayCircle, X, Bot, User, Target, Menu, ChevronDown, AlertCircle
 } from 'lucide-react';
 
-export default function LmsCoursePlayerPage({ params }) {
+function LmsCoursePlayerContent({ params }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { enrollmentId } = params;
   const orgId = searchParams.get('orgId');
-
   
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
@@ -146,17 +145,13 @@ export default function LmsCoursePlayerPage({ params }) {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col overflow-hidden relative">
-
-      {/* ─── TOP NAVBAR ─── */}
       <div className="bg-indigo-950 text-white shadow-md z-30 shrink-0">
         <div className="px-3 sm:px-4 h-14 sm:h-16 flex items-center justify-between gap-2">
-          {/* Left: Exit + Menu */}
           <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             <Link href={`/corporate/learn?orgId=${enrollment.org_id}`}
               className="text-indigo-300 hover:text-white flex items-center gap-1 text-sm font-semibold shrink-0 transition-colors">
               <ArrowLeft size={16} /> <span className="hidden xs:inline">Exit</span>
             </Link>
-            {/* Mobile: hamburger to open sidebar */}
             <button onClick={() => setIsSidebarOpen(true)}
               className="lg:hidden p-2 rounded-lg text-indigo-300 hover:text-white hover:bg-indigo-800 transition-colors shrink-0">
               <Menu size={18} />
@@ -167,8 +162,6 @@ export default function LmsCoursePlayerPage({ params }) {
               <span className="truncate">{enrollment.title}</span>
             </h1>
           </div>
-
-          {/* Right: Progress + Coach */}
           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             <div className="hidden sm:flex items-center gap-2">
               <div className="w-24 md:w-40 h-2 bg-indigo-900 rounded-full overflow-hidden">
@@ -185,17 +178,13 @@ export default function LmsCoursePlayerPage({ params }) {
         </div>
       </div>
 
-      {/* ─── BODY: SIDEBAR + CONTENT ─── */}
       <div className="flex-1 flex overflow-hidden relative">
-
-        {/* ─── SIDEBAR OVERLAY (mobile) ─── */}
         {isSidebarOpen && (
           <div className="fixed inset-0 z-50 lg:hidden" onClick={() => setIsSidebarOpen(false)}>
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
           </div>
         )}
 
-        {/* ─── SIDEBAR ─── */}
         <div className={`
           fixed lg:relative inset-y-0 left-0 z-50 lg:z-20
           w-72 sm:w-80 flex flex-col
@@ -211,7 +200,6 @@ export default function LmsCoursePlayerPage({ params }) {
             </button>
           </div>
             <div className="overflow-y-auto flex-1 p-2 space-y-1">
-              {/* Assessments (High level) */}
               {data.assessments?.map(a => (
                 <button key={a.id} onClick={() => handleStartAssessment(a)}
                   className="w-full text-left p-3 rounded-xl flex gap-3 transition-colors border border-amber-100 bg-amber-50/50 hover:bg-amber-100 mb-2">
@@ -222,9 +210,7 @@ export default function LmsCoursePlayerPage({ params }) {
                   </div>
                 </button>
               ))}
-
               <div className="h-4" />
-
               {modules.map((mod, idx) => (
               <button key={mod.id} onClick={() => handleModuleClick(idx)}
                 className={`w-full text-left p-3 rounded-xl flex gap-3 transition-colors border ${
@@ -249,7 +235,6 @@ export default function LmsCoursePlayerPage({ params }) {
           </div>
         </div>
 
-        {/* ─── MAIN CONTENT ─── */}
         <div className="flex-1 overflow-y-auto bg-gray-50 p-4 sm:p-6 lg:p-10">
           <div className="max-w-3xl mx-auto bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-8 lg:p-12 shadow-sm border border-gray-200">
             {activeModule ? (
@@ -265,7 +250,6 @@ export default function LmsCoursePlayerPage({ params }) {
                     <p className="text-gray-500 font-medium text-base sm:text-lg border-b border-gray-100 pb-6">{activeModule.description}</p>
                   )}
                 </div>
-
                 <div className="prose prose-indigo max-w-none text-gray-700 text-sm sm:text-base leading-relaxed">
                   {activeModule.content ? (
                     <div className="whitespace-pre-wrap">{activeModule.content}</div>
@@ -276,7 +260,6 @@ export default function LmsCoursePlayerPage({ params }) {
                     </div>
                   )}
                 </div>
-
                 <div className="mt-10 sm:mt-16 pt-6 sm:pt-8 border-t border-gray-100 flex justify-end">
                   <button onClick={handleCompleteModule}
                     className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-indigo-600 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 active:scale-95 transition-all flex items-center justify-center gap-2">
@@ -293,15 +276,10 @@ export default function LmsCoursePlayerPage({ params }) {
           </div>
         </div>
 
-        {/* ─── AI COACH DRAWER (full-screen on mobile) ─── */}
         {isCoachOpen && (
           <div className="fixed inset-0 z-50 flex items-end sm:items-stretch sm:justify-end">
-            {/* Overlay */}
             <div className="absolute inset-0 bg-black/30 backdrop-blur-sm sm:hidden" onClick={() => setIsCoachOpen(false)} />
-            
-            {/* Drawer */}
             <div className="relative z-10 w-full sm:w-80 lg:w-96 h-[85vh] sm:h-full bg-white flex flex-col rounded-t-3xl sm:rounded-none shadow-2xl">
-              {/* Header */}
               <div className="p-4 bg-amber-50 border-b border-amber-100 flex justify-between items-center shrink-0 rounded-t-3xl sm:rounded-none">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-sm">
@@ -318,8 +296,6 @@ export default function LmsCoursePlayerPage({ params }) {
                   <X size={20} />
                 </button>
               </div>
-
-              {/* Messages */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50">
                 {chatHistory.map((msg, idx) => (
                   <div key={idx} className={`flex gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
@@ -348,8 +324,6 @@ export default function LmsCoursePlayerPage({ params }) {
                 )}
                 <div ref={chatEndRef} />
               </div>
-
-              {/* Input */}
               <div className="p-3 sm:p-4 bg-white border-t border-gray-200 shrink-0">
                 <form onSubmit={handleSendMessage} className="flex items-center gap-2">
                   <input type="text" value={currentMsg} onChange={e => setCurrentMsg(e.target.value)}
@@ -360,13 +334,12 @@ export default function LmsCoursePlayerPage({ params }) {
                     <Send size={16} />
                   </button>
                 </form>
-                <p className="text-[10px] text-center text-gray-400 mt-2">AI can make mistakes. Verify important facts.</p>
+                <p className="text-[10px] text-center text-gray-400 mt-2">AI can make mistakes.</p>
               </div>
             </div>
           </div>
         )}
 
-        {/* ─── RECOMMENDATION MODAL ─── */}
         {recommendation && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-indigo-950/60 backdrop-blur-md animate-in fade-in duration-300">
             <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl animate-in zoom-in-95 duration-200">
@@ -387,7 +360,6 @@ export default function LmsCoursePlayerPage({ params }) {
           </div>
         )}
 
-        {/* ─── ASSESSMENT MODAL ─── */}
         {activeAssessment && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-md">
             <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-8">
@@ -398,7 +370,6 @@ export default function LmsCoursePlayerPage({ params }) {
                 </div>
                 <button onClick={() => setActiveAssessment(null)} className="text-gray-400 hover:text-gray-600"><X size={24}/></button>
               </div>
-              
               <div className="flex-1 overflow-y-auto p-8">
                 {assessmentResult ? (
                   <div className="text-center py-10">
@@ -406,8 +377,7 @@ export default function LmsCoursePlayerPage({ params }) {
                        {assessmentResult.passed ? <CheckCircle size={48} /> : <AlertCircle size={48} />}
                     </div>
                     <h3 className="text-3xl font-black text-gray-900 mb-2">{assessmentResult.score}%</h3>
-                    <p className="text-lg font-bold text-gray-600 mb-8">{assessmentResult.passed ? 'Congratulations! You passed.' : 'Keep practicing to reach the passing score.'}</p>
-                    
+                    <p className="text-lg font-bold text-gray-600 mb-8">{assessmentResult.passed ? 'Congratulations!' : 'Keep practicing.'}</p>
                     <div className="space-y-4 text-left max-w-md mx-auto">
                       {assessmentResult.results?.map((r, i) => (
                         <div key={i} className={`p-4 rounded-2xl border ${r.isCorrect ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'}`}>
@@ -421,10 +391,9 @@ export default function LmsCoursePlayerPage({ params }) {
                   </div>
                 ) : (
                   <div className="space-y-10">
-                    {/* Mocked questions for UI demonstration as per task */}
                     {[1, 2, 3].map(qIdx => (
                       <div key={qIdx} className="space-y-4">
-                        <h4 className="font-bold text-gray-900 text-lg">{qIdx}. Sample question for {activeAssessment.title}?</h4>
+                        <h4 className="font-bold text-gray-900 text-lg">{qIdx}. Question?</h4>
                         <div className="grid gap-3">
                           {[0, 1, 2, 3].map(opt => (
                             <button key={opt} 
@@ -432,7 +401,7 @@ export default function LmsCoursePlayerPage({ params }) {
                               className={`w-full text-left p-4 rounded-2xl border-2 transition-all font-semibold ${
                                 assessmentAnswers[qIdx-1] === opt ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-gray-100 hover:border-gray-200 text-gray-600'
                               }`}>
-                              Option {String.fromCharCode(65 + opt)}: Description choice
+                              Option {String.fromCharCode(65 + opt)}
                             </button>
                           ))}
                         </div>
@@ -441,7 +410,6 @@ export default function LmsCoursePlayerPage({ params }) {
                   </div>
                 )}
               </div>
-
               {!assessmentResult && (
                 <div className="p-6 bg-gray-50 border-t border-gray-100 flex gap-4">
                    <button onClick={() => setActiveAssessment(null)} className="flex-1 py-4 border border-gray-200 rounded-2xl font-bold text-gray-600 hover:bg-gray-100 transition-all">Cancel</button>
@@ -454,8 +422,20 @@ export default function LmsCoursePlayerPage({ params }) {
             </div>
           </div>
         )}
-
       </div>
     </div>
+  );
+}
+
+export default function LmsCoursePlayerPage(props) {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex flex-col justify-center items-center px-4">
+        <Loader2 className="animate-spin text-indigo-500 w-10 h-10 mb-4" />
+        <p className="text-gray-500 font-medium text-center">Loading Course Player...</p>
+      </div>
+    }>
+      <LmsCoursePlayerContent {...props} />
+    </Suspense>
   );
 }

@@ -1,6 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import LD_API from '@/lib/api/ld.api';
@@ -10,7 +9,7 @@ import {
   Send, AlertCircle, Loader2, Plus, Edit3, Trash2, ArrowRight, Shield
 } from 'lucide-react';
 
-export default function AIContentStudioPage() {
+function AIContentStudioContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const orgId = searchParams.get('orgId');
@@ -46,7 +45,6 @@ export default function AIContentStudioPage() {
     if (!topic.trim()) return toast.error('Please enter a target skill or topic');
     setIsGenerating(true);
     try {
-      // Calling our ld.api backend endpoint which uses Gemini
       const res = await LD_API.generateOutline(orgId, {
         topic,
         audience: targetAudience || 'General employees',
@@ -58,7 +56,6 @@ export default function AIContentStudioPage() {
       
       setOutline(generatedOutline);
       
-      // Convert outline titles into empty module shells
       if (generatedOutline.modules) {
         setModules(generatedOutline.modules.map(m => ({
           title: m.title,
@@ -81,7 +78,6 @@ export default function AIContentStudioPage() {
   const generateSingleModule = async (index) => {
     const mod = modules[index];
     
-    // Update state to show loading for this specific module
     const newModules = [...modules];
     newModules[index].isGenerating = true;
     setModules(newModules);
@@ -98,7 +94,6 @@ export default function AIContentStudioPage() {
       newModules[index].content = content;
       newModules[index].isGenerated = true;
       
-      // Run Safety Check
       try {
         const safetyRes = await LD_API.runSafetyCheck(orgId, content);
         setSafetyReports(prev => ({ ...prev, [index]: safetyRes.data?.data }));
@@ -118,7 +113,6 @@ export default function AIContentStudioPage() {
 
   const handleGenerateAllContent = async () => {
     setStep('content');
-    // Sequential generation to avoid rate limits
     for (let i = 0; i < modules.length; i++) {
        if (!modules[i].isGenerated) {
            await generateSingleModule(i);
@@ -129,7 +123,6 @@ export default function AIContentStudioPage() {
   const handleSubmitForReview = async () => {
     setIsGenerating(true);
     try {
-      // 1. Create the Program
       const progRes = await LD_API.createProgram(orgId, {
         title: outline.title || topic,
         description: outline.description || '',
@@ -139,7 +132,6 @@ export default function AIContentStudioPage() {
       });
       const programId = progRes.data.data.id;
 
-      // 2. Save modules
       const formattedModules = modules.map((m, idx) => ({
         title: m.title,
         module_type: 'concept',
@@ -151,11 +143,10 @@ export default function AIContentStudioPage() {
       }));
       await LD_API.saveModules(orgId, programId, formattedModules);
 
-      // 3. Submit for SME Review
       await LD_API.submitForReview(orgId, {
         content_type: 'program',
         content_id: programId,
-        reviewer_ids: []  // Auto-assign reviewers or admin will handle
+        reviewer_ids: []
       });
       
       toast.success('Successfully submitted to SME Review Queue!');
@@ -173,7 +164,6 @@ export default function AIContentStudioPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* ─── HEADER ─── */}
       <div className="sticky top-0 z-40 bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -196,8 +186,6 @@ export default function AIContentStudioPage() {
       </div>
 
       <div className="flex-1 max-w-7xl mx-auto px-6 py-8 w-full flex gap-8">
-        
-        {/* ─── PROGRESS SIDEBAR ─── */}
         <div className="w-64 shrink-0">
           <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm sticky top-24">
             <h3 className="font-bold text-gray-800 mb-4 text-sm uppercase tracking-wider">Workflow</h3>
@@ -253,9 +241,7 @@ export default function AIContentStudioPage() {
           </div>
         </div>
 
-        {/* ─── MAIN CANVAS ─── */}
         <div className="flex-1 max-w-3xl">
-          
           {step === 'setup' && (
             <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
               <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center mb-6">
@@ -299,8 +285,6 @@ export default function AIContentStudioPage() {
 
           {(step === 'outline' || step === 'content' || step === 'review') && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              
-              {/* Program Overview Card */}
               <div className="bg-indigo-900 rounded-2xl p-8 relative overflow-hidden text-white shadow-lg">
                 <div className="absolute right-0 top-0 w-64 h-64 bg-indigo-500/30 rounded-full blur-[80px]" />
                 <div className="relative z-10">
@@ -319,7 +303,6 @@ export default function AIContentStudioPage() {
                 </div>
               </div>
 
-              {/* Module List */}
               <div className="space-y-4">
                 {modules.map((mod, idx) => (
                   <div key={idx} className={`bg-white rounded-2xl border shadow-sm p-6 transition-all ${mod.isGenerated ? 'border-green-200 bg-green-50/10' : 'border-gray-200'}`}>
@@ -334,7 +317,6 @@ export default function AIContentStudioPage() {
                           </div>
                        </div>
                        
-                       {/* Module Actions */}
                        {!mod.isGenerated ? (
                           <button onClick={() => generateSingleModule(idx)} disabled={mod.isGenerating} className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold hover:bg-indigo-100 disabled:opacity-50 flex gap-2 items-center">
                             {mod.isGenerating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12}/>} 
@@ -348,14 +330,12 @@ export default function AIContentStudioPage() {
                        )}
                     </div>
                     
-                    {/* Generated Content Preview & Safety */}
                     {mod.isGenerated && mod.content && (
                       <div className="mt-4 pt-4 border-t border-gray-100 space-y-4">
                         <div className="bg-gray-50 p-4 rounded-xl text-sm text-gray-600 prose prose-sm max-w-none max-h-40 overflow-y-auto">
                           {mod.content.substring(0, 300)}...
                         </div>
 
-                        {/* Governance Panel */}
                         {safetyReports[idx] && (
                           <div className="bg-white border border-indigo-100 rounded-xl p-4 flex flex-col sm:flex-row gap-4 items-center justify-between">
                             <div className="flex items-center gap-3">
@@ -385,11 +365,18 @@ export default function AIContentStudioPage() {
                   </div>
                 ))}
               </div>
-
             </div>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AIContentStudioPage() {
+  return (
+    <Suspense fallback={<div className="p-10 flex justify-center"><Loader2 className="animate-spin text-indigo-500" /></div>}>
+      <AIContentStudioContent />
+    </Suspense>
   );
 }

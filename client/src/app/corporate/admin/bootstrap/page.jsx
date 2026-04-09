@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import LD_API from '@/lib/api/ld.api';
 import toast from 'react-hot-toast';
@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-export default function LDBootstrapPage() {
+function BootstrapContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const orgId = searchParams.get('orgId');
@@ -31,7 +31,7 @@ export default function LDBootstrapPage() {
         }
       }).catch(() => router.push('/corporate/dashboard'));
     }
-  }, [orgId]);
+  }, [orgId, router]);
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -214,15 +214,15 @@ export default function LDBootstrapPage() {
                             { icon: Database, title: 'Challenges', desc: 'ROI & Context Data' },
                             { icon: Award, title: 'Test Cases', desc: 'Validation Logic' },
                          ].map((item, id) => (
-                           <div key={id} className="p-4 rounded-2xl bg-black/20 border border-white/5 flex gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 flex-shrink-0">
-                                 <item.icon size={16} />
-                              </div>
-                              <div>
-                                 <p className="text-xs font-bold text-white">{item.title}</p>
-                                 <p className="text-[10px] text-gray-500 mt-1">{item.desc}</p>
-                              </div>
-                           </div>
+                            <div key={id} className="p-4 rounded-2xl bg-black/20 border border-white/5 flex gap-3">
+                               <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 flex-shrink-0">
+                                  <item.icon size={16} />
+                               </div>
+                               <div>
+                                  <p className="text-xs font-bold text-white">{item.title}</p>
+                                  <p className="text-[10px] text-gray-500 mt-1">{item.desc}</p>
+                               </div>
+                            </div>
                          ))}
                       </div>
 
@@ -284,20 +284,20 @@ export default function LDBootstrapPage() {
                       <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-2">
                          {/* Errors first */}
                          {[...(report.users.errors || []), ...(report.skills.errors || []), ...(report.challenges.errors || [])].map((err, idx) => (
-                           <div key={`err-${idx}`} className="p-3 rounded-xl bg-rose-500/5 border border-rose-500/10 flex items-center gap-3">
-                              <XCircle className="text-rose-500 flex-shrink-0" size={14} />
-                              <p className="text-[11px] text-rose-200/70 truncate">Row {err.row}: {err.msg}</p>
-                           </div>
+                            <div key={`err-${idx}`} className="p-3 rounded-xl bg-rose-500/5 border border-rose-500/10 flex items-center gap-3">
+                               <XCircle className="text-rose-500 flex-shrink-0" size={14} />
+                               <p className="text-[11px] text-rose-200/70 truncate">Row {err.row}: {err.msg}</p>
+                            </div>
                          ))}
                          {/* Test cases summary */}
                          {(report.testResults || []).map((tc, idx) => (
-                           <div key={`tc-${idx}`} className="p-3 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                 <CheckCircle className="text-emerald-500" size={14} />
-                                 <p className="text-[11px] text-gray-300"><span className="font-bold text-white">{tc.TestCaseID}</span>: {tc.Module} Verification</p>
-                              </div>
-                              <span className="text-[10px] font-bold text-gray-500 px-2 py-0.5 bg-white/5 rounded-md uppercase">{tc.Priority}</span>
-                           </div>
+                            <div key={`tc-${idx}`} className="p-3 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between">
+                               <div className="flex items-center gap-3">
+                                  <CheckCircle className="text-emerald-500" size={14} />
+                                  <p className="text-[11px] text-gray-300"><span className="font-bold text-white">{tc.TestCaseID}</span>: {tc.Module} Verification</p>
+                               </div>
+                               <span className="text-[10px] font-bold text-gray-500 px-2 py-0.5 bg-white/5 rounded-md uppercase">{tc.Priority}</span>
+                            </div>
                          ))}
                       </div>
                    </div>
@@ -316,10 +316,18 @@ export default function LDBootstrapPage() {
 
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); border-radius: 10px; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); border-radius: 10px; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.1); }
       `}</style>
     </div>
+  );
+}
+
+export default function LDBootstrapPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#0A0B10] flex items-center justify-center"><Loader2 className="animate-spin text-indigo-500" /></div>}>
+      <BootstrapContent />
+    </Suspense>
   );
 }

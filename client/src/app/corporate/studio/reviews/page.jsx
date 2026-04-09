@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import LD_API from '@/lib/api/ld.api';
@@ -8,7 +8,7 @@ import {
   History, CheckCircle, XCircle, Clock, Eye, AlertCircle, Loader2, Sparkles, Shield
 } from 'lucide-react';
 
-export default function SMEReviewQueuePage() {
+function SMEReviewQueueContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const orgId = searchParams.get('orgId');
@@ -32,7 +32,7 @@ export default function SMEReviewQueuePage() {
         }
       }).catch(() => router.push('/corporate/dashboard'));
     }
-  }, [orgId]);
+  }, [orgId, router]);
 
   const loadReviews = async () => {
     setLoading(true);
@@ -279,5 +279,13 @@ export default function SMEReviewQueuePage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function SMEReviewQueuePage() {
+  return (
+    <Suspense fallback={<div className="p-10 flex justify-center"><Loader2 className="animate-spin text-indigo-500" /></div>}>
+      <SMEReviewQueueContent />
+    </Suspense>
   );
 }

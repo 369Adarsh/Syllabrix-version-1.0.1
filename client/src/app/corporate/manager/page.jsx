@@ -1,16 +1,16 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSearchParams } from 'next/navigation';
 import LD_API from '@/lib/api/ld.api';
 import { 
   Users, Target, MessageSquare, TrendingUp, ChevronRight, 
   Sparkles, Calendar, BookOpen, CheckCircle, AlertCircle,
-  BarChart3, UserCheck, Zap
+  BarChart3, UserCheck, Zap, Loader2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-export default function ManagerDashboardPage() {
+function ManagerDashboardContent() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const orgId = searchParams.get('orgId');
@@ -87,8 +87,6 @@ export default function ManagerDashboardPage() {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
          <div className="grid lg:grid-cols-12 gap-8">
-            
-            {/* ─── LEFT: TEAM LIST ─── */}
             <div className="lg:col-span-4 space-y-6">
                <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
                   <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -113,7 +111,6 @@ export default function ManagerDashboardPage() {
                     ))}
                   </div>
                </div>
-
                 <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl p-6 text-white shadow-xl shadow-indigo-200">
                   <BarChart3 size={24} className="mb-4 opacity-50" />
                   <h4 className="font-bold text-lg leading-tight mb-2 text-indigo-100">Team Readiness Score</h4>
@@ -128,12 +125,9 @@ export default function ManagerDashboardPage() {
                   </p>
                </div>
             </div>
-
-            {/* ─── RIGHT: MEMBER INSIGHTS ─── */}
             <div className="lg:col-span-8 space-y-8">
                {selectedMember ? (
                  <>
-                   {/* Profile Header */}
                    <div className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm flex flex-col md:flex-row items-center gap-8">
                       <div className="w-24 h-24 rounded-3xl bg-amber-50 flex items-center justify-center text-3xl font-black text-amber-600">
                          {selectedMember.full_name?.[0]}
@@ -153,8 +147,6 @@ export default function ManagerDashboardPage() {
                          <Sparkles size={18} /> 1:1 Prep with AI
                       </button>
                    </div>
-
-                   {/* Gaps and Performance */}
                    <div className="grid md:grid-cols-2 gap-8">
                       <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
                          <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -162,24 +154,23 @@ export default function ManagerDashboardPage() {
                          </h4>
                          <div className="space-y-4">
                             {selectedMemberGaps.length === 0 ? (
-                              <p className="text-xs text-gray-400 text-center py-4">No critical skill gaps identified.</p>
+                               <p className="text-xs text-gray-400 text-center py-4">No critical skill gaps identified.</p>
                             ) : (
-                              selectedMemberGaps.slice(0, 4).map((s, i) => (
-                                <div key={i} className="group">
-                                   <div className="flex justify-between items-end mb-1">
-                                      <p className="text-sm font-bold text-gray-800">{s.skill_name}</p>
-                                      <p className="text-[10px] font-mono text-gray-400">Current {parseFloat(s.composite_score || 0).toFixed(1)} / Target {s.required_proficiency}</p>
-                                   </div>
-                                   <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden flex">
-                                      <div className={`h-full ${s.gap > 1 ? 'bg-rose-500' : 'bg-amber-500'}`} 
-                                        style={{ width: `${Math.min(100, (s.composite_score/s.required_proficiency)*100)}%` }} />
-                                   </div>
-                                </div>
-                              ))
+                               selectedMemberGaps.slice(0, 4).map((s, i) => (
+                                 <div key={i} className="group">
+                                    <div className="flex justify-between items-end mb-1">
+                                       <p className="text-sm font-bold text-gray-800">{s.skill_name}</p>
+                                       <p className="text-[10px] font-mono text-gray-400">Current {parseFloat(s.composite_score || 0).toFixed(1)} / Target {s.required_proficiency}</p>
+                                    </div>
+                                    <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden flex">
+                                       <div className={`h-full ${s.gap > 1 ? 'bg-rose-500' : 'bg-amber-500'}`} 
+                                         style={{ width: `${Math.min(100, (s.composite_score/s.required_proficiency)*100)}%` }} />
+                                    </div>
+                                 </div>
+                               ))
                             )}
                          </div>
                       </div>
-
                       <div className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm">
                          <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
                             <TrendingUp size={18} className="text-blue-500" /> Learning Velocity
@@ -202,15 +193,12 @@ export default function ManagerDashboardPage() {
                          </div>
                       </div>
                    </div>
-
-                   {/* AI AGENDA MODAL-LIKE AREA */}
                    {generating && (
                       <div className="p-20 bg-white rounded-3xl border border-dashed border-indigo-200 text-center animate-pulse">
                          <Zap size={32} className="text-indigo-400 mx-auto mb-4" />
                          <p className="text-indigo-600 font-bold">AI is parsing skill gaps and recent learning activity...</p>
                       </div>
                    )}
-
                    {agenda && (
                       <div className="bg-gradient-to-br from-gray-900 to-slate-800 rounded-3xl p-8 text-white shadow-2xl relative overflow-hidden">
                          <div className="absolute top-0 right-0 p-4 opacity-10">
@@ -222,7 +210,6 @@ export default function ManagerDashboardPage() {
                                <span className="text-gray-400 text-xs font-medium">Updated 1m ago</span>
                             </div>
                             <h3 className="text-2xl font-bold mb-4">Coaching Strategy for {agenda.member}</h3>
-                            
                             <div className="grid md:grid-cols-3 gap-6 mb-8">
                                <div className="col-span-2 space-y-3">
                                   <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">Suggested Talking Points</p>
@@ -238,7 +225,6 @@ export default function ManagerDashboardPage() {
                                    <p className="text-xs italic text-gray-300 leading-relaxed">"{agenda.ai_insight}"</p>
                                 </div>
                             </div>
-
                             <div className="flex gap-3">
                                <button className="flex-1 py-3 bg-white text-gray-900 rounded-xl font-bold text-sm hover:bg-gray-100 transition-all flex items-center justify-center gap-2">
                                   <MessageSquare size={16} /> Send to {agenda.member.split(' ')[0]}
@@ -258,9 +244,16 @@ export default function ManagerDashboardPage() {
                  </div>
                )}
             </div>
-
          </div>
       </div>
     </div>
+  );
+}
+
+export default function ManagerDashboardPage() {
+  return (
+    <Suspense fallback={<div className="p-20 text-center text-gray-400">Loading Manager Suite...</div>}>
+      <ManagerDashboardContent />
+    </Suspense>
   );
 }

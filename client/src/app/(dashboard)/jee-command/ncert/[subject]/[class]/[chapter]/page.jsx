@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { jeeAPI } from '@/lib/api/jee.api';
 import Link from 'next/link';
@@ -11,10 +11,10 @@ import { InlineMath } from 'react-katex';
 import 'katex/dist/katex.min.css';
 import { 
   ArrowLeft, CheckCircle2, ChevronRight, 
-  MessageSquare, Share2, BookmarkPlus
+  MessageSquare, Share2, BookmarkPlus, BookOpen, Sparkles
 } from 'lucide-react';
 
-export default function NcertChapterPage() {
+function NcertChapterContent() {
   const { subject, class: classLevel, chapter } = useParams();
   const searchParams = useSearchParams();
   const bookType = searchParams.get('type') || 'textbook';
@@ -49,7 +49,6 @@ export default function NcertChapterPage() {
 
   return (
     <div className="max-w-5xl mx-auto">
-      {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-6">
         <Link href="/jee-command/ncert" className="text-gray-500 hover:text-blue-600 transition-colors">
           <ArrowLeft size={18} />
@@ -72,7 +71,7 @@ export default function NcertChapterPage() {
               </span>
             </div>
             <h1 className="text-[24px] font-bold text-gray-900">{chapterName}</h1>
-            <p className="text-gray-500 text-[13px] mt-1">Detailed solutions for all exercise questions with JEE shortcuts.</p>
+            <p className="text-gray-500 text-[13px] mt-1">Detailed solutions for all exercise questions.</p>
           </div>
           <div className="hidden sm:flex items-center gap-2">
             <button className="p-2.5 rounded-xl border border-gray-100 text-gray-400 hover:text-blue-500 transition-all">
@@ -84,7 +83,6 @@ export default function NcertChapterPage() {
           </div>
         </div>
 
-        {/* Exercise Tabs */}
         {exercises.length > 1 && (
           <div className="flex gap-2 mt-8 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
             {exercises.map(ex => (
@@ -104,7 +102,6 @@ export default function NcertChapterPage() {
         )}
       </div>
 
-      {/* Solutions List */}
       <div className="space-y-6">
         {filteredSolutions.map((sol, idx) => (
           <div key={sol.id} className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-md transition-all">
@@ -126,14 +123,12 @@ export default function NcertChapterPage() {
             </div>
             
             <div className="p-6">
-              {/* Question */}
               <div className="mb-8">
                 <div className="prose prose-sm max-w-none text-[15px] text-gray-800 leading-relaxed font-medium">
                   <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>{sol.question_text}</ReactMarkdown>
                 </div>
               </div>
 
-              {/* Solution */}
               <div className="bg-blue-50/30 rounded-2xl p-6 border border-blue-100/50">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold">A</div>
@@ -154,7 +149,6 @@ export default function NcertChapterPage() {
                 )}
               </div>
 
-              {/* Footer Actions */}
               <div className="mt-6 flex items-center justify-between">
                 <button className="flex items-center gap-2 text-[12px] font-bold text-gray-500 hover:text-blue-600 transition-colors">
                   <MessageSquare size={14} /> Ask AI to explain
@@ -170,10 +164,26 @@ export default function NcertChapterPage() {
         {filteredSolutions.length === 0 && (
           <div className="text-center py-20 bg-white rounded-3xl border border-gray-100">
             <BookOpen size={48} className="text-gray-100 mx-auto mb-4" />
-            <p className="text-gray-500">No questions found for this exercise.</p>
+            <p className="text-gray-500">No questions found.</p>
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+export default function NcertChapterPage() {
+  return (
+    <Suspense fallback={
+      <div className="p-8 space-y-4">
+        <div className="h-8 bg-gray-100 rounded-xl w-64 animate-pulse" />
+        <div className="h-4 bg-gray-50 rounded-xl w-96 animate-pulse" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+          {[1,2,4,4].map(i => <div key={i} className="h-40 bg-gray-50 rounded-2xl animate-pulse" />)}
+        </div>
+      </div>
+    }>
+      <NcertChapterContent />
+    </Suspense>
   );
 }

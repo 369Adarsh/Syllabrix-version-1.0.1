@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import LD_API from '@/lib/api/ld.api';
 import toast from 'react-hot-toast';
@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
-export default function KnowledgeHubPage() {
+function KnowledgeHubContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const orgId = searchParams.get('orgId');
@@ -27,7 +27,7 @@ export default function KnowledgeHubPage() {
   useEffect(() => {
     if (orgId) loadKnowledge();
     else router.push('/corporate/dashboard');
-  }, [orgId]);
+  }, [orgId, router]);
 
   const loadKnowledge = async () => {
     setLoading(true);
@@ -80,7 +80,6 @@ export default function KnowledgeHubPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* ─── HEADER ─── */}
       <div className="sticky top-0 z-40 bg-white border-b border-gray-100 px-6 py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -106,15 +105,13 @@ export default function KnowledgeHubPage() {
       </div>
 
       <div className="flex-1 max-w-6xl mx-auto w-full px-6 py-8">
-         
-         {/* ─── SEARCH SECTION ─── */}
          <div className="mb-12 relative">
             <form onSubmit={handleSearch} className="group">
                <input 
                  type="text" 
                  value={searchQuery}
                  onChange={(e) => setSearchQuery(e.target.value)}
-                 placeholder="Search company knowledge base: 'How to handle discount requests...', 'CRM best practices'..."
+                 placeholder="Search company knowledge base..."
                  className="w-full h-16 pl-14 pr-32 rounded-3xl bg-white border border-gray-200 shadow-sm focus:border-orange-500 focus:ring-4 focus:ring-orange-500/5 outline-none transition-all text-gray-800 font-medium"
                />
                <Search className="absolute left-5 top-5 text-gray-400 group-focus-within:text-orange-500" size={24} />
@@ -128,8 +125,6 @@ export default function KnowledgeHubPage() {
          </div>
 
          <div className="grid lg:grid-cols-12 gap-10">
-            
-            {/* ─── MAIN FEED ─── */}
             <div className="lg:col-span-8 space-y-6">
                <div className="flex items-center justify-between mb-2">
                   <h3 className="font-bold text-gray-800 uppercase text-xs tracking-widest flex items-center gap-2">
@@ -184,7 +179,6 @@ export default function KnowledgeHubPage() {
                ))}
             </div>
 
-            {/* ─── SIDEBAR ─── */}
             <div className="lg:col-span-4 space-y-8">
                <div className="bg-orange-600 rounded-3xl p-6 text-white shadow-xl shadow-orange-100">
                   <Sparkles size={24} className="mb-4 opacity-50" />
@@ -193,14 +187,13 @@ export default function KnowledgeHubPage() {
                     Syllabrix turns your team's unique tribal knowledge into searchable learning assets. Shared tips are reviewed by SMEs and distributed to teammates via AI Coach.
                   </p>
                </div>
-
                <div className="bg-white rounded-3xl border border-gray-100 p-6">
                   <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
                      <Tag size={16} className="text-indigo-500" /> Top Categories
                   </h4>
                   <div className="flex flex-wrap gap-2">
                     {['Product', 'Sales', 'Process', 'HR', 'IT'].map(tag => (
-                      <span key={tag} className="px-3 py-1 bg-gray-50 text-[10px] font-bold text-gray-500 uppercase rounded-full hover:bg-indigo-50 hover:text-indigo-600 transition-colors cursor-pointer">
+                      <span key={tag} className="px-3 py-1 bg-gray-50 text-[10px] font-bold text-gray-500 uppercase rounded-full hover:bg-indigo-50 hover:text-indigo-600 cursor-pointer">
                         #{tag}
                       </span>
                     ))}
@@ -210,14 +203,13 @@ export default function KnowledgeHubPage() {
          </div>
       </div>
 
-      {/* ─── SUBMISSION MODAL ─── */}
       {showSubmitModal && (
         <div className="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4">
            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
               <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                  <div className="flex items-center gap-2">
                     <div className="p-2 rounded-lg bg-orange-100 text-orange-600">
-                      <Plus size={16} />
+                       <Plus size={16} />
                     </div>
                     <h3 className="font-bold text-gray-900">Share Internal Insight</h3>
                  </div>
@@ -233,17 +225,16 @@ export default function KnowledgeHubPage() {
                       value={newItem.title}
                       onChange={(e) => setNewItem({ ...newItem, title: e.target.value })}
                       placeholder="e.g., Handling discount requests for Enterprise plans"
-                      className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:bg-white focus:border-orange-500 outline-none transition-all text-sm font-medium"
+                      className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:bg-white focus:border-orange-500 outline-none text-sm font-medium"
                     />
                  </div>
-
                  <div className="grid grid-cols-2 gap-4">
                     <div>
                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Type</label>
                        <select 
                          value={newItem.item_type}
                          onChange={(e) => setNewItem({ ...newItem, item_type: e.target.value })}
-                         className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent outline-none text-sm font-medium"
+                         className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent text-sm font-medium"
                        >
                           <option value="tip">Expert Tip</option>
                           <option value="process">Standard Process</option>
@@ -256,26 +247,24 @@ export default function KnowledgeHubPage() {
                        <input 
                          type="text" 
                          placeholder="e.g., Sales"
-                         className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent outline-none text-sm font-medium"
+                         className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent text-sm font-medium"
                        />
                     </div>
                  </div>
-
                  <div>
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Body Content (Markdown Supported)</label>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Body Content</label>
                     <textarea 
                       required
                       rows={6}
                       value={newItem.body}
                       onChange={(e) => setNewItem({ ...newItem, body: e.target.value })}
                       placeholder="Explain the insight, process, or tip in detail..."
-                      className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:bg-white focus:border-orange-500 outline-none transition-all text-sm font-medium resize-none"
+                      className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-transparent focus:bg-white focus:border-orange-500 outline-none text-sm font-medium resize-none"
                     />
                  </div>
-
                  <button 
                    disabled={isSubmitting}
-                   className="w-full py-4 bg-gray-900 text-white rounded-2xl font-bold hover:bg-black transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                   className="w-full py-4 bg-gray-900 text-white rounded-2xl font-bold enabled:hover:bg-black transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                  >
                     {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />} Submit to SME Review Queue
                  </button>
@@ -284,5 +273,13 @@ export default function KnowledgeHubPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function KnowledgeHubPage() {
+  return (
+    <Suspense fallback={<div className="p-20 text-center"><Loader2 className="animate-spin text-indigo-500 mx-auto" /></div>}>
+      <KnowledgeHubContent />
+    </Suspense>
   );
 }

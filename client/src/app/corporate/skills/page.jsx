@@ -1,9 +1,8 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import LD_API from '@/lib/api/ld.api';
 import toast from 'react-hot-toast';
 import {
@@ -11,7 +10,7 @@ import {
   FileText, Briefcase, Zap, Shield, HelpCircle, Check, X, AlertCircle, Map, Target, TrendingUp
 } from 'lucide-react';
 
-export default function SkillIntelligencePage() {
+function SkillIntelligenceContent() {
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -54,7 +53,6 @@ export default function SkillIntelligencePage() {
     if (orgId) {
       loadData();
     } else {
-      // Fallback: load first org
       LD_API.getMyOrgs().then(res => {
         if (res.data?.data?.length > 0) {
           router.replace(`/corporate/skills?orgId=${res.data.data[0].id}`);
@@ -65,7 +63,7 @@ export default function SkillIntelligencePage() {
         router.push('/corporate/dashboard');
       });
     }
-  }, [orgId, activeTab]);
+  }, [orgId, activeTab, router]);
 
   const loadData = async () => {
     setLoading(true);
@@ -118,7 +116,6 @@ export default function SkillIntelligencePage() {
           importance_level: s.importance === 'high' ? 5 : (s.importance === 'medium' ? 3 : 1)
         });
         
-        // If a role is selected, automatically map it
         if (selectedRole && skillRes.data?.data?.id) {
           await LD_API.mapRoleSkill(orgId, selectedRole.id, {
             skill_id: skillRes.data.data.id,
@@ -196,7 +193,6 @@ export default function SkillIntelligencePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* ─── HEADER ─── */}
       <div className="sticky top-0 z-40 bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between py-4 gap-4">
@@ -232,7 +228,6 @@ export default function SkillIntelligencePage() {
           </div>
         ) : (
           <>
-            {/* ─── TAB 1: TAXONOMY BUILDER ─── */}
             {activeTab === 'taxonomy' && (
               <div className="space-y-6">
                 <div className="flex justify-between items-center bg-indigo-900 rounded-2xl p-6 text-white shadow-lg overflow-hidden relative">
@@ -251,7 +246,6 @@ export default function SkillIntelligencePage() {
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-6">
-                  {/* Roles List */}
                   <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
                     <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                       <h3 className="font-bold text-gray-800 flex items-center gap-2"><Briefcase size={16} className="text-indigo-500"/> Defined Roles ({roles.length})</h3>
@@ -278,7 +272,6 @@ export default function SkillIntelligencePage() {
                     </div>
                   </div>
 
-                  {/* Skills List / Mapped Skills */}
                   <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
                     <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                       <h3 className="font-bold text-gray-800 flex items-center gap-2">
@@ -324,7 +317,6 @@ export default function SkillIntelligencePage() {
               </div>
             )}
 
-            {/* ─── TAB 2: TEAM MEMBERS ─── */}
             {activeTab === 'members' && (
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                 <div className="p-5 border-b border-gray-100 flex justify-between items-center">
@@ -365,7 +357,6 @@ export default function SkillIntelligencePage() {
               </div>
             )}
 
-            {/* ─── TAB 3: SKILL GAP HEATMAP ─── */}
             {activeTab === 'heatmap' && (
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
                  <div className="max-w-md mx-auto mb-8 text-center">
@@ -452,7 +443,6 @@ export default function SkillIntelligencePage() {
                  </div>
               </div>
             )}
-            {/* ─── TAB 4: CAREER PATHING ─── */}
             {activeTab === 'career' && (
               <div className="space-y-8">
                 <div className="bg-gradient-to-br from-emerald-900 to-teal-800 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
@@ -542,7 +532,6 @@ export default function SkillIntelligencePage() {
         )}
       </div>
 
-      {/* ─── CREATE ROLE MODAL ─── */}
       {isRoleModalOpen && (
         <div className="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -550,54 +539,28 @@ export default function SkillIntelligencePage() {
               <h3 className="text-lg font-bold text-gray-900">Define New Job Role</h3>
               <p className="text-sm text-gray-500">Add a role to map specific skills and competencies.</p>
             </div>
-
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-gray-400 uppercase mb-1 tracking-wider">Role Title</label>
-                <input 
-                  type="text" 
-                  value={newRole.title}
-                  onChange={e => setNewRole({...newRole, title: e.target.value})}
-                  placeholder="e.g. Senior Frontend Engineer"
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500/50 outline-none"
-                />
+                <input type="text" value={newRole.title} onChange={e => setNewRole({...newRole, title: e.target.value})} placeholder="e.g. Senior Frontend Engineer" className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm outline-none" />
               </div>
-              
               <div>
                 <label className="block text-xs font-bold text-gray-400 uppercase mb-1 tracking-wider">Department</label>
-                <input 
-                  type="text" 
-                  value={newRole.department}
-                  onChange={e => setNewRole({...newRole, department: e.target.value})}
-                  placeholder="e.g. Engineering"
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500/50 outline-none"
-                />
+                <input type="text" value={newRole.department} onChange={e => setNewRole({...newRole, department: e.target.value})} placeholder="e.g. Engineering" className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm outline-none" />
               </div>
-
               <div>
                 <label className="block text-xs font-bold text-gray-400 uppercase mb-1 tracking-wider">Seniority Level</label>
-                <select 
-                  value={newRole.level}
-                  onChange={e => setNewRole({...newRole, level: e.target.value})}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500/50 outline-none"
-                >
+                <select value={newRole.level} onChange={e => setNewRole({...newRole, level: e.target.value})} className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm outline-none">
                   <option value="entry">Entry Level</option>
                   <option value="mid">Mid Level</option>
                   <option value="senior">Senior</option>
                   <option value="lead">Lead</option>
-                  <option value="director">Director</option>
-                  <option value="executive">Executive</option>
                 </select>
               </div>
             </div>
-
             <div className="p-6 bg-gray-50 flex gap-3">
-              <button onClick={() => setIsRoleModalOpen(false)} className="flex-1 py-3 border border-gray-200 text-gray-600 rounded-xl font-bold hover:bg-gray-100 transition-colors">Cancel</button>
-              <button 
-                onClick={handleCreateRole}
-                disabled={isSubmittingRole || !newRole.title}
-                className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all flex justify-center items-center gap-2 disabled:opacity-50"
-              >
+              <button onClick={() => setIsRoleModalOpen(false)} className="flex-1 py-3 border border-gray-200 text-gray-600 rounded-xl font-bold hover:bg-gray-100">Cancel</button>
+              <button onClick={handleCreateRole} disabled={isSubmittingRole || !newRole.title} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold disabled:opacity-50">
                 {isSubmittingRole ? <Loader2 className="animate-spin" size={18} /> : 'Create Role'}
               </button>
             </div>
@@ -605,7 +568,6 @@ export default function SkillIntelligencePage() {
         </div>
       )}
 
-      {/* ─── JD EXTRACTION MODAL ─── */}
       {isJDModalOpen && (
         <div className="fixed inset-0 z-50 bg-gray-900/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -613,129 +575,56 @@ export default function SkillIntelligencePage() {
               <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2"><Sparkles className="text-amber-500" /> AI Skill Extraction</h3>
               <button onClick={() => setIsJDModalOpen(false)} className="text-gray-400 hover:text-gray-600"><X size={20}/></button>
             </div>
-            
             <div className="flex-1 overflow-y-auto p-6 flex flex-col md:flex-row gap-6">
-              {/* Left: Input */}
               <div className="flex-1 flex flex-col">
-                <label className="text-sm font-bold text-gray-700 mb-2">Paste Job Description or Requirements List</label>
-                <textarea 
-                  value={jdText}
-                  onChange={e => setJdText(e.target.value)}
-                  placeholder="e.g. We are looking for a Senior Frontend Engineer proficient in React, Next.js, and state management using Redux..."
-                  className="flex-1 w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 resize-none min-h-[300px]"
-                />
-                <button 
-                  onClick={handleExtractJD} 
-                  disabled={isExtracting || !jdText.trim()}
-                  className="mt-4 w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold shadow-md hover:shadow-lg disabled:opacity-50 flex justify-center items-center gap-2"
-                >
-                  {isExtracting ? <><Loader2 className="animate-spin" size={18} /> Processing with AI...</> : <><Brain size={18} /> Extract Skills</>}
+                <label className="text-sm font-bold text-gray-700 mb-2">Paste Job Description</label>
+                <textarea value={jdText} onChange={e => setJdText(e.target.value)} placeholder="e.g. We are looking for a Senior Frontend Engineer..." className="flex-1 w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm resize-none min-h-[300px]" />
+                <button onClick={handleExtractJD} disabled={isExtracting || !jdText.trim()} className="mt-4 w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold disabled:opacity-50 flex justify-center items-center gap-2">
+                  {isExtracting ? <Loader2 className="animate-spin" size={18} /> : <Brain size={18} />} Extract Skills
                 </button>
               </div>
-
-              {/* Right: Results */}
               <div className="flex-1 bg-gray-50 rounded-xl border border-gray-200 p-4 flex flex-col">
-                <h4 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                  <Check size={16} className="text-emerald-500" /> Detected Skills
-                </h4>
+                <h4 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2"><Check size={16} className="text-emerald-500" /> Detected Skills</h4>
                 {isExtracting ? (
-                  <div className="flex-1 flex flex-col items-center justify-center text-center px-4">
-                    <Sparkles className="w-10 h-10 text-amber-400 animate-pulse mb-3" />
-                    <p className="text-gray-600 font-semibold text-sm mb-1">Analyzing Job Description</p>
-                    <p className="text-gray-400 text-xs">AI is classifying technical and soft skills...</p>
-                  </div>
+                  <div className="flex-1 flex flex-col items-center justify-center text-center"><Sparkles className="w-10 h-10 text-amber-400 animate-pulse mb-3" /><p className="text-gray-600 font-semibold text-sm">Analyzing...</p></div>
                 ) : extractedSkills.length > 0 ? (
                   <>
                     <div className="flex-1 overflow-y-auto space-y-2 pr-2">
                       {extractedSkills.map((s, idx) => (
-                        <div key={idx} className="bg-white p-3 rounded-lg border shadow-sm border-indigo-100 flex justify-between items-center">
-                          <div>
-                            <p className="font-bold text-sm text-gray-800">{s.skill}</p>
-                            <p className="text-[10px] text-gray-500 font-semibold uppercase">{s.type}</p>
-                          </div>
-                          <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${s.importance === 'high' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
-                            {s.importance}
-                          </span>
+                        <div key={idx} className="bg-white p-3 rounded-lg border flex justify-between items-center">
+                          <div><p className="font-bold text-sm">{s.skill}</p><p className="text-[10px] uppercase">{s.type}</p></div>
+                          <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${s.importance === 'high' ? 'bg-red-100' : 'bg-blue-100'}`}>{s.importance}</span>
                         </div>
                       ))}
                     </div>
-                    <button onClick={handleSaveExtractedSkills} className="mt-4 w-full py-2.5 bg-gray-900 text-white rounded-lg text-sm font-bold hover:bg-black transition-colors">
-                      Save {extractedSkills.length} Skills to Taxonomy
-                    </button>
+                    <button onClick={handleSaveExtractedSkills} className="mt-4 w-full py-2.5 bg-gray-900 text-white rounded-lg text-sm font-bold">Save to Taxonomy</button>
                   </>
-                ) : (
-                  <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-400 px-4">
-                    <AlertCircle className="w-10 h-10 mb-3 opacity-20" />
-                    <p className="text-sm">Results will appear here.</p>
-                  </div>
-                )}
+                ) : <div className="flex-1 flex flex-col items-center justify-center text-gray-400"><AlertCircle className="w-10 h-10 mb-3 opacity-20" /><p className="text-sm">Results will appear here.</p></div>}
               </div>
             </div>
           </div>
         </div>
       )}
-      {/* ─── ROLE-SKILL MAPPING MODAL ─── */}
       {isMapModalOpen && (
         <div className="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
             <div className="p-6 border-b border-gray-100 bg-gray-50/50">
-              <div className="flex justify-between items-center mb-1">
-                <h3 className="text-lg font-bold text-gray-900">Map Skill to Role</h3>
-                <button onClick={() => setIsMapModalOpen(false)} className="text-gray-400 hover:text-gray-600"><X size={20}/></button>
-              </div>
-              <p className="text-sm text-gray-500">Linking <span className="font-bold text-indigo-600">{mappingSkill?.name}</span> to <span className="font-bold text-gray-700">{selectedRole?.title}</span></p>
+              <div className="flex justify-between items-center mb-1"><h3 className="text-lg font-bold">Map Skill to Role</h3><button onClick={() => setIsMapModalOpen(false)}><X/></button></div>
+              <p className="text-sm">Linking <span className="font-bold text-indigo-600">{mappingSkill?.name}</span> to <span className="font-bold">{selectedRole?.title}</span></p>
             </div>
-
             <div className="p-6 space-y-6">
               <div>
-                <div className="flex justify-between items-center mb-2">
-                  <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                    <Check size={16} className="text-green-500" /> Target Proficiency
-                  </label>
-                  <span className="text-lg font-extrabold text-indigo-600">{profLevel}/5</span>
-                </div>
-                <input 
-                  type="range" min="1" max="5" step="1" 
-                  value={profLevel} onChange={e => setProfLevel(parseInt(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                />
-                <div className="flex justify-between text-[10px] text-gray-400 font-bold uppercase mt-2">
-                  <span>Awareness</span>
-                  <span>Expert</span>
-                </div>
+                <div className="flex justify-between mb-2"><label className="text-sm font-bold">Proficiency</label><span className="font-extrabold">{profLevel}/5</span></div>
+                <input type="range" min="1" max="5" value={profLevel} onChange={e => setProfLevel(parseInt(e.target.value))} className="w-full accent-indigo-600" />
               </div>
-
               <div>
-                <div className="flex justify-between items-center mb-2">
-                  <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                    <AlertCircle size={16} className="text-amber-500" /> Criticality Weight
-                  </label>
-                  <span className="text-lg font-extrabold text-amber-600">{critWeight}/10</span>
-                </div>
-                <input 
-                  type="range" min="1" max="10" step="1" 
-                  value={critWeight} onChange={e => setCritWeight(parseInt(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-amber-500"
-                />
-                <div className="flex justify-between text-[10px] text-gray-400 font-bold uppercase mt-2">
-                  <span>Optional</span>
-                  <span>Mission Critical</span>
-                </div>
+                <div className="flex justify-between mb-2"><label className="text-sm font-bold">Criticality</label><span className="font-extrabold">{critWeight}/10</span></div>
+                <input type="range" min="1" max="10" value={critWeight} onChange={e => setCritWeight(parseInt(e.target.value))} className="w-full accent-amber-500" />
               </div>
             </div>
-
             <div className="p-6 bg-gray-50 flex gap-3">
-              <button 
-                onClick={() => setIsMapModalOpen(false)}
-                className="flex-1 py-3 border border-gray-200 text-gray-600 rounded-xl font-bold hover:bg-gray-100 transition-colors"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleMapSkill}
-                disabled={isMapping}
-                className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all flex justify-center items-center gap-2"
-              >
+              <button onClick={() => setIsMapModalOpen(false)} className="flex-1 py-3 border rounded-xl">Cancel</button>
+              <button onClick={handleMapSkill} disabled={isMapping} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold">
                 {isMapping ? <Loader2 className="animate-spin" size={18} /> : 'Save Mapping'}
               </button>
             </div>
@@ -743,5 +632,13 @@ export default function SkillIntelligencePage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function SkillIntelligencePage() {
+  return (
+    <Suspense fallback={<div className="p-10 text-center"><Loader2 className="animate-spin mx-auto text-amber-500" /></div>}>
+      <SkillIntelligenceContent />
+    </Suspense>
   );
 }

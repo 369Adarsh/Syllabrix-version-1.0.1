@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import TrustBadge from '../components/TrustBadge';
 import ReportButton from '../components/ReportButton';
-import UpgradePrompt from '../components/UpgradePrompt';
+import UpgradePrompt from '@/app/(dashboard)/jee-command/components/UpgradePrompt';
 import { useJeeAccess } from '@/lib/hooks/useJeeAccess';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';

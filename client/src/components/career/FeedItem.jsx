@@ -66,7 +66,9 @@ const FeedItem = ({ post, isAI }) => {
               </p>
               <div className="p-6 bg-gray-50 rounded-3xl border border-gray-100 relative group/quote">
                 <div className="absolute top-4 left-4 text-blue-200 group-hover/quote:text-blue-400 transition-colors">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.83"} /></svg>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.83" />
+                  </svg>
                 </div>
                 <p className="text-[14px] italic text-gray-500 font-bold text-center leading-relaxed">
                   "The most resilient professionals are those who learn to build systems, not just follow them."

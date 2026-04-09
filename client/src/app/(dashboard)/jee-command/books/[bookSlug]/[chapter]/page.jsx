@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { jeeAPI } from '@/lib/api/jee.api';
 import { useJeeAccess } from '@/lib/hooks/useJeeAccess';
-import UpgradePrompt from '../../components/UpgradePrompt';
+import UpgradePrompt from '@/app/(dashboard)/jee-command/components/UpgradePrompt';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';

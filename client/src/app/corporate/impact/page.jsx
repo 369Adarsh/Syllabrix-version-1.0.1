@@ -1,15 +1,16 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import LD_API from '@/lib/api/ld.api';
 import { 
   TrendingUp, IndianRupee, Clock, Award, Star, 
   BarChart3, PieChart, Activity, Target, Zap, 
-  Building2, Users, ArrowUpRight, ShieldCheck, ChevronRight
+  Building2, Users, ArrowUpRight, ShieldCheck, ChevronRight,
+  Loader2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-export default function ImpactDashboardPage() {
+function ImpactDashboardContent() {
   const searchParams = useSearchParams();
   const orgId = searchParams.get('orgId');
 
@@ -34,10 +35,10 @@ export default function ImpactDashboardPage() {
   };
 
   if (loading) return <div className="p-20 text-center text-gray-400">Calculating Business Impact Metrics...</div>;
+  if (!stats) return <div className="p-20 text-center text-gray-400">No impact data available for this organization.</div>;
 
   return (
     <div className="min-h-screen bg-[#FDFCFB] pb-20">
-      {/* ─── HEADER ─── */}
       <div className="bg-white border-b border-gray-100 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
            <div className="flex items-center gap-3">
@@ -56,8 +57,6 @@ export default function ImpactDashboardPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-10 space-y-12">
-         
-         {/* ─── THE ROI ENGINE (MAIN VALUE) ─── */}
          <div className="grid lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1 bg-gradient-to-br from-gray-950 via-slate-900 to-indigo-950 rounded-[2.5rem] p-10 text-white shadow-2xl relative overflow-hidden flex flex-col justify-between h-[450px]">
                <div className="absolute top-0 right-0 p-10 opacity-10">
@@ -123,7 +122,6 @@ export default function ImpactDashboardPage() {
             </div>
          </div>
 
-         {/* ─── KPI LINKAGE ─── */}
          <div className="space-y-6">
             <div className="flex items-end justify-between">
                <div>
@@ -153,7 +151,6 @@ export default function ImpactDashboardPage() {
             </div>
          </div>
 
-         {/* ─── PROGRAM ROI RANKING ─── */}
          <div className="bg-white border border-gray-200 rounded-[2rem] overflow-hidden shadow-sm">
             <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                <h3 className="font-bold text-gray-800 flex items-center gap-2">
@@ -192,8 +189,15 @@ export default function ImpactDashboardPage() {
                </table>
             </div>
          </div>
-
       </div>
     </div>
+  );
+}
+
+export default function ImpactDashboardPage() {
+  return (
+    <Suspense fallback={<div className="p-20 text-center text-gray-400">Calculating Impact Metrics...</div>}>
+      <ImpactDashboardContent />
+    </Suspense>
   );
 }

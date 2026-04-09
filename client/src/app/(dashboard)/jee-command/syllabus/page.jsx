@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { jeeAPI } from '@/lib/api/jee.api';
 import { useJee } from '../layout';
@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   BookOpen, ChevronRight, CheckCircle2, Clock, BarChart2,
-  Layers, Sparkles, Lock, Search
+  Layers, Sparkles, Lock, Search, Loader2
 } from 'lucide-react';
 
 const MASTERY_CONFIG = {
@@ -65,7 +65,7 @@ function ChapterCard({ chapter, index }) {
   );
 }
 
-export default function SyllabusPage() {
+function SyllabusContent() {
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
   const { selectedClass } = useJee();
@@ -93,7 +93,6 @@ export default function SyllabusPage() {
 
   return (
     <div>
-      {/* Subject selector tabs */}
       <div className="flex gap-2 mb-4 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
         {Object.entries(SUBJECT_CONFIG).map(([slug, cfg]) => (
           <button
@@ -110,7 +109,6 @@ export default function SyllabusPage() {
         ))}
       </div>
 
-      {/* Stats + search */}
       <div className="flex items-center gap-3 mb-4">
         <div className="flex-1 relative">
           <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
@@ -127,7 +125,6 @@ export default function SyllabusPage() {
         </div>
       </div>
 
-      {/* Class filter pills */}
       <div className="flex gap-2 mb-4 text-[11px]">
         {filtered.some(c => c.class_level === 11) && (
           <span className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100 font-medium">
@@ -147,7 +144,6 @@ export default function SyllabusPage() {
         </div>
       ) : (
         <>
-          {/* Class 11 */}
           {filtered.filter(c => c.class_level === 11).length > 0 && (
             <div className="mb-4">
               <p className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-2">Class 11</p>
@@ -158,7 +154,6 @@ export default function SyllabusPage() {
               </div>
             </div>
           )}
-          {/* Class 12 */}
           {filtered.filter(c => c.class_level === 12).length > 0 && (
             <div>
               <p className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold mb-2">Class 12</p>
@@ -178,5 +173,17 @@ export default function SyllabusPage() {
         </>
       )}
     </div>
+  );
+}
+
+export default function SyllabusPage() {
+  return (
+    <Suspense fallback={
+       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {Array(6).fill(0).map((_, i) => <div key={i} className="h-20 bg-white rounded-xl animate-pulse border border-gray-100" />)}
+       </div>
+    }>
+      <SyllabusContent />
+    </Suspense>
   );
 }

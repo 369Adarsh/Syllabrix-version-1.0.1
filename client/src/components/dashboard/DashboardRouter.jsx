@@ -5,7 +5,7 @@ import ProfessionalDashboard from './ProfessionalDashboard';
 import ParentDashboard from './ParentDashboard';
 import { Loader2, ShieldAlert, Users } from 'lucide-react';
 import Link from 'next/link';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { postsAPI } from '@/lib/api/posts.api';
 import CreatePostBox from '@/components/feed/CreatePostBox';
 import PostCard from '@/components/feed/PostCard';
@@ -56,11 +56,23 @@ export default function DashboardRouter() {
   // ═══ PERSONA ROUTING ═══
   
   if (user.user_type === 'professional_learner' || user.user_type === 'organization') {
-    return <ProfessionalDashboard />;
+    return (
+      <Suspense fallback={
+        <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4">
+          <Loader2 size={32} className="text-blue-600 animate-spin" />
+        </div>
+      }>
+        <ProfessionalDashboard />
+      </Suspense>
+    );
   }
 
   if (user.user_type === 'parent') {
-    return <ParentDashboard />;
+    return (
+      <Suspense fallback={<Loader2 className="animate-spin" />}>
+        <ParentDashboard />
+      </Suspense>
+    );
   }
 
   if (user.user_type === 'teacher' || user.user_type === 'institute' || user.user_type === 'mentor') {
@@ -128,5 +140,9 @@ export default function DashboardRouter() {
   }
 
   // Default: Student/General Learner
-  return <StudentDashboard />;
+  return (
+    <Suspense fallback={<Loader2 className="animate-spin" />}>
+      <StudentDashboard />
+    </Suspense>
+  );
 }
