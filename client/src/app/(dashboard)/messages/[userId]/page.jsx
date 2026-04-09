@@ -8,6 +8,7 @@ import Avatar from '@/components/ui/Avatar';
 import Link from 'next/link';
 import { Send, ArrowLeft, Loader2 } from 'lucide-react';
 import { timeAgo } from '@/lib/utils';
+import { motion } from 'motion/react';
 
 export default function ChatPage() {
   const { userId } = useParams();
@@ -41,7 +42,6 @@ export default function ChatPage() {
     finally { setSending(false); }
   };
 
-  return (
   return (
     <div className="max-w-2xl mx-auto flex flex-col h-[calc(100dvh-130px)] md:h-[calc(100vh-140px)] bg-white rounded-2xl border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.1)] overflow-hidden transition-all">
       {/* Dynamic Header */}
