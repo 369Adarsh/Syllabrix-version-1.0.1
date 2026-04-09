@@ -79,16 +79,23 @@ const verifyPayment = async (paymentId, razorpayPaymentId, razorpaySignature) =>
   const planKey = metadata.plan_key;
   const plan = PLANS[planKey];
 
-  // In production: verify Razorpay signature
-  // const expectedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-  //   .update(`${payment.razorpay_order_id}|${razorpayPaymentId}`)
-  //   .digest('hex');
-  // if (expectedSignature !== razorpaySignature) throw new Error('Invalid signature');
+  // Verify Razorpay signature
+  if (process.env.RAZORPAY_KEY_SECRET) {
+    const expectedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(`${payment.razorpay_order_id}|${razorpayPaymentId}`)
+      .digest('hex');
+    if (expectedSignature !== razorpaySignature) {
+      throw new Error('Payment signature verification failed. Possible tampered request.');
+    }
+  } else if (process.env.NODE_ENV === 'production') {
+    throw new Error('Payment gateway not configured. RAZORPAY_KEY_SECRET is missing.');
+  }
+  // In development without Razorpay keys, verification is skipped (dev-only bypass)
 
   // Update payment status
   await pool.query(
     `UPDATE payments SET status = 'captured', razorpay_payment_id = ?, razorpay_signature = ?, paid_at = NOW() WHERE id = ?`,
-    [razorpayPaymentId || `pay_${crypto.randomBytes(8).toString('hex')}`, razorpaySignature || 'verified', paymentId]
+    [razorpayPaymentId || `pay_${crypto.randomBytes(8).toString('hex')}`, razorpaySignature || 'dev_bypass', paymentId]
   );
 
   // Create/activate subscription
@@ -277,7 +284,7 @@ const createDoubtSession = async (studentId, data) => {
   const [result] = await pool.query(
     `INSERT INTO doubt_sessions (student_id, subject, question, mode, amount_inr, status)
      VALUES (?, ?, ?, ?, ?, ?)`,
-    [studentId, subject, question, mode || 'ai', amount, mode === 'ai' ? 'in_progress' : 'pending']
+    [studentId, subject, question, mode || 'ai', amount, mode === 'ai' ? 'resolved' : 'pending']
   );
 
   return { id: result.insertId, mode, amount };
@@ -314,13 +321,29 @@ const acceptDoubt = async (teacherId, sessionId) => {
 /**
  * Resolve a doubt
  */
-const resolveDoubt = async (sessionId, answer, userId) => {
+const resolveDoubt = async (sessionId, answer, teacherId) => {
+
+  const [session] = await pool.query(`SELECT teacher_id, mode FROM doubt_sessions WHERE id = ?`, [sessionId]);
+  if (session.length === 0) throw new Error('Session not found');
+
+  // Verify this teacher owns the session
+  if (teacherId && session[0].teacher_id !== teacherId) {
+    throw new Error('You are not the assigned teacher for this doubt');
+  }
+
   await pool.query(
     `UPDATE doubt_sessions SET teacher_answer = ?, status = 'resolved', resolved_at = NOW() WHERE id = ?`,
     [answer, sessionId]
   );
-  return { resolved: true };
+
+  // Reward teacher with XP (50 XP for resolving a doubt)
+  if (teacherId) {
+    await pool.query(`UPDATE users SET xp = xp + 50 WHERE id = ?`, [teacherId]);
+  }
+
+  return { resolved: true, xp_awarded: 50 };
 };
+
 
 module.exports = {
   PLANS,

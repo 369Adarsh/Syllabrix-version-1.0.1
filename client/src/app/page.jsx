@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, Brain, FlaskConical, GraduationCap, Shield, Users, Sparkles, BookOpen, Map, Play, Star, Zap, Globe, Award, Heart, CheckCircle, Gamepad2, Newspaper, MessageCircle, TrendingUp, Target, Mic, UserCheck } from 'lucide-react';
+import { ArrowRight, Brain, FlaskConical, GraduationCap, Shield, Users, Sparkles, BookOpen, Map, Play, Star, Zap, Globe, Award, Heart, CheckCircle, Gamepad2, Newspaper, MessageCircle, TrendingUp, Target, Mic, UserCheck, Building2 } from 'lucide-react';
 
 const STATS = [
   { num: '30+', label: 'AI Features' },
@@ -46,6 +46,7 @@ export default function LandingPage() {
               <a href="#pillars" className="hover:text-blue-700 transition-colors">Platform</a>
               <a href="#mentors" className="hover:text-blue-700 transition-colors">Mentors</a>
               <a href="#who" className="hover:text-blue-700 transition-colors">Who It&apos;s For</a>
+              <Link href="/corporate" className="flex items-center gap-1 text-blue-700 font-bold hover:text-blue-800 transition-colors"><Building2 size={14} /> For Business</Link>
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
               <Link href="/sign-in" className="inline-flex px-4 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-all">Sign In</Link>
@@ -86,6 +87,9 @@ export default function LandingPage() {
                 <a href="#features" className="px-6 py-3.5 rounded-xl text-sm font-semibold bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-all">
                   Explore Features
                 </a>
+                <Link href="/corporate" className="px-6 py-3.5 rounded-xl text-sm font-bold bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-orange-500/25 hover:from-amber-600 transition-all flex items-center gap-2">
+                  <Building2 size={15} /> Corporate L&D
+                </Link>
               </div>
               <div className="mt-10 flex flex-wrap gap-6 sm:gap-10">
                 {STATS.map((s, i) => (

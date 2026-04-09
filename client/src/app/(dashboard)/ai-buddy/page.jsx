@@ -1,12 +1,15 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { aiAPI } from '@/lib/api/ai.api';
+import { careerAPI } from '@/lib/api/career.api';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import {
   Send, Sparkles, Brain, GraduationCap, Briefcase, BookOpen, Mic, MicOff,
   Plus, MessageSquare, Trash2, ChevronLeft, ChevronRight, Loader2, Clock,
-  X, Target, FlaskConical, Map, Lightbulb, Zap, MoreHorizontal, PanelLeftClose, PanelLeftOpen
+  X, Target, FlaskConical, Map, Lightbulb, Zap, MoreHorizontal, PanelLeftClose, PanelLeftOpen,
+  TrendingUp, Award, Globe, BarChart3, Bot, CheckCircle, CheckCircle2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -14,14 +17,14 @@ import toast from 'react-hot-toast';
 //  QUICK PROMPTS
 // ════════════════════════════════════════════════════════════
 const QUICK_PROMPTS = [
-  { icon: '🎯', text: 'What should I choose — PCM or PCB?', tag: 'Career' },
-  { icon: '📚', text: 'How to prepare for JEE Main in 6 months?', tag: 'Exam' },
-  { icon: '🧬', text: 'Explain DNA replication step by step', tag: 'Science' },
-  { icon: '💼', text: 'What does a software engineer actually do?', tag: 'Career' },
-  { icon: '🧮', text: 'Solve: If 3x + 7 = 22, find x', tag: 'Math' },
-  { icon: '🌍', text: 'Give me 5 important current affairs this week', tag: 'GK' },
-  { icon: '🧠', text: 'Best study techniques for board exams?', tag: 'Tips' },
-  { icon: '🔬', text: 'What happens during photosynthesis?', tag: 'Science' },
+  { icon: '📈', text: 'Recent industry shifts in Tech 2026', tag: 'Market' },
+  { icon: '🎯', text: 'Mastery roadmap for Cloud Architecture', tag: 'Skills' },
+  { icon: '💼', text: 'Salary negotiation strategy for Lead roles', tag: 'Career' },
+  { icon: '🚀', text: 'Soft skills for first-time engineering managers', tag: 'Growth' },
+  { icon: '🌍', text: 'Global demand for AI Research Scientists', tag: 'Demand' },
+  { icon: '🧠', text: 'How to build domain authority in 6 months', tag: 'Personal' },
+  { icon: '🔬', text: 'Explain RAG vs Fine-tuning in LLMs', tag: 'Tech' },
+  { icon: '💡', text: 'Project ideas to showcase Senior expertise', tag: 'Portfolio' },
 ];
 
 const INTENT_BADGES = {
@@ -36,7 +39,9 @@ const INTENT_BADGES = {
 // ════════════════════════════════════════════════════════════
 //  SESSION SIDEBAR
 // ════════════════════════════════════════════════════════════
-function SessionSidebar({ sessions, activeId, onSelect, onNew, onDelete, collapsed, onToggle, loading }) {
+function SessionSidebar({ sessions, activeId, onSelect, onNew, onDelete, onClearAll, collapsed, onToggle, loading }) {
+  const [showConfirm, setShowConfirm] = useState(false);
+
   const formatTime = (dateStr) => {
     if (!dateStr) return '';
     const d = new Date(dateStr);
@@ -58,8 +63,8 @@ function SessionSidebar({ sessions, activeId, onSelect, onNew, onDelete, collaps
         <button onClick={onToggle} className="p-2 rounded-lg hover:bg-gray-100 transition-colors" title="Show chats">
           <PanelLeftOpen size={16} className="text-gray-500" />
         </button>
-        <button onClick={onNew} className="p-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 transition-colors" title="New chat">
-          <Plus size={16} className="text-indigo-600" />
+        <button onClick={onNew} className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors" title="New chat">
+          <Plus size={16} className="text-blue-600" />
         </button>
       </div>
     );
@@ -70,8 +75,8 @@ function SessionSidebar({ sessions, activeId, onSelect, onNew, onDelete, collaps
       {/* Header */}
       <div className="px-3 py-3 border-b border-gray-100 flex items-center justify-between">
         <button onClick={onNew}
-          className="flex-1 flex items-center justify-center gap-2 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-semibold hover:from-indigo-700 hover:to-purple-700 shadow-md shadow-indigo-200/40 transition-all active:scale-[0.98]">
-          <Plus size={14} /> New Chat
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-blue-600 text-white text-xs font-black uppercase tracking-widest hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all active:scale-[0.98]">
+          <Plus size={14} strokeWidth={3} /> New Strategy
         </button>
         <button onClick={onToggle} className="ml-2 p-2 rounded-lg hover:bg-gray-100 transition-colors" title="Hide sidebar">
           <PanelLeftClose size={14} className="text-gray-400" />
@@ -82,7 +87,7 @@ function SessionSidebar({ sessions, activeId, onSelect, onNew, onDelete, collaps
       <div className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5">
         {loading ? (
           <div className="text-center py-8">
-            <Loader2 size={20} className="animate-spin text-indigo-400 mx-auto" />
+            <Loader2 size={20} className="animate-spin text-blue-400 mx-auto" />
             <p className="text-xs text-gray-400 mt-2">Loading chats...</p>
           </div>
         ) : sessions.length === 0 ? (
@@ -92,51 +97,76 @@ function SessionSidebar({ sessions, activeId, onSelect, onNew, onDelete, collaps
             <p className="text-[10px] text-gray-300 mt-1">Start chatting with your AI buddy!</p>
           </div>
         ) : (
-          sessions.map(s => (
-            <div key={s.id}
-              className={`group flex items-start gap-2 px-2.5 py-2.5 rounded-xl cursor-pointer transition-all ${
-                activeId === s.id
-                  ? 'bg-indigo-50 border border-indigo-200/60'
-                  : 'hover:bg-gray-50 border border-transparent'
-              }`}
-              onClick={() => onSelect(s)}>
-              <MessageSquare size={14} className={`mt-0.5 flex-shrink-0 ${activeId === s.id ? 'text-indigo-500' : 'text-gray-400'}`} />
-              <div className="flex-1 min-w-0">
-                <p className={`text-[12px] font-medium truncate ${activeId === s.id ? 'text-indigo-700' : 'text-gray-700'}`}>
-                  {s.title || 'New Chat'}
-                </p>
-                <p className="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
-                  <Clock size={9} /> {formatTime(s.last_message_at || s.created_at)}
-                  {s.message_count > 0 && <span>· {s.message_count} msgs</span>}
-                </p>
+          <>
+            {sessions.map(s => (
+              <div key={s.id}
+                className={`group flex items-start gap-2 px-2.5 py-3 rounded-2xl cursor-pointer transition-all ${
+                  activeId === s.id
+                    ? 'bg-blue-50 border border-blue-100'
+                    : 'hover:bg-gray-50 border border-transparent'
+                }`}
+                onClick={() => onSelect(s)}>
+                <MessageSquare size={14} className={`mt-0.5 flex-shrink-0 ${activeId === s.id ? 'text-blue-500' : 'text-gray-400'}`} />
+                <div className="flex-1 min-w-0">
+                  <p className={`text-[12px] font-black tracking-tight truncate ${activeId === s.id ? 'text-blue-700' : 'text-gray-700'}`}>
+                    {s.title || 'New Strategy'}
+                  </p>
+                  <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1 font-bold uppercase">
+                    <Clock size={9} /> {formatTime(s.last_message_at || s.created_at)}
+                    {s.message_count > 0 && <span>· {s.message_count} steps</span>}
+                  </p>
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onDelete(s.id); }}
+                  className="opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-red-50 transition-all"
+                  title="Delete chat">
+                  <Trash2 size={12} className="text-red-400" />
+                </button>
               </div>
-              <button
-                onClick={(e) => { e.stopPropagation(); onDelete(s.id); }}
-                className="opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-red-50 transition-all"
-                title="Delete chat">
-                <Trash2 size={12} className="text-red-400" />
-              </button>
+            ))}
+            
+            <div className="pt-4 pb-2 px-2 mt-auto border-t border-gray-50">
+               {!showConfirm ? (
+                 <button 
+                  onClick={() => setShowConfirm(true)}
+                  className="w-full flex items-center justify-center gap-2 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 hover:text-red-500 transition-all">
+                   <Trash2 size={11} /> Clear All History
+                 </button>
+               ) : (
+                 <div className="flex items-center gap-1.5 animate-fade-in">
+                    <button 
+                      onClick={() => { onClearAll(); setShowConfirm(false); }}
+                      className="flex-1 py-1.5 rounded-lg bg-red-50 text-red-600 text-[10px] font-bold hover:bg-red-100 transition-all">
+                      Confirm Clear
+                    </button>
+                    <button 
+                      onClick={() => setShowConfirm(false)}
+                      className="p-1.5 rounded-lg bg-gray-50 text-gray-500 hover:bg-gray-100 transition-all">
+                      <X size={12} />
+                    </button>
+                 </div>
+               )}
             </div>
-          ))
+          </>
         )}
       </div>
     </div>
   );
 }
 
+
 // ════════════════════════════════════════════════════════════
 //  CHAT MESSAGE BUBBLE
 // ════════════════════════════════════════════════════════════
 function ChatBubble({ msg, isUser }) {
-  // Simple markdown: **bold**, `code`, numbered lists
+  const [copied, setCopied] = useState(false);
+
   const formatContent = (text) => {
     if (!text) return '';
-    // Split by code blocks first
     return text.split(/(`[^`]+`)/).map((part, i) => {
       if (part.startsWith('`') && part.endsWith('`')) {
-        return <code key={i} className="bg-gray-100 text-indigo-600 px-1.5 py-0.5 rounded text-[12px] font-mono">{part.slice(1, -1)}</code>;
+        return <code key={i} className="bg-gray-100 text-blue-600 px-1.5 py-0.5 rounded text-[12px] font-mono">{part.slice(1, -1)}</code>;
       }
-      // Bold
       return part.split(/(\*\*[^*]+\*\*)/).map((seg, j) => {
         if (seg.startsWith('**') && seg.endsWith('**')) {
           return <strong key={`${i}-${j}`} className="font-bold">{seg.slice(2, -2)}</strong>;
@@ -146,23 +176,39 @@ function ChatBubble({ msg, isUser }) {
     });
   };
 
+  const handleCopy = () => {
+    navigator.clipboard.writeText(msg.content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} animate-fade-in`}>
+    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} animate-fade-in group/bubble`}>
       {!isUser && (
-        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mr-2.5 mt-1 flex-shrink-0 shadow-sm">
-          <Sparkles size={14} className="text-white" />
+        <div className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center mr-3 mt-1 flex-shrink-0 shadow-lg shadow-blue-100">
+          <Bot size={18} className="text-white" />
         </div>
       )}
-      <div className={`max-w-[80%] px-4 py-3 text-sm leading-relaxed ${
+      <div className={`relative max-w-[80%] px-5 py-4 text-sm leading-relaxed ${
         isUser
-          ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl rounded-br-lg shadow-md shadow-indigo-200/30'
-          : 'bg-white border border-gray-100 text-gray-800 rounded-2xl rounded-bl-lg shadow-sm'
+          ? 'bg-blue-600 text-white rounded-[24px] rounded-br-lg shadow-xl shadow-blue-100 font-medium'
+          : 'bg-white border border-gray-100 text-gray-800 rounded-[24px] rounded-bl-lg shadow-sm font-medium'
       }`}>
         <p className="whitespace-pre-wrap">{formatContent(msg.content)}</p>
+        
+        {!isUser && (
+          <button 
+            onClick={handleCopy}
+            className="absolute top-2 right-2 p-1.5 rounded-lg bg-gray-50 text-gray-400 opacity-0 group-hover/bubble:opacity-100 transition-all hover:bg-blue-50 hover:text-blue-600"
+            title="Copy response">
+            {copied ? <CheckCircle size={12} className="text-emerald-500" /> : <Plus size={12} className="rotate-45" />}
+          </button>
+        )}
       </div>
     </div>
   );
 }
+
 
 // ════════════════════════════════════════════════════════════
 //  MAIN PAGE
@@ -184,14 +230,31 @@ export default function AIBuddyPage() {
 
   // Voice
   const [isListening, setIsListening] = useState(false);
-  const recognitionRef = useRef(null);
-  const bottomRef = useRef(null);
-  const inputRef = useRef(null);
+  // Dashboard data (wiring)
+  const [dashboardData, setDashboardData] = useState(null);
+  const [dataLoading, setDataLoading] = useState(true);
 
-  // ── Load sessions on mount ──
+  const inputRef = useRef(null);
+  const bottomRef = useRef(null);
+  const recognitionRef = useRef(null);
+
+  // ── Load data on mount ──
   useEffect(() => {
     loadSessions();
+    loadDashboardFacts();
   }, []);
+
+  const loadDashboardFacts = async () => {
+    setDataLoading(true);
+    try {
+      const res = await careerAPI.getDashboard();
+      setDashboardData(res.data?.data || null);
+    } catch (e) {
+      console.error('[Buddy] Failed to load dashboard facts:', e);
+    } finally {
+      setDataLoading(false);
+    }
+  };
 
   const loadSessions = async () => {
     setSessionsLoading(true);
@@ -277,6 +340,18 @@ export default function AIBuddyPage() {
     }
   };
 
+  const handleClearAll = async () => {
+    try {
+      await aiAPI.clearChatHistory('buddy');
+      setSessions([]);
+      setActiveSessionId(null);
+      setMessages([]);
+      toast.success('All history cleared');
+    } catch {
+      toast.error('Could not clear history');
+    }
+  };
+
   // ── Send message ──
   const sendMessage = async (text) => {
     const msg = (text || input).trim();
@@ -330,37 +405,44 @@ export default function AIBuddyPage() {
         onSelect={selectSession}
         onNew={startNewChat}
         onDelete={deleteSession}
+        onClearAll={handleClearAll}
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(p => !p)}
         loading={sessionsLoading}
       />
 
+
       {/* ═══ CHAT AREA ═══ */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Chat header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gradient-to-r from-indigo-50/80 to-purple-50/60">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-sm">
-              <Sparkles size={18} className="text-white" />
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white">
+          <div className="flex items-center gap-4">
+            <div className="w-11 h-11 rounded-2xl bg-blue-600 flex items-center justify-center shadow-xl shadow-blue-100">
+              <Bot size={22} className="text-white" />
             </div>
             <div>
-              <h1 className="font-bold text-gray-800 text-sm">AI Learning Buddy</h1>
-              <p className="text-[11px] text-gray-400">
+              <div className="flex items-center gap-2">
+                <h1 className="font-black text-gray-900 text-lg tracking-tighter uppercase">Professional AI Mentor</h1>
+                {dashboardData?.marketFitScore && (
+                  <div className="px-2 py-0.5 bg-blue-50 border border-blue-100 rounded-lg flex items-center gap-1.5 animate-pulse">
+                    <div className="w-1 h-1 rounded-full bg-blue-600" />
+                    <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest">{dashboardData.marketFitScore}% Match</span>
+                  </div>
+                )}
+              </div>
+              <p className="text-[11px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">
                 {activeSessionId
-                  ? sessions.find(s => s.id === activeSessionId)?.title || 'Continuing conversation...'
-                  : 'Ask me anything — career, doubts, exam prep, or just chat!'}
+                  ? sessions.find(s => s.id === activeSessionId)?.title || 'Strategic Guidance Session'
+                  : `Calibrating ${dashboardData?.profile?.industry || 'Professional'} Trajectory`}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-1.5">
-            <Link href="/mindmap" className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-500 hover:bg-white hover:text-indigo-600 transition-all">
-              <Brain size={12} /> Mind Map
+            <Link href="/career/skills" className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-gray-500 hover:bg-gray-50 hover:text-blue-600 transition-all uppercase tracking-tight border border-transparent hover:border-blue-100">
+              <Target size={12} /> Scanner
             </Link>
-            <Link href="/career-explorer" className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-500 hover:bg-white hover:text-indigo-600 transition-all">
-              <Map size={12} /> Careers
-            </Link>
-            <Link href="/prep" className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-gray-500 hover:bg-white hover:text-indigo-600 transition-all">
-              <GraduationCap size={12} /> Prep
+            <Link href="/professional/dashboard" className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-gray-500 hover:bg-gray-50 hover:text-blue-600 transition-all uppercase tracking-tight border border-transparent hover:border-blue-100">
+              <BarChart3 size={12} /> Dashboard
             </Link>
           </div>
         </div>
@@ -370,31 +452,87 @@ export default function AIBuddyPage() {
           {/* Loading messages for existing session */}
           {loadingMessages ? (
             <div className="flex flex-col items-center justify-center py-16">
-              <Loader2 size={24} className="animate-spin text-indigo-400 mb-3" />
+              <Loader2 size={24} className="animate-spin text-blue-400 mb-3" />
               <p className="text-sm text-gray-400">Loading conversation...</p>
             </div>
           ) : messages.length === 0 ? (
             /* Empty state */
             <div className="flex flex-col items-center justify-center py-8">
-              <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center mb-5">
-                <Sparkles size={32} className="text-indigo-500" />
+              <div className="w-20 h-20 rounded-[32px] bg-blue-50 border border-blue-100 flex items-center justify-center mb-6 shadow-sm">
+                <Bot size={32} className="text-blue-600" />
               </div>
-              <h2 className="font-extrabold text-gray-800 text-lg mb-1">
-                Hi{user?.username ? ` ${user.username}` : ''}! 👋
+              <h2 className="font-black text-gray-900 text-2xl mb-1 tracking-tighter uppercase">
+                Intelligence Pulse
               </h2>
-              <p className="text-sm text-gray-400 mb-6 text-center max-w-sm">
-                I&apos;m your AI learning buddy. I can help with doubts, career advice, exam prep, or anything you&apos;re curious about!
+              <p className="text-sm text-gray-400 mb-10 text-center max-w-sm font-medium">
+                Real-time professional facts and strategic gaps identified in your profile.
               </p>
+
+              {/* Data Wired Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-4xl mb-12">
+                 {/* Trajectory Card */}
+                 <div className="bg-white border border-gray-100 rounded-[32px] p-6 shadow-sm hover:shadow-xl hover:border-blue-100 transition-all group overflow-hidden relative">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 opacity-20 blur-3xl -mr-10 -mt-10" />
+                    <div className="flex items-center justify-between mb-4">
+                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">Market Fit</p>
+                       <TrendingUp size={14} className="text-blue-600" />
+                    </div>
+                    <p className="text-3xl font-black text-gray-900 leading-none">{dashboardData?.marketFitScore || 0}%</p>
+                    <div className="mt-4 space-y-2">
+                       <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden">
+                          <motion.div 
+                            initial={{ width: 0 }} 
+                            animate={{ width: `${dashboardData?.marketFitScore || 0}%` }} 
+                            className="h-full bg-blue-600" 
+                          />
+                       </div>
+                       <p className="text-[10px] text-blue-600 font-bold">TOP {dashboardData?.marketPercentile || '15'}% WORLDWIDE</p>
+                    </div>
+                 </div>
+
+                 {/* Critical Gaps Card */}
+                 <div className="bg-white border border-gray-100 rounded-[32px] p-6 shadow-sm hover:shadow-xl hover:border-blue-100 transition-all group overflow-hidden relative">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-50 opacity-20 blur-3xl -mr-10 -mt-10" />
+                    <div className="flex items-center justify-between mb-4">
+                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">Critical Gaps</p>
+                       <Award size={14} className="text-emerald-600" />
+                    </div>
+                    <p className="text-xl font-black text-gray-900 leading-tight">
+                       {dashboardData?.skillGaps?.[0]?.skill_name || 'Alignment Peak'}
+                    </p>
+                    <p className="text-[10px] text-gray-400 mt-2 font-medium">
+                       {dashboardData?.skillGaps?.[0] 
+                         ? `Expected Yield: ${dashboardData.skillGaps[0].salary_impact || '+₹3 LPA'}`
+                         : 'Profile perfectly matched to Tier-1 trends.'}
+                    </p>
+                 </div>
+
+                 {/* Market Opportunity Card */}
+                 <div className="bg-white border border-gray-100 rounded-[32px] p-6 shadow-sm hover:shadow-xl hover:border-blue-100 transition-all group overflow-hidden relative">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-purple-50 opacity-20 blur-3xl -mr-10 -mt-10" />
+                    <div className="flex items-center justify-between mb-4">
+                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">Market Trends</p>
+                       <Globe size={14} className="text-purple-600" />
+                    </div>
+                    <p className="text-xl font-black text-gray-900 leading-tight">
+                       {dashboardData?.profile?.industry || 'Tech Innovation'}
+                    </p>
+                    <p className="text-[10px] text-purple-600 mt-2 font-bold uppercase tracking-tight">
+                       Rising +12% Demand
+                    </p>
+                 </div>
+              </div>
 
               <div className="grid grid-cols-2 gap-2.5 max-w-lg w-full">
                 {QUICK_PROMPTS.map((p, i) => (
                   <button key={i} onClick={() => sendMessage(p.text)}
-                    className="text-left bg-white border border-gray-100 rounded-xl p-3.5 hover:shadow-md hover:border-indigo-200 transition-all active:scale-[0.98] group">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span className="text-base">{p.icon}</span>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 group-hover:text-indigo-500 transition-colors">{p.tag}</span>
+                    className="text-left bg-white border border-gray-100 rounded-[32px] p-5 hover:shadow-2xl hover:border-blue-200 transition-all active:scale-[0.98] group relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-blue-50 opacity-0 group-hover:opacity-100 blur-2xl -mr-8 -mt-8 transition-opacity" />
+                    <div className="flex items-center gap-3 mb-2 relative z-10">
+                      <span className="text-lg">{p.icon}</span>
+                      <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 group-hover:text-blue-600 transition-colors">{p.tag} Intelligence</span>
                     </div>
-                    <p className="text-[12.5px] text-gray-700 leading-relaxed">{p.text}</p>
+                    <p className="text-[13px] text-gray-800 leading-snug font-bold relative z-10">{p.text}</p>
                   </button>
                 ))}
               </div>
@@ -410,15 +548,15 @@ export default function AIBuddyPage() {
 
           {/* Typing indicator */}
           {sending && (
-            <div className="flex items-start gap-2.5 animate-fade-in">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-sm">
-                <Sparkles size={14} className="text-white animate-pulse" />
+            <div className="flex items-start gap-4 animate-fade-in px-2">
+              <div className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-100">
+                <Bot size={18} className="text-white animate-pulse" />
               </div>
-              <div className="bg-white border border-gray-100 rounded-2xl rounded-bl-lg px-4 py-3 shadow-sm">
-                <div className="flex gap-1.5">
-                  <div className="w-2 h-2 bg-indigo-300 rounded-full animate-bounce" />
-                  <div className="w-2 h-2 bg-indigo-300 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />
-                  <div className="w-2 h-2 bg-indigo-300 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
+              <div className="bg-white border border-gray-100 rounded-[24px] rounded-bl-lg px-5 py-4 shadow-sm">
+                <div className="flex gap-2">
+                  <div className="w-2.5 h-2.5 bg-blue-200 rounded-full animate-bounce" />
+                  <div className="w-2.5 h-2.5 bg-blue-200 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />
+                  <div className="w-2.5 h-2.5 bg-blue-200 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
                 </div>
               </div>
             </div>
@@ -434,7 +572,7 @@ export default function AIBuddyPage() {
               className={`p-2.5 rounded-xl transition-all flex-shrink-0 ${
                 isListening
                   ? 'bg-red-100 text-red-500 animate-pulse shadow-sm'
-                  : 'bg-gray-50 text-gray-400 hover:bg-indigo-50 hover:text-indigo-500'
+                  : 'bg-gray-50 text-gray-400 hover:bg-blue-50 hover:text-blue-600'
               }`}
               title={isListening ? 'Stop listening' : 'Voice input'}>
               {isListening ? <MicOff size={18} /> : <Mic size={18} />}
@@ -447,7 +585,7 @@ export default function AIBuddyPage() {
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={isListening ? '🎤 Listening...' : 'Ask me anything...'}
-                className="w-full bg-gray-50/80 border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 focus:bg-white transition-all pr-12"
+                className="w-full bg-gray-50/80 border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 focus:bg-white transition-all pr-12"
                 disabled={sending}
               />
               {input.trim() && !sending && (
@@ -458,8 +596,8 @@ export default function AIBuddyPage() {
             </div>
 
             <button onClick={() => sendMessage()} disabled={!input.trim() || sending}
-              className="p-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-200/40 hover:from-indigo-700 hover:to-purple-700 transition-all active:scale-[0.95] disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0">
-              {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+              className="p-3.5 rounded-2xl bg-blue-600 text-white shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all active:scale-[0.95] disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0">
+              {sending ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
             </button>
           </div>
 

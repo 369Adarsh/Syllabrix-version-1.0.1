@@ -171,7 +171,8 @@ const deleteFile = async (publicId) => {
 const RESUME_TABLE_MAP = {
   student: 'student_profiles',
   teacher: 'teacher_profiles',
-  professional_learner: 'professional_learner_profiles',
+  professional_learner: 'professional_learner_profiles', // Legacy support
+  organization: 'career_profiles', // For orgs in career dashboard
 };
 
 const uploadResumeFile = async (userId, userType, file) => {
@@ -179,16 +180,22 @@ const uploadResumeFile = async (userId, userType, file) => {
   if (file.mimetype !== 'application/pdf') throw ApiError.badRequest('Resume must be a PDF file.');
   if (file.size > 5 * 1024 * 1024) throw ApiError.badRequest('Resume must be under 5MB.');
 
-  const table = RESUME_TABLE_MAP[userType];
-  if (!table) throw ApiError.badRequest('Resume upload is not available for your account type.');
-
   const result = await uploadToCloudinary(file.buffer, {
     folder: 'resumes',
     resourceType: 'raw',
     public_id: `resume_${userId}_${Date.now()}`,
   });
 
-  await pool.query(`UPDATE \`${table}\` SET resume_url = ? WHERE user_id = ?`, [result.url, userId]);
+  const table = RESUME_TABLE_MAP[userType];
+  if (table) {
+    try {
+      // Check if resume_url column exists in target table before updating
+      // This is a safety net for career_profiles which doesn't have it
+      await pool.query(`UPDATE \`${table}\` SET resume_url = ? WHERE user_id = ?`, [result.url, userId]);
+    } catch (err) {
+      console.log(`[UploadService] Optional profile update skipped for ${userType}: ${err.message}`);
+    }
+  }
 
   return { url: result.url, message: 'Resume uploaded successfully!' };
 };

@@ -14,6 +14,7 @@ const create = async (userId, postData) => {
     post_type: postData.post_type,
     original_post_id: postData.original_post_id,
     hashtags: postData.hashtags,
+    feeling: postData.feeling,
   });
 
   const post = await queries.getPostById(postId);

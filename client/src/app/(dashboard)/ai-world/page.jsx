@@ -6,6 +6,8 @@ import {
   Sparkles, Bot, Compass, Map, FlaskConical, BookOpenCheck,
   Newspaper, Dumbbell, LibraryBig, GraduationCap, ChevronRight, Home
 } from 'lucide-react';
+import Image from 'next/image';
+import LottieAnimation from '@/components/ui/LottieAnimation';
 
 const TOOLS = [
   {
@@ -96,18 +98,25 @@ export default function AIWorldPage() {
           <Home size={11} /> Home
         </Link>
         <ChevronRight size={11} />
-        <span className="text-gray-600 font-medium">AI World</span>
+        <span className="text-gray-600 font-medium">Syllabrix AI Studio</span>
       </div>
 
       {/* Page header */}
       <FadeIn className="mb-8">
-        <h1 className="flex items-center gap-2.5 text-[26px] font-extrabold text-gray-900 leading-tight">
-          <Sparkles size={26} className="text-blue-500" />
-          AI World
-        </h1>
-        <p className="text-[14px] text-gray-500 mt-1">
-          Your intelligent learning toolkit — powered by Syllabrix AI
-        </p>
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700 p-6 shadow-xl">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
+          <div className="absolute bottom-0 left-10 w-48 h-48 bg-white/5 rounded-full translate-y-1/2" />
+          <div className="relative z-10 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <LottieAnimation src="/animations/ai-brain.json" className="w-16 h-16" />
+              <div>
+                <h1 className="text-[24px] font-extrabold text-white leading-tight">Syllabrix AI Studio</h1>
+                <p className="text-[14px] text-blue-200/80 mt-1">Your intelligent learning toolkit — powered by Syllabrix AI</p>
+              </div>
+            </div>
+            <Image src="/images/illustrations/mascot.png" alt="AI" width={100} height={100} className="w-24 h-24 object-cover rounded-2xl ring-2 ring-white/10 hidden md:block" />
+          </div>
+        </div>
       </FadeIn>
 
       {/* Cards grid */}

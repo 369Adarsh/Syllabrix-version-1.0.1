@@ -2,11 +2,19 @@
 const jwt = require('jsonwebtoken');
 const jwtConfig = require('../config/jwt');
 
-const generateToken = (userId) => {
+const generateToken = (userId, is_2fa_verified = false) => {
   return jwt.sign(
-    { userId },
+    { userId, is_2fa_verified },
     jwtConfig.secret,
     { expiresIn: jwtConfig.expiry, algorithm: jwtConfig.algorithm }
+  );
+};
+
+const generatePreTwoFAToken = (userId) => {
+  return jwt.sign(
+    { userId, pre_2fa: true },
+    jwtConfig.secret,
+    { expiresIn: '10m' }
   );
 };
 
@@ -34,4 +42,4 @@ const generateVerificationToken = (userId) => {
   );
 };
 
-module.exports = { generateToken, verifyToken, generateResetToken, generateVerificationToken };
+module.exports = { generateToken, verifyToken, generateResetToken, generateVerificationToken, generatePreTwoFAToken };

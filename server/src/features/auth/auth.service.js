@@ -5,12 +5,15 @@
 const crypto = require('crypto');
 const { ApiError } = require('../../utils/api-error');
 const { hashPassword, comparePassword } = require('../../utils/password-utils');
-const { generateToken, verifyToken, generateResetToken, generateVerificationToken } = require('../../utils/token-utils');
+const { generateToken, verifyToken, generateResetToken, generateVerificationToken, generatePreTwoFAToken } = require('../../utils/token-utils');
 const { calculateAge } = require('../../../../shared/utils/calculate-age');
 const { getAgeGroup } = require('../../../../shared/constants/age-groups');
 const { sendVerificationEmail, sendWelcomeEmail, sendPasswordResetEmail } = require('../../services/email.service');
 const { CLIENT_URL } = require('../../config/env');
 const queries = require('./auth.queries');
+const speakeasy = require('speakeasy');
+const qrcode = require('qrcode');
+const { socialPool: pool } = require('../../database/connection');
 
 // ======================== GENERATE SYLLABRIX ID ========================
 // Format: PREFIX-FFFFFFFFLPPPPYY  (10 chars after dash)
@@ -59,6 +62,22 @@ const generateSyllabrixId = async (user_type, username, phone, date_of_birth) =>
   return candidateId;
 };
 
+// ======================== GENERATE GUARDIAN ID ========================
+// Format: G-XXXXXXXXXX (10 random digits)
+const generateGID = async () => {
+  let gid;
+  let collision = true;
+
+  while (collision) {
+    const randomDigits = Math.floor(Math.random() * 10000000000).toString().padStart(10, '0');
+    gid = `G-${randomDigits}`;
+    const [rows] = await pool.query('SELECT user_id FROM parent_profiles WHERE guardian_id = ? LIMIT 1', [gid]);
+    if (rows.length === 0) collision = false;
+  }
+
+  return gid;
+};
+
 // ======================== REGISTER ========================
 
 const register = async (userData) => {
@@ -74,6 +93,11 @@ const register = async (userData) => {
   const existingEmail = await queries.findUserByEmail(email);
   if (existingEmail) throw ApiError.conflict('An account with this email already exists.');
 
+  // Block unauthorized admin creation
+  if (user_type === 'syllabrix_admin') {
+    throw ApiError.forbidden('Admin accounts cannot be created through the standard registration portal.');
+  }
+
   const age = calculateAge(date_of_birth);
   if (age !== null && age < 5) throw ApiError.badRequest('Users must be at least 5 years old to register.');
 
@@ -81,10 +105,72 @@ const register = async (userData) => {
   const password_hash = await hashPassword(password);
   const syllabrix_id = await generateSyllabrixId(user_type, fullName, phone, date_of_birth);
 
+  // G-ID Logic for Parent registration
+  let generatedGID = null;
+  if (user_type === 'parent') {
+    generatedGID = await generateGID();
+  }
+
+  // Student Validation: G-ID mandatory for 5-13, both emails mandatory
+  if (user_type === 'student' && age !== null && age >= 5 && age <= 13) {
+    if (!userData.guardian_id) {
+      throw ApiError.badRequest('Guardian ID is mandatory for students aged 5-13.');
+    }
+    // Verify G-ID exists
+    const [parent] = await pool.query('SELECT user_id FROM parent_profiles WHERE guardian_id = ? LIMIT 1', [userData.guardian_id]);
+    if (parent.length === 0) {
+      throw ApiError.badRequest('Invalid or non-existent Guardian ID.');
+    }
+  }
+
   const userId = await queries.createUser({
     username, full_name: fullName, email, password_hash, user_type, age_group,
     date_of_birth, gender, city, state, country: 'India', syllabrix_id, phone,
   });
+
+  // Create Parent Profile with G-ID immediately if parent
+  if (user_type === 'parent') {
+    await queries.createParentProfile({
+      user_id: userId,
+      full_name: fullName,
+      guardian_id: generatedGID,
+      relationship: 'other' // default
+    });
+  }
+
+  // Create Student Profile with linked G-ID immediately if student
+  if (user_type === 'student') {
+    await queries.createStudentProfile({
+      user_id: userId,
+      full_name: fullName,
+      age,
+      linked_guardian_id: userData.guardian_id || null,
+      requires_guardian: age !== null && age <= 13
+    });
+
+    // If G-ID provided, create the link in parent_child_links
+    if (userData.guardian_id) {
+      const [parent] = await pool.query('SELECT user_id FROM parent_profiles WHERE guardian_id = ? LIMIT 1', [userData.guardian_id]);
+      if (parent.length > 0) {
+        await pool.query('INSERT INTO parent_child_links (parent_user_id, child_user_id, status) VALUES (?, ?, ?)', [parent[0].user_id, userId, 'active']);
+      }
+    }
+  }
+
+  // Handle registration bundle (Parent creating children accounts)
+  if (user_type === 'parent' && userData.children && Array.isArray(userData.children)) {
+    for (const child of userData.children.slice(0, 4)) { // Limit to 4
+      try {
+        await register({
+          ...child,
+          user_type: 'student',
+          guardian_id: generatedGID // pass the parent's new G-ID
+        });
+      } catch (err) {
+        console.error(`[AUTH] Failed to auto-register child: ${child.email}`, err.message);
+      }
+    }
+  }
 
   const user = await queries.findUserById(userId);
 
@@ -103,6 +189,67 @@ const register = async (userData) => {
 
   // Don't create a session yet — user must verify email first before logging in
   return { user, requiresEmailVerification: true };
+};
+
+/**
+ * Register Admin directly - Skips normal onboarding, requires valid SECRET KEY
+ */
+const registerAdmin = async (data) => {
+  const { username, email, full_name, password, admin_role, secret_key } = data;
+
+  if (secret_key !== (process.env.ADMIN_REGISTRATION_SECRET || 'SYLLABRIX_SUPER_SECRET_2026')) {
+    throw ApiError.forbidden('Invalid Master Registration Secret.');
+  }
+
+  // 1. Validation
+  if (!email || !password || !admin_role) {
+    throw ApiError.badRequest('Email, password, and role are required');
+  }
+
+  const existingEmail = await queries.findUserByEmail(email);
+  if (existingEmail) throw ApiError.badRequest('Email already registered');
+
+  const existingUsername = await queries.findUserByUsername(username);
+  if (existingUsername) throw ApiError.badRequest('Username already taken');
+
+  // 2. Hash Password
+  const password_hash = await hashPassword(password);
+
+  // 3. Create core user (migration 128 adds 'syllabrix_admin' to user_type ENUM)
+  const { pool } = require('../../database/connection');
+  const userId = await queries.createUser({
+    username,
+    full_name: full_name || username,
+    email,
+    password_hash,
+    user_type: 'syllabrix_admin',
+    age_group: '18+',
+  });
+
+  // 4. Force inject the admin_role, ensure active, and mark profile complete
+  await pool.query(
+    "UPDATE users SET admin_role=?, is_active=1, is_profile_complete=1 WHERE id=?", 
+    [admin_role, userId]
+  );
+
+  // 5. Send verification email
+  try {
+    const { generateVerificationToken } = require('../../utils/token-utils');
+    const { sendVerificationEmail } = require('../../services/email.service');
+    const { CLIENT_URL } = require('../../config/env');
+
+    const verificationToken = generateVerificationToken(userId);
+    const verificationUrl = `${CLIENT_URL}/verify-email?token=${verificationToken}`;
+    await sendVerificationEmail({
+      to: email,
+      username: full_name || username,
+      verificationUrl,
+    });
+  } catch (emailErr) {
+    console.error('[EMAIL] Failed to send admin verification email:', emailErr.message);
+  }
+
+  return { message: 'Admin account created successfully. Please verify your email before logging in.' };
 };
 
 // ======================== GOOGLE LOGIN ========================
@@ -169,7 +316,7 @@ const googleLogin = async (googleIdToken) => {
 
 // ======================== LOGIN ========================
 
-const login = async (email, password, deviceInfo, ipAddress) => {
+const login = async (email, password, deviceInfo, ipAddress, isAdminPortal = false) => {
   // Find user by email
   const user = await queries.findUserByEmail(email);
   if (!user) {
@@ -210,12 +357,68 @@ const login = async (email, password, deviceInfo, ipAddress) => {
 
   // Get clean user (without password_hash)
   const cleanUser = await queries.findUserById(user.id);
+  const isAdmin = cleanUser.user_type === 'syllabrix_admin' || cleanUser.admin_role;
+
+  // Enforce portal separation
+  if (isAdminPortal && !isAdmin) {
+    throw ApiError.unauthorized('Unauthorized access. This portal is for administrative personnel only.');
+  }
+  if (!isAdminPortal && isAdmin) {
+    throw ApiError.forbidden('Administrative accounts must log in via the dedicated Admin Portal.');
+  }
+
+  // 2FA Logic for Admins
+  const is2FARequired = (cleanUser.user_type === 'syllabrix_admin' || cleanUser.admin_role) && cleanUser.is_2fa_enabled;
+
+  // When 2FA is required, issue a short-lived pre-2FA token (10 min) for the verify step only
+  const pre2FAToken = is2FARequired ? generatePreTwoFAToken(cleanUser.id) : null;
 
   return {
     user: cleanUser,
-    token,
+    token: is2FARequired ? null : token,
+    pre_2fa_token: pre2FAToken,
+    requires_2fa: is2FARequired,
     requiresProfileCompletion: !user.is_profile_complete,
   };
+};
+
+/**
+ * 2FA Setup: Generate secret and QR code
+ */
+const setup2FA = async (userId) => {
+  const user = await queries.findUserById(userId);
+  const secret = speakeasy.generateSecret({ 
+    name: `Syllabrix:${user.email}`,
+    issuer: 'Syllabrix'
+  });
+  
+  await pool.query('UPDATE users SET totp_secret = ? WHERE id = ?', [secret.base32, userId]);
+  
+  const qrCodeDataURL = await qrcode.toDataURL(secret.otpauth_url);
+  return { secret: secret.base32, qrCode: qrCodeDataURL };
+};
+
+/**
+ * 2FA Verification: Confirm token and enable 2FA
+ */
+const verify2FA = async (userId, token) => {
+  const [users] = await pool.query('SELECT totp_secret FROM users WHERE id = ?', [userId]);
+  if (!users[0] || !users[0].totp_secret) throw ApiError.badRequest('2FA not set up for this user.');
+
+  const verified = speakeasy.totp.verify({
+    secret: users[0].totp_secret,
+    encoding: 'base32',
+    token
+  });
+
+  if (verified) {
+    await pool.query('UPDATE users SET is_2fa_enabled = 1 WHERE id = ?', [userId]);
+    // Generate a new "MFA-verified" token
+    const newUserToken = generateToken(userId, true); // true for is_2fa_verified
+    return { verified: true, token: newUserToken };
+  }
+
+  return { verified: false };
 };
 
 // ======================== VERIFY EMAIL ========================
@@ -692,8 +895,9 @@ const updateIdentity = async (userId, data) => {
 };
 
 module.exports = {
-  register, login, logout, getCurrentUser, googleLogin,
+  register, registerAdmin, login, logout, getCurrentUser, googleLogin,
   completeProfile, forgotPassword, resetPassword,
   verifyEmail, resendVerificationEmail, applyMentor,
   skipProfile, updateProfile, updateIdentity,
+  setup2FA, verify2FA
 };

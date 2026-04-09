@@ -3,8 +3,11 @@ const queries = require('./live-classes.queries');
 const { emitToUser } = require('../../socket/index');
 const { getPagination, getPaginationMeta } = require('../../utils/pagination');
 
+const crypto = require('crypto');
+
 const create = async (hostId, data) => {
-  const classId = await queries.createClass({ host_id: hostId, ...data });
+  const roomId = data.room_id || crypto.randomUUID().slice(0, 13).replace(/-/g, '');
+  const classId = await queries.createClass({ host_id: hostId, room_id: roomId, ...data });
   return queries.getClassById(classId);
 };
 

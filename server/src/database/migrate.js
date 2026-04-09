@@ -1,40 +1,23 @@
-// Migration Runner — Reads and executes SQL files in order
-// FIXED: Properly strips comments before executing SQL
+// Migration Runner — Reads and executes SQL files in order across multiple databases
 const fs = require('fs');
 const path = require('path');
-const { pool, testConnection } = require('./connection');
+const { socialPool, ldPool, testConnection } = require('./connection');
 
 const MIGRATIONS_DIR = path.resolve(__dirname, '..', '..', '..', 'database', 'migrations');
 
 const runMigrations = async () => {
   console.log('');
   console.log('========================================');
-  console.log('  Syllabrix Migration Runner');
+  console.log('  Syllabrix Multi-DB Migration Runner');
   console.log('========================================');
   console.log('');
 
-  const connected = await testConnection();
-  if (!connected) {
-    console.error('Cannot run migrations — database not reachable.');
-    process.exit(1);
-  }
+  // 1. Initial connectivity check (Optional - will skip individual pools later)
+  await testConnection().catch(() => {
+    console.warn('  ⚠️  Warning: Initial connection check failed. Will retry per phase.');
+  });
 
-  // Create migrations tracking table
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS _migrations (
-      id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-      filename VARCHAR(255) NOT NULL,
-      executed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (id),
-      UNIQUE KEY uk_migration_file (filename)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-  `);
-
-  // Get already-run migrations
-  const [executed] = await pool.query('SELECT filename FROM _migrations ORDER BY id');
-  const executedSet = new Set(executed.map((r) => r.filename));
-
-  // Find all phase directories and collect SQL files
+  // Find all phase directories
   const phases = fs.readdirSync(MIGRATIONS_DIR)
     .filter((d) => d.startsWith('phase-'))
     .sort();
@@ -43,12 +26,43 @@ const runMigrations = async () => {
   let totalSkipped = 0;
 
   for (const phase of phases) {
+    // 2. Determine target pool (Phase-LD goes to Corporate, others to Social)
+    const isCorporate = phase.startsWith('phase-ld');
+    const targetPool = isCorporate ? ldPool : socialPool;
+    const dbLabel = isCorporate ? '[CORPORATE]' : '[SOCIAL]   ';
+
+    // 3. Check pool connectivity for this specific phase
+    try {
+      const conn = await targetPool.getConnection();
+      conn.release();
+    } catch (e) {
+      console.warn(`  ⚠️  Skipping Phase: ${phase} — ${dbLabel} is not reachable.`);
+      continue;
+    }
+
     const phaseDir = path.join(MIGRATIONS_DIR, phase);
     const files = fs.readdirSync(phaseDir)
       .filter((f) => f.endsWith('.sql'))
       .sort();
 
-    console.log(`  Phase: ${phase} (${files.length} files)`);
+    if (files.length === 0) continue;
+
+    console.log(`  ${dbLabel} Phase: ${phase} (${files.length} files)`);
+
+    // 4. Ensure _migrations table exists in the target DB
+    await targetPool.query(`
+      CREATE TABLE IF NOT EXISTS _migrations (
+        id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+        filename VARCHAR(255) NOT NULL,
+        executed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY uk_migration_file (filename)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    // 5. Get already-run migrations for THIS database
+    const [executed] = await targetPool.query('SELECT filename FROM _migrations ORDER BY id');
+    const executedSet = new Set(executed.map((r) => r.filename));
 
     for (const file of files) {
       const key = `${phase}/${file}`;
@@ -59,31 +73,22 @@ const runMigrations = async () => {
       }
 
       const sql = fs.readFileSync(path.join(phaseDir, file), 'utf8');
-
-      // Extract only the UP section (before -- DOWN)
       const upSql = sql.split('-- DOWN')[0];
-
-      // Strip all comment lines, then extract SQL statements
-      const cleanedSql = upSql
-        .split('\n')
-        .filter((line) => !line.trim().startsWith('--'))
-        .join('\n');
-
-      // Split by semicolon and get non-empty statements
-      const statements = cleanedSql
-        .split(';')
-        .map((s) => s.trim())
-        .filter((s) => s.length > 0);
+      const cleanedSql = upSql.split('\n').filter((line) => !line.trim().startsWith('--')).join('\n');
+      const statements = cleanedSql.split(';').map((s) => s.trim()).filter((s) => s.length > 0);
 
       try {
         for (const stmt of statements) {
           if (stmt.toUpperCase().includes('CREATE TABLE') ||
               stmt.toUpperCase().includes('ALTER TABLE') ||
-              stmt.toUpperCase().includes('INSERT')) {
-            await pool.query(stmt);
+              stmt.toUpperCase().includes('ALTER COLUMN') ||
+              stmt.toUpperCase().includes('INSERT') ||
+              stmt.toUpperCase().includes('UPDATE') ||
+              stmt.toUpperCase().includes('DELETE')) {
+            await targetPool.query(stmt);
           }
         }
-        await pool.query('INSERT INTO _migrations (filename) VALUES (?)', [key]);
+        await targetPool.query('INSERT INTO _migrations (filename) VALUES (?)', [key]);
         console.log(`    ✓ ${file}`);
         totalRun++;
       } catch (error) {
@@ -95,7 +100,8 @@ const runMigrations = async () => {
   }
 
   console.log('');
-  console.log(`  Done! ${totalRun} migrations executed, ${totalSkipped} skipped (already run).`);
+  console.log(`  Done! ${totalRun} migrations executed, ${totalSkipped} skipped.`);
+  console.log('========================================');
   console.log('');
   process.exit(0);
 };

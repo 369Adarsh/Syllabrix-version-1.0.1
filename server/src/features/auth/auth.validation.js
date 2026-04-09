@@ -37,6 +37,15 @@ const registerValidation = [
 
   body('city').optional().trim().isLength({ max: 100 }),
   body('state').optional().trim().isLength({ max: 100 }),
+
+  // Guardian ID for students
+  body('guardian_id').optional().trim().isLength({ max: 15 }),
+
+  // Company Name for organization
+  body('company_name').optional().trim().isLength({ max: 200 }),
+
+  // Children bundle for unified registration
+  body('children').optional().isArray(),
 ];
 
 const loginValidation = [

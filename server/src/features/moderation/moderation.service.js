@@ -1,19 +1,48 @@
 const q = require('./moderation.queries');
+const aiService = require('../../services/ai.service');
 
-// Bad words filter (basic — production would use Perspective API)
-const BAD_WORDS = ['abuse','hate','kill','stupid','idiot','dumb','ugly','loser','shut up','die'];
+const checkContent = async (text) => {
+  if (!text) return { clean: true, flagged: [], reason: '' };
+  
+  const prompt = `Analyze the following text strictly for severe platform violations.
+You must protect this academic environment by blocking content related to:
+1. Abuse, Profanity, or Hate Speech
+2. Sexual content or Nudity references
+3. Terrorism, Extremism, or Violence
+4. Religious or Caste-based conflict/discrimination
+5. Extreme Negativity, Bullying, or Self-Harm
 
-const checkContent = (text) => {
-  if (!text) return { clean: true, flagged: [] };
-  const lower = text.toLowerCase();
-  const flagged = BAD_WORDS.filter(w => lower.includes(w));
-  return { clean: flagged.length === 0, flagged };
+Return ONLY a JSON response strictly in this exact format:
+{"clean": boolean, "flagged": ["list", "of", "triggering", "themes"], "reason": "brief explanation if clean is false"}
+
+Input Text: "${text}"`;
+
+  try {
+     const data = await aiService.generateJSON(prompt);
+     return { 
+       clean: data.clean !== false, 
+       flagged: data.flagged || [], 
+       reason: data.reason || '' 
+     };
+  } catch (err) {
+     console.error('[AI Moderation Error]', err);
+     // Fail-safe open on API timeout so app doesn't break, but log
+     return { clean: true, flagged: [], reason: 'AI timeout' };
+  }
 };
 
 const moderateContent = async (contentType, contentId, userId, text) => {
-  const result = checkContent(text);
+  const result = await checkContent(text);
   if (!result.clean) {
-    await q.logModeration({ content_type: contentType, content_id: contentId, user_id: userId, original_text: text, action_taken: 'flagged', reason: 'Contains inappropriate words', flagged_words: result.flagged });
+    await q.logModeration({ 
+      content_type: contentType, 
+      content_id: contentId, 
+      user_id: userId, 
+      original_text: text, 
+      action_taken: 'flagged', 
+      reason: result.reason || 'AI Flagged', 
+      flagged_words: result.flagged 
+    });
     const strikes = await q.getUserStrikes(userId);
     if (strikes >= 5) {
       // Auto-ban after 5 strikes

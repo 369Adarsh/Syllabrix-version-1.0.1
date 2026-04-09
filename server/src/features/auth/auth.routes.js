@@ -35,6 +35,13 @@ router.post('/register',
   authController.register
 );
 
+// POST /api/auth/register-admin
+router.post('/register-admin',
+  authLimiter,
+  sanitizeBody,
+  authController.registerAdmin
+);
+
 // POST /api/auth/login
 router.post('/login',
   authLimiter,

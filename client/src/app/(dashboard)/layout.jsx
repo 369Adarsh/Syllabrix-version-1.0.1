@@ -8,7 +8,7 @@ import TopBar from '@/components/layout/TopBar';
 import BottomNav from '@/components/layout/BottomNav';
 
 // Pages that manage their own full-width/height layout
-const FULL_BLEED_PAGES = ['/ai-library'];
+const FULL_BLEED_PAGES = ['/ai-library', '/live-classes/room'];
 
 export default function DashboardLayout({ children }) {
   const pathname = usePathname();
@@ -25,7 +25,7 @@ export default function DashboardLayout({ children }) {
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
         {/* Main area — shifted right on desktop */}
-        <div className="md:ml-[220px] pt-[56px]">
+        <div className="md:ml-[200px] pt-[56px]">
           <AnimatePresence mode="wait" initial={false}>
             <motion.main
               key={pathname}

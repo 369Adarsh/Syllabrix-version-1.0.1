@@ -263,6 +263,14 @@ const updateSessionTitle = asyncHandler(async (req, res) => {
   sendSuccess(res, { updated: true });
 });
 
+const clearSessions = asyncHandler(async (req, res) => {
+  const { type } = req.query;
+  if (!type) return res.status(400).json({ success: false, message: 'Type is required' });
+  await pool.query(`DELETE FROM ai_chat_sessions WHERE user_id = ? AND session_type = ?`, [req.user.id, type]);
+  sendSuccess(res, { cleared: true });
+});
+
+
 // ═══ CHAT HISTORY — NEW ENDPOINTS ═══
 const getChatSessions = asyncHandler(async (req, res) => {
   const type = req.query.type || 'buddy';
@@ -457,7 +465,7 @@ module.exports = {
   generateMindMap, generateMindMapNotes,
   getSubjects, getChapters, getTopics,
   generateFlowchart, explainWithDiagram,
-  buddyChat, createSession, deleteSession, updateSessionTitle,
+  buddyChat, createSession, deleteSession, clearSessions, updateSessionTitle,
   getStreamGuidance, compareStreams, careerChat,
   getAIExamDetails,
   clearDoubt, doubtChat,

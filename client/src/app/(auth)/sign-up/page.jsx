@@ -17,6 +17,7 @@ const isPersonalEmail = (email) => {
 
 const USER_TYPES = [
   { value: 'student', label: 'Student', icon: GraduationCap, desc: 'School, college or coaching', color: 'blue' },
+  { value: 'parent', label: 'Parent', icon: User, desc: 'Manage child accounts', color: 'indigo' },
   { value: 'teacher', label: 'Teacher', icon: BookOpen, desc: 'Teach & guide learners', color: 'emerald' },
   { value: 'institute', label: 'Institute', icon: Building2, desc: 'School, college or academy', color: 'purple' },
   { value: 'professional_learner', label: 'Professional Learner', icon: Briefcase, desc: 'Upskill your career', color: 'amber' },
@@ -25,6 +26,7 @@ const USER_TYPES = [
 
 const COLOR_MAP = {
   blue: { bg: 'bg-blue-50', border: 'border-blue-500', text: 'text-blue-700', ring: 'ring-blue-500/20', dot: 'bg-blue-500' },
+  indigo: { bg: 'bg-indigo-50', border: 'border-indigo-500', text: 'text-indigo-700', ring: 'ring-indigo-500/20', dot: 'bg-indigo-500' },
   emerald: { bg: 'bg-emerald-50', border: 'border-emerald-500', text: 'text-emerald-700', ring: 'ring-emerald-500/20', dot: 'bg-emerald-500' },
   purple: { bg: 'bg-purple-50', border: 'border-purple-500', text: 'text-purple-700', ring: 'ring-purple-500/20', dot: 'bg-purple-500' },
   amber: { bg: 'bg-amber-50', border: 'border-amber-500', text: 'text-amber-700', ring: 'ring-amber-500/20', dot: 'bg-amber-500' },
@@ -65,11 +67,33 @@ export default function SignUpPage() {
     date_of_birth: '',
     user_type: 'student',
     company_name: '',
+    guardian_id: '',
     password: '',
     confirmPassword: '',
   });
 
+  const [addChild, setAddChild] = useState(false);
+  const [childForm, setChildForm] = useState({
+    fullName: '',
+    email: '',
+    date_of_birth: '',
+    gender: 'male',
+    password: '',
+  });
+
   const update = (key, val) => setForm(prev => ({ ...prev, [key]: val }));
+
+  const calculateAge = (dob) => {
+    if (!dob) return null;
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -81,25 +105,23 @@ export default function SignUpPage() {
       toast.error('Password must be at least 8 characters');
       return;
     }
-    if (form.phone && !/^[6-9]\d{9}$/.test(form.phone)) {
-      toast.error('Enter a valid 10-digit Indian mobile number');
-      return;
-    }
-    // Organization: require company work email
+
     if (form.user_type === 'organization') {
       if (!form.company_name.trim()) {
         toast.error('Company name is required for organization accounts');
         return;
       }
       if (isPersonalEmail(form.email)) {
-        toast.error('Organizations must use a work email address (no Gmail, Yahoo, etc.)');
+        toast.error('Organizations must use a work email address');
         return;
       }
     }
+
     if (!agreedToTerms) {
-      toast.error('Please agree to the Terms of Service and Privacy Policy');
+      toast.error('Please agree to the Terms of Service');
       return;
     }
+
     setLoading(true);
     try {
       await register({
@@ -109,31 +131,34 @@ export default function SignUpPage() {
         user_type: form.user_type,
         date_of_birth: form.date_of_birth || undefined,
         phone: form.phone || undefined,
+        guardian_id: form.user_type === 'student' ? form.guardian_id.trim().toUpperCase() : undefined,
         company_name: form.user_type === 'organization' ? form.company_name.trim() : undefined,
+        children: (form.user_type === 'parent' && addChild) ? [{
+          fullName: childForm.fullName.trim(),
+          email: childForm.email.trim().toLowerCase(),
+          date_of_birth: childForm.date_of_birth,
+          gender: childForm.gender,
+          password: childForm.password,
+        }] : undefined
       });
-      // Redirect to check-email page — pass email via query param
       window.location.href = `/check-email?email=${encodeURIComponent(form.email.trim().toLowerCase())}`;
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Registration failed. Please try again.');
+      toast.error(err.response?.data?.message || 'Registration failed.');
     } finally {
       setLoading(false);
     }
   };
 
+  const mainAge = calculateAge(form.date_of_birth);
+
   return (
     <div>
-      {/* Header */}
       <div className="mb-7">
-        <h1 className="text-[28px] font-extrabold tracking-tight text-gray-900">
-          Create your account
-        </h1>
-        <p className="text-gray-500 text-sm mt-1.5">
-          Join India&apos;s complete education ecosystem — free forever
-        </p>
+        <h1 className="text-[28px] font-extrabold tracking-tight text-gray-900">Create account</h1>
+        <p className="text-gray-500 text-sm mt-1.5">Join the Syllabrix ecosystem</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Full Name */}
         <InputField
           icon={User}
           label="Full Name"
@@ -141,73 +166,49 @@ export default function SignUpPage() {
           onChange={e => update('fullName', e.target.value)}
           placeholder="Your full name"
           required
-          autoComplete="name"
         />
 
-        {/* Email */}
-        <div>
-          <InputField
-            icon={Mail}
-            label={form.user_type === 'organization' ? 'Work Email address' : 'Email address'}
-            type="email"
-            value={form.email}
-            onChange={e => update('email', e.target.value)}
-            placeholder={form.user_type === 'organization' ? 'you@company.com (no Gmail/Yahoo)' : 'you@example.com'}
-            required
-            autoComplete="email"
-          />
-          {form.user_type === 'organization' && (
-            <p className="text-[11px] text-amber-600 mt-1 pl-1">Organizations must use a work email — personal email addresses are not accepted.</p>
-          )}
-        </div>
+        <InputField
+          icon={Mail}
+          label="Email address"
+          type="email"
+          value={form.email}
+          onChange={e => update('email', e.target.value)}
+          placeholder="you@example.com"
+          required
+        />
 
-        {/* Company Name — only for Organization */}
         {form.user_type === 'organization' && (
           <InputField
             icon={Building}
             label="Company Name"
             value={form.company_name}
             onChange={e => update('company_name', e.target.value)}
-            placeholder="Official registered company name"
+            placeholder="Official company name"
             required
-            autoComplete="organization"
           />
         )}
 
-        {/* Phone */}
-        <div>
-          <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">
-            {form.user_type === 'organization' ? 'Work Phone' : 'Mobile Number'}{' '}
-            <span className="text-gray-400 font-normal">(optional)</span>
-          </label>
-          <div className="relative">
-            <Phone size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            <div className="absolute left-10 top-1/2 -translate-y-1/2 text-[13px] text-gray-500 font-medium pointer-events-none select-none">
-              +91
-            </div>
-            <input
-              type="tel"
-              value={form.phone}
-              onChange={e => update('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
-              placeholder="10-digit mobile number"
-              autoComplete="tel"
-              className="w-full pl-16 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-[14px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 focus:bg-white transition-all"
-            />
-          </div>
-        </div>
-
-        {/* Date of Birth */}
         <InputField
           icon={Calendar}
           label="Date of Birth"
           type="date"
           value={form.date_of_birth}
           onChange={e => update('date_of_birth', e.target.value)}
-          placeholder=""
-          autoComplete="bday"
+          required
         />
 
-        {/* User Type */}
+        {form.user_type === 'student' && form.date_of_birth && (
+          <InputField
+            icon={User}
+            label={mainAge <= 13 ? 'Guardian ID (Mandatory for age <= 13)' : 'Guardian ID (Optional)'}
+            value={form.guardian_id}
+            onChange={e => update('guardian_id', e.target.value)}
+            placeholder="G-XXXXXXXXXX"
+            required={mainAge <= 13}
+          />
+        )}
+
         <div>
           <label className="block text-[13px] font-semibold text-gray-700 mb-2">I am a</label>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
@@ -219,117 +220,124 @@ export default function SignUpPage() {
                   key={type.value}
                   type="button"
                   onClick={() => update('user_type', type.value)}
-                  className={`relative flex flex-col items-center gap-1.5 p-3.5 rounded-xl border-2 text-center transition-all duration-200 ${
-                    selected
-                      ? `${c.bg} ${c.border} ring-4 ${c.ring}`
-                      : 'bg-white border-gray-100 hover:border-gray-200 hover:bg-gray-50'
+                  className={`relative flex flex-col items-center gap-1.5 p-3.5 rounded-xl border-2 text-center transition-all ${
+                    selected ? `${c.bg} ${c.border} ring-4 ${c.ring}` : 'bg-white border-gray-100 hover:bg-gray-50'
                   }`}
                 >
-                  <type.icon size={20} className={selected ? c.text : 'text-gray-400'} strokeWidth={selected ? 2.5 : 1.5} />
-                  <span className={`text-[12px] font-bold leading-tight ${selected ? c.text : 'text-gray-700'}`}>
-                    {type.label}
-                  </span>
-                  <span className={`text-[10px] leading-tight ${selected ? c.text : 'text-gray-400'}`}>
-                    {type.desc}
-                  </span>
-                  {selected && (
-                    <span className={`absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full ${c.dot} flex items-center justify-center`}>
-                      <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </span>
-                  )}
+                  <type.icon size={20} className={selected ? c.text : 'text-gray-400'} />
+                  <span className={`text-[12px] font-bold ${selected ? c.text : 'text-gray-700'}`}>{type.label}</span>
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Password */}
-        <div>
-          <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">Password</label>
-          <div className="relative">
-            <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            <input
-              type={showPassword ? 'text' : 'password'}
-              value={form.password}
-              onChange={e => update('password', e.target.value)}
-              placeholder="At least 8 characters"
-              required
-              autoComplete="new-password"
-              className="w-full pl-10 pr-12 py-3 rounded-xl border border-gray-200 bg-gray-50 text-[14px] text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 focus:bg-white transition-all"
-            />
-            <button type="button" onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+        {form.user_type === 'parent' && (
+          <div className="mt-4 p-4 rounded-xl border-2 border-indigo-100 bg-indigo-50/30 space-y-4">
+            <label className="flex items-center gap-3 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={addChild}
+                onChange={e => setAddChild(e.target.checked)}
+                className="w-4 h-4 rounded text-indigo-600 accent-indigo-600"
+              />
+              <span className="text-[14px] font-bold text-indigo-900">Create account for my child too</span>
+            </label>
+            
+            {addChild && (
+              <div className="space-y-4 pt-4 border-t border-indigo-100">
+                <InputField
+                  icon={User}
+                  label="Child's Full Name"
+                  value={childForm.fullName}
+                  onChange={e => setChildForm({ ...childForm, fullName: e.target.value })}
+                  placeholder="Child's name"
+                  required={addChild}
+                />
+                <InputField
+                  icon={Mail}
+                  label="Child's Email Address"
+                  type="email"
+                  value={childForm.email}
+                  onChange={e => setChildForm({ ...childForm, email: e.target.value })}
+                  placeholder="child@example.com"
+                  required={addChild}
+                />
+                <InputField
+                  icon={Calendar}
+                  label="Child's DOB (Upto 13)"
+                  type="date"
+                  value={childForm.date_of_birth}
+                  onChange={e => {
+                    const age = calculateAge(e.target.value);
+                    if (age > 13) {
+                      toast.error("Unified registration is only for children age 13 and under.");
+                      return;
+                    }
+                    setChildForm({ ...childForm, date_of_birth: e.target.value });
+                  }}
+                  required={addChild}
+                />
+                <InputField
+                  icon={Lock}
+                  label="Child's Password"
+                  type="password"
+                  value={childForm.password}
+                  onChange={e => setChildForm({ ...childForm, password: e.target.value })}
+                  placeholder="Min 8 characters"
+                  required={addChild}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="space-y-4">
+          <InputField
+            icon={Lock}
+            label="Password"
+            type={showPassword ? 'text' : 'password'}
+            value={form.password}
+            onChange={e => update('password', e.target.value)}
+            placeholder="Min 8 characters"
+            required
+          >
+            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400">
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
-          </div>
-        </div>
+          </InputField>
 
-        {/* Confirm Password */}
-        <div>
-          <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">Confirm Password</label>
-          <div className="relative">
-            <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            <input
-              type={showConfirm ? 'text' : 'password'}
-              value={form.confirmPassword}
-              onChange={e => update('confirmPassword', e.target.value)}
-              placeholder="Repeat your password"
-              required
-              autoComplete="new-password"
-              className={`w-full pl-10 pr-12 py-3 rounded-xl border text-[14px] text-gray-900 placeholder-gray-400 bg-gray-50 focus:outline-none focus:ring-2 focus:bg-white transition-all ${
-                form.confirmPassword && form.password !== form.confirmPassword
-                  ? 'border-red-400 focus:ring-red-500/20 focus:border-red-400'
-                  : 'border-gray-200 focus:ring-blue-500/30 focus:border-blue-500'
-              }`}
-            />
-            <button type="button" onClick={() => setShowConfirm(!showConfirm)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+          <InputField
+            icon={Lock}
+            label="Confirm Password"
+            type={showConfirm ? 'text' : 'password'}
+            value={form.confirmPassword}
+            onChange={e => update('confirmPassword', e.target.value)}
+            placeholder="Repeat password"
+            required
+          >
+            <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400">
               {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
-          </div>
-          {form.confirmPassword && form.password !== form.confirmPassword && (
-            <p className="text-[11px] text-red-500 mt-1 pl-1">Passwords do not match</p>
-          )}
+          </InputField>
         </div>
 
-        {/* Submit */}
         <button
           type="submit"
           disabled={loading}
-          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[14px] font-bold shadow-md shadow-blue-200/50 hover:from-blue-700 hover:to-indigo-700 active:scale-[0.99] transition-all disabled:opacity-60 disabled:cursor-not-allowed mt-2"
+          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-all disabled:opacity-60"
         >
-          {loading ? (
-            <><Loader2 size={16} className="animate-spin" /> Creating account...</>
-          ) : (
-            <>Create Account <ArrowRight size={15} /></>
-          )}
+          {loading ? <Loader2 size={16} className="animate-spin" /> : <>Create Account <ArrowRight size={15} /></>}
         </button>
 
-        {/* Terms checkbox */}
-        <label className="flex items-start gap-2.5 cursor-pointer group">
-          <input
-            type="checkbox"
-            checked={agreedToTerms}
-            onChange={e => setAgreedToTerms(e.target.checked)}
-            className="mt-0.5 w-4 h-4 rounded border-gray-300 text-blue-600 accent-blue-600 flex-shrink-0"
-          />
-          <span className="text-[12px] text-gray-500 leading-relaxed">
-            I agree to the{' '}
-            <span className="text-blue-600 font-medium cursor-pointer hover:text-blue-700">Terms of Service</span>
-            {' '}and{' '}
-            <span className="text-blue-600 font-medium cursor-pointer hover:text-blue-700">Privacy Policy</span>
-            {' '}of Syllabrix<span className="text-red-400 ml-0.5">*</span>
-          </span>
+        <label className="flex items-start gap-2.5 cursor-pointer">
+          <input type="checkbox" checked={agreedToTerms} onChange={e => setAgreedToTerms(e.target.checked)} className="mt-1" />
+          <span className="text-[12px] text-gray-500">I agree to the Terms and Privacy Policy</span>
         </label>
       </form>
 
       <p className="text-center text-[13px] text-gray-500 mt-6">
-        Already have an account?{' '}
-        <Link href="/sign-in" className="font-semibold text-blue-600 hover:text-blue-700 transition-colors">
-          Sign In
-        </Link>
+        Already have an account? <Link href="/sign-in" className="font-semibold text-blue-600">Sign In</Link>
       </p>
     </div>
   );

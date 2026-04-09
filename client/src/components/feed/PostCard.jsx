@@ -116,11 +116,26 @@ export default function PostCard({ post: initialPost, onDelete }) {
           ) : (<span className="text-white font-semibold text-sm">{post.username?.charAt(0)?.toUpperCase()}</span>)}
         </Link>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <Link href={'/profile/' + post.user_id} className="font-semibold text-gray-800 hover:text-blue-600 text-sm">{post.username}</Link>
-            <span className="text-[10px] font-medium text-gray-400 capitalize bg-gray-50 px-1.5 py-0.5 rounded">{post.user_type}</span>
+          <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5">
+            <Link href={'/profile/' + post.user_id} className="font-bold text-gray-900 hover:text-blue-600 text-[13px] md:text-sm tracking-tight">{post.username}</Link>
+            {post.feeling && (
+              <div className="flex items-center gap-1 text-[11px] md:text-[13px] text-gray-400 font-medium">
+                <span className="hidden sm:inline">is feeling</span>
+                <span className="text-gray-900 flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded-lg border border-gray-100/50">
+                  <span className="text-xs">{
+                    {
+                      'Productive': '🦾', 'Excited': '🤩', 'Grateful': '🙏', 
+                      'Achieving': '🏆', 'Focused': '🎯', 'Inspired': '💡', 
+                      'Happy': '😊', 'Tired': '🥱'
+                    }[post.feeling] || '😊'
+                  }</span>
+                  <span className="text-[10px] md:text-[11px] font-black uppercase tracking-tighter">{post.feeling}</span>
+                </span>
+              </div>
+            )}
+            <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100/50">{post.user_type}</span>
           </div>
-          <p className="text-[11px] text-gray-400">{timeAgo(post.created_at)}</p>
+          <p className="text-[10px] font-bold text-gray-300 uppercase tracking-widest mt-0.5">{timeAgo(post.created_at)}</p>
         </div>
 
         {/* 3-DOT MENU — WORKING */}
@@ -175,23 +190,28 @@ export default function PostCard({ post: initialPost, onDelete }) {
         {post.shares_count > 0 && <span>{post.shares_count} share{post.shares_count !== 1 ? 's' : ''}</span>}
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center border-t border-gray-100 px-2">
-        <motion.button whileTap={{ scale: 0.9 }} onClick={handleLike} className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold rounded-lg transition-all mx-0.5 ${liked ? 'text-red-500' : 'text-gray-500 hover:bg-gray-50 hover:text-red-500'}`}>
+      {/* Actions — Calibrated for Touch */}
+      <div className="flex items-center border-t border-gray-100 px-2 py-1 md:py-0">
+        <motion.button whileTap={{ scale: 0.92 }} onClick={handleLike} className={`flex-1 flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 py-2.5 rounded-xl transition-all mx-0.5 ${liked ? 'text-red-500 bg-red-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
           <motion.span animate={liked ? { scale: [1, 1.4, 1] } : {}} transition={{ duration: 0.3 }}>
-            <Heart size={16} fill={liked ? 'currentColor' : 'none'} />
+            <Heart size={18} fill={liked ? 'currentColor' : 'none'} strokeWidth={2.5} />
           </motion.span>
-          Like
+          <span className="text-[10px] md:text-xs font-black uppercase tracking-widest">{liked ? 'Strategic' : 'Like'}</span>
         </motion.button>
-        <motion.button whileTap={{ scale: 0.9 }} onClick={loadComments} className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold rounded-lg transition-all mx-0.5 ${showComments ? 'text-blue-600' : 'text-gray-500 hover:bg-gray-50 hover:text-blue-600'}`}>
-          <MessageCircle size={16} /> Comment
+
+        <motion.button whileTap={{ scale: 0.92 }} onClick={loadComments} className={`flex-1 flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 py-2.5 rounded-xl transition-all mx-0.5 ${showComments ? 'text-blue-600 bg-blue-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
+          <MessageCircle size={18} strokeWidth={2.5} />
+          <span className="text-[10px] md:text-xs font-black uppercase tracking-widest">Connect</span>
         </motion.button>
-        <motion.button whileTap={{ scale: 0.9 }} onClick={handleShare} className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-gray-500 rounded-lg hover:bg-gray-50 hover:text-blue-600 transition-all mx-0.5">
-          <Share2 size={16} /> Share
+
+        <motion.button whileTap={{ scale: 0.92 }} onClick={handleShare} className="flex-1 flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 py-2.5 rounded-xl text-gray-500 hover:bg-gray-50 transition-all mx-0.5">
+          <Share2 size={18} strokeWidth={2.5} />
+          <span className="text-[10px] md:text-xs font-black uppercase tracking-widest">Deploy</span>
         </motion.button>
-        <motion.button whileTap={{ scale: 0.85 }} onClick={handleSave} className={`flex items-center justify-center p-2.5 rounded-lg transition-all ${saved ? 'text-amber-500' : 'text-gray-400 hover:bg-gray-50 hover:text-amber-500'}`}>
+
+        <motion.button whileTap={{ scale: 0.85 }} onClick={handleSave} className={`flex items-center justify-center p-3 rounded-xl transition-all ${saved ? 'text-amber-500 bg-amber-50' : 'text-gray-400 hover:bg-gray-50'}`}>
           <motion.span animate={saved ? { scale: [1, 1.3, 1] } : {}} transition={{ duration: 0.25 }}>
-            <Bookmark size={16} fill={saved ? 'currentColor' : 'none'} />
+            <Bookmark size={18} fill={saved ? 'currentColor' : 'none'} strokeWidth={2.5} />
           </motion.span>
         </motion.button>
       </div>

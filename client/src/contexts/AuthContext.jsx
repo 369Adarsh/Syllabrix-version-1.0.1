@@ -34,13 +34,19 @@ export function AuthProvider({ children }) {
 
   useEffect(() => { loadUser(); }, [loadUser]);
 
-  const login = async (email, password) => {
-    const res = await authAPI.login({ email, password });
-    const { token, user: userData, requiresProfileCompletion } = res.data.data;
-localStorage.setItem('syllabrix_token', token);
-localStorage.setItem('syllabrix_user', JSON.stringify(userData));
-setUser(userData);
-return { ...userData, requiresProfileCompletion };
+  const login = async (email, password, isAdminPortal = false) => {
+    const res = await authAPI.login({ email, password, isAdminPortal });
+    const { token, user: userData, requiresProfileCompletion, requires_2fa, pre_2fa_token } = res.data.data;
+
+    // 2FA challenge — don't store a session yet, hand control back to the caller
+    if (requires_2fa) {
+      return { requires_2fa: true, pre_2fa_token, user: userData };
+    }
+
+    localStorage.setItem('syllabrix_token', token);
+    localStorage.setItem('syllabrix_user', JSON.stringify(userData));
+    setUser(userData);
+    return { ...userData, requiresProfileCompletion };
   };
 
   const register = async (data) => {

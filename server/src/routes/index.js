@@ -60,4 +60,23 @@ router.use('/library', require('../features/library/library.routes'));
 // FITNESS MODULE — AI Fitness Coach, Workouts, Diet, Habits, Coaches
 router.use('/fitness', require('../features/fitness/fitness.routes'));
 
+// AI STUDY TABLE - Workspace, Documents, Generation
+router.use('/study-table', require('../features/study-table/study-table.routes'));
+
+// ═══ CORPORATE L&D PLATFORM ═══
+router.use('/ld/org',     require('../features/corporate/ld-org/ld-org.routes'));
+router.use('/ld/skills',  require('../features/corporate/ld-skills/ld-skills.routes'));
+router.use('/ld/content', require('../features/corporate/ld-content/ld-content.routes'));
+router.use('/ld/lms',     require('../features/corporate/ld-lms/ld-lms.routes'));
+
+// ═══ JEE COMMAND — Complete JEE Preparation Platform ═══
+router.use('/jee', require('../features/jee/jee.routes'));
+
+// ═══ CAREER INTELLIGENCE — Professional Learner Platform ═══
+router.use('/career', require('../features/career/career.routes'));
+
+// ═══ ADMINISTRATIVE CONTROL CENTER ═══
+router.use('/admin',      require('../features/admin/admin.routes'));
+router.use('/support',    require('../features/support/support.routes'));
+
 module.exports = router;

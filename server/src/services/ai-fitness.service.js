@@ -176,6 +176,49 @@ Keep it warm, personal, and under 2 sentences each.`;
   return await generateJSON(prompt, { task: 'fast', maxTokens: 512, temperature: 0.9 });
 };
 
+// ─── Fresh News Generation ───────────────────────────────────
+
+const getFreshNews = async (count = 5) => {
+  const prompt = `Generate ${count} fresh, trending health and fitness news headlines for today.
+Target audience: Health-conscious individuals in India.
+Include various categories like: 'research', 'guidelines', 'industry', 'nutrition', 'yoga'.
+
+Return a JSON object with this structure:
+{
+  "news": [
+    {
+      "title": "Compelling headline",
+      "source": "Credible source name",
+      "excerpt": "1-2 sentence summary of the news impact",
+      "category": "category_slug"
+    }
+  ]
+}
+Make them realistic and relevant to current health trends (AI in fitness, new dietary guidelines, sports science breakthroughs, etc.).`;
+
+  const result = await generateJSON(prompt, { task: 'fast', maxTokens: 2048, temperature: 0.8 });
+  return result?.news || [];
+};
+
+// ─── Dynamic Insight Generation ───────────────────────────────
+
+const getDynamicInsight = async (profile, dashboardData) => {
+  const context = buildUserContext(profile);
+  const prompt = `Based on the user's fitness profile and today's activity, generate one unique, actionable "Fresh Insight" for them.
+${context}
+
+TODAY'S ACTIVITY:
+Streak: ${dashboardData.totalHabitStreak} days
+Habits Completed: ${dashboardData.completedTodayHabits}/${dashboardData.totalHabits}
+Water: ${dashboardData.checkin?.water_ml || 0}ml
+Workout: ${dashboardData.todayWorkout ? dashboardData.todayWorkout.day_name : 'No workout scheduled'}
+
+Return JSON: { "title": "Insight Title", "content": "1-2 sentence insight", "priority": "high|medium|low" }
+The insight should be fresh, specific (e.g. mention late night sleep if sleep is low, or suggest a specific food if goal is muscle gain), and scientific.`;
+
+  return await generateJSON(prompt, { task: 'fast', maxTokens: 512, temperature: 0.8 });
+};
+
 // ─── Calculate BMI, BMR, TDEE ───────────────────────────────
 
 const calculateMetrics = (profile) => {
@@ -219,5 +262,7 @@ module.exports = {
   generateWorkoutPlan,
   generateDietPlan,
   generateMotivation,
+  getFreshNews,
+  getDynamicInsight,
   calculateMetrics,
 };

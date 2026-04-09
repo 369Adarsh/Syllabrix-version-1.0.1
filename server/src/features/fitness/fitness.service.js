@@ -13,10 +13,19 @@ const getProfile = async (userId) => {
 };
 
 const saveProfile = async (userId, data) => {
-  // Calculate metrics
-  const metrics = aiFitness.calculateMetrics({ ...data, age: data.age, gender: data.gender });
+  // Use provided data or fallback to reasonable defaults if truly missing
+  const age = data.age || 30;
+  const gender = data.gender || 'prefer_not_to_say';
+  const activity_level = data.activity_level || 'sedentary';
+
+  // Calculate metrics (BMI, BMR, TDEE)
+  const metrics = aiFitness.calculateMetrics({ ...data, age, gender, activity_level });
+  
   const profileData = {
     ...data,
+    age,
+    gender,
+    activity_level,
     ...metrics,
     onboarding_complete: true,
   };
@@ -54,16 +63,34 @@ const getDashboard = async (userId) => {
   // Weekly progress
   const weeklyCheckins = await queries.getCheckinHistory(userId, 7);
 
-  // Generate motivation
+  // Generate motivation & dynamic insight
   let motivation = null;
+  let freshInsight = null;
   if (profile) {
     try {
-      motivation = await aiFitness.generateMotivation(profile, totalHabitStreak, completedToday > 0 ? Math.round((completedToday / Math.max(habits.length, 1)) * 100) : 0);
+      const dashboardData = {
+        totalHabitStreak,
+        completedTodayHabits: completedToday,
+        totalHabits: habits.length,
+        checkin,
+        todayWorkout
+      };
+      
+      [motivation, freshInsight] = await Promise.all([
+        aiFitness.generateMotivation(profile, totalHabitStreak, completedToday > 0 ? Math.round((completedToday / Math.max(habits.length, 1)) * 100) : 0),
+        aiFitness.getDynamicInsight(profile, dashboardData)
+      ]);
     } catch (e) {
-      motivation = { message: "Every step counts! Keep pushing towards your goals! 💪", tip: "Try drinking a glass of water right now.", emoji: "🔥" };
+      console.error("[FitnessService] AI Insights error:", e);
+      motivation = { 
+        message: "Every step counts! Keep pushing towards your healthy lifestyle goals! 💪", 
+        tip: "Consistency is more important than intensity when starting out.", 
+        emoji: "🔥" 
+      };
+      freshInsight = { title: "Stay Consistent", content: "Small daily actions lead to big long-term results. Keep going!", priority: "medium" };
     }
   }
-
+ 
   return {
     profile,
     checkin,
@@ -76,6 +103,7 @@ const getDashboard = async (userId) => {
     progress: progressLogs,
     weeklyCheckins,
     motivation,
+    freshInsight,
     stats: {
       totalHabitStreak,
       completedTodayHabits: completedToday,
@@ -85,6 +113,7 @@ const getDashboard = async (userId) => {
     },
   };
 };
+
 
 // ─── AI Coach Chat ───────────────────────────────────────────
 
@@ -102,18 +131,25 @@ const generateWorkout = async (userId, options = {}) => {
   const profile = await queries.getProfile(userId);
   if (!profile) throw ApiError.badRequest('Please complete your fitness profile first');
 
-  const plan = await aiFitness.generateWorkoutPlan(profile, options);
-  const saved = await queries.createWorkoutPlan(userId, {
-    title: plan.title || 'AI Generated Workout Plan',
-    description: plan.description,
-    plan_type: 'ai_generated',
-    difficulty: profile.fitness_level,
-    goal: profile.goal,
-    days_per_week: plan.days?.length || 5,
-  }, plan.days || []);
+  try {
+    const plan = await aiFitness.generateWorkoutPlan(profile, options);
+    if (!plan || !plan.days) throw new Error("Invalid AI output");
 
-  await queries.logActivity(userId, 'generate_workout', 'workout_plan', saved.id);
-  return saved;
+    const saved = await queries.createWorkoutPlan(userId, {
+      title: plan.title || 'Personalized AI Workout Plan',
+      description: plan.description || 'A custom plan tailored to your fitness level and goals.',
+      plan_type: 'ai_generated',
+      difficulty: profile.fitness_level,
+      goal: profile.goal,
+      days_per_week: plan.days?.length || 5,
+    }, plan.days || []);
+
+    await queries.logActivity(userId, 'generate_workout', 'workout_plan', saved.id);
+    return saved;
+  } catch (e) {
+    console.error("[FitnessService] Workout Generation AI error:", e);
+    throw ApiError.internal('Our AI trainer is currently busy. Please try again in a few moments.');
+  }
 };
 
 const getUserWorkouts = async (userId) => {
@@ -135,19 +171,26 @@ const generateDiet = async (userId, options = {}) => {
   const profile = await queries.getProfile(userId);
   if (!profile) throw ApiError.badRequest('Please complete your fitness profile first');
 
-  const plan = await aiFitness.generateDietPlan(profile, options);
-  const saved = await queries.createDietPlan(userId, {
-    plan_type: 'ai_generated',
-    total_calories: plan.total_calories,
-    protein_g: plan.protein_g,
-    carbs_g: plan.carbs_g,
-    fats_g: plan.fats_g,
-    fiber_g: plan.fiber_g,
-    water_ml: plan.water_ml,
-  }, plan.meals || []);
+  try {
+    const plan = await aiFitness.generateDietPlan(profile, options);
+    if (!plan || !plan.meals) throw new Error("Invalid AI output");
 
-  await queries.logActivity(userId, 'generate_diet', 'diet_plan', saved?.id);
-  return saved;
+    const saved = await queries.createDietPlan(userId, {
+      plan_type: 'ai_generated',
+      total_calories: plan.total_calories || 2000,
+      protein_g: plan.protein_g,
+      carbs_g: plan.carbs_g,
+      fats_g: plan.fats_g,
+      fiber_g: plan.fiber_g,
+      water_ml: plan.water_ml || 2500,
+    }, plan.meals || []);
+
+    await queries.logActivity(userId, 'generate_diet', 'diet_plan', saved?.id);
+    return saved;
+  } catch (e) {
+    console.error("[FitnessService] Diet Generation AI error:", e);
+    throw ApiError.internal('Our AI nutritionist is crafting other plans. Please try again in a moment.');
+  }
 };
 
 const getTodayDiet = async (userId) => {
@@ -228,9 +271,29 @@ const getArticleById = async (id) => {
 
 // ─── News ────────────────────────────────────────────────────
 
-const getNews = async (limit) => {
-  return queries.getNews(limit);
+const getNews = async (limit = 10) => {
+  const dbNews = await queries.getNews(limit);
+  
+  // Logic for freshness: If we have no news or the news is older than 24 hours,
+  // we fetch/generate fresh news using AI.
+  const isFresh = dbNews.length > 0 && 
+                  (new Date() - new Date(dbNews[0].published_at)) < (24 * 3600 * 1000);
+                  
+  if (isFresh && dbNews.length >= 3) {
+    return dbNews;
+  }
+  
+  console.log("[FitnessService] NEWS STALE: Generating fresh AI news...");
+  try {
+    const freshNews = await aiFitness.getFreshNews(limit);
+    // Return AI news (merged with DB if needed, but AI news is 'fresher')
+    return [...freshNews, ...dbNews].slice(0, limit);
+  } catch (e) {
+    console.error("[FitnessService] News generation error:", e);
+    return dbNews;
+  }
 };
+
 
 // ─── Coaches ─────────────────────────────────────────────────
 

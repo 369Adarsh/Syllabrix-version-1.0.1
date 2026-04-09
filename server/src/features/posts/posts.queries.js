@@ -3,13 +3,14 @@ const { pool } = require('../../database/connection');
 const createPost = async (data) => {
   const [result] = await pool.query(
     `INSERT INTO posts (user_id, content, media_url, media_type, media_urls,
-                        visibility, group_id, post_type, original_post_id, hashtags)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                        visibility, group_id, post_type, original_post_id, hashtags, feeling)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [data.user_id, data.content || null, data.media_url || null,
      data.media_type || 'none', data.media_urls ? JSON.stringify(data.media_urls) : null,
      data.visibility || 'public', data.group_id || null,
      data.post_type || 'regular', data.original_post_id || null,
-     data.hashtags ? JSON.stringify(data.hashtags) : null]
+     data.hashtags ? JSON.stringify(data.hashtags) : null,
+     data.feeling || null]
   );
   return result.insertId;
 };

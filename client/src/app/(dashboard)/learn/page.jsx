@@ -5,6 +5,8 @@ import Link from 'next/link';
 import {
   GraduationCap, Trophy, Beaker, Mic, MessageSquare, Brain, Code, ChevronRight, Home, BookOpen
 } from 'lucide-react';
+import Image from 'next/image';
+import LottieAnimation from '@/components/ui/LottieAnimation';
 
 const TOOLS = [
   {
@@ -82,13 +84,20 @@ export default function LearnHubPage() {
 
       {/* Page header */}
       <FadeIn className="mb-8">
-        <h1 className="flex items-center gap-2.5 text-[26px] font-extrabold text-gray-900 leading-tight">
-          <BookOpen size={26} className="text-indigo-500" />
-          Learn
-        </h1>
-        <p className="text-[14px] text-gray-500 mt-1">
-          Master new skills with AI-powered interactive learning tracks
-        </p>
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 p-6 shadow-xl">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/4" />
+          <div className="relative z-10 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <LottieAnimation src="/animations/student-reading.json" className="w-20 h-20 hidden sm:block" />
+              <div>
+                <h1 className="text-[24px] font-extrabold text-white leading-tight">Learn</h1>
+                <p className="text-[14px] text-indigo-200/80 mt-1">Master new skills with AI-powered interactive learning tracks</p>
+              </div>
+            </div>
+            <Image src="/images/illustrations/study.png" alt="Study" width={120} height={120} className="w-28 h-28 object-cover rounded-xl hidden lg:block ring-2 ring-white/10" />
+          </div>
+        </div>
       </FadeIn>
 
       {/* Cards grid */}

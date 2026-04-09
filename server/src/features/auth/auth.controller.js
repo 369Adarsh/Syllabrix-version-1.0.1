@@ -8,22 +8,23 @@ const { asyncHandler } = require('../../utils/async-handler');
 
 // POST /api/auth/register
 const register = asyncHandler(async (req, res) => {
-  const { username, email, password, user_type, date_of_birth, gender, city, state, phone } = req.body;
-
-  const result = await authService.register({
-    username, email, password, user_type, date_of_birth, gender, city, state, phone,
-  });
-
+  const result = await authService.register(req.body);
   sendCreated(res, result, 'Account created! Please check your email to verify your account.');
+});
+
+// POST /api/auth/register-admin
+const registerAdmin = asyncHandler(async (req, res) => {
+  const result = await authService.registerAdmin(req.body);
+  sendCreated(res, result, 'Admin account created successfully.');
 });
 
 // POST /api/auth/login
 const login = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, isAdminPortal } = req.body;
   const deviceInfo = req.headers['user-agent'] || null;
   const ipAddress = req.ip || req.connection.remoteAddress || null;
 
-  const result = await authService.login(email, password, deviceInfo, ipAddress);
+  const result = await authService.login(email, password, deviceInfo, ipAddress, !!isAdminPortal);
 
   sendSuccess(res, result, 'Login successful!');
 });
@@ -119,7 +120,7 @@ const updateIdentity = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
-  register, login, logout, getMe, googleLogin,
+  register, registerAdmin, login, logout, getMe, googleLogin,
   completeProfile, forgotPassword, resetPassword,
   verifyEmail, resendVerification, applyMentor,
   skipProfile, updateProfile, updateIdentity,

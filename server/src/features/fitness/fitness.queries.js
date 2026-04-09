@@ -268,6 +268,14 @@ const enrollHabit = async (userId, templateId, customTarget) => {
 };
 
 const logHabit = async (userHabitId, value) => {
+  // 1. Check if already completed today
+  const [todayLog] = await pool.query(
+    'SELECT id FROM fitness_habit_logs WHERE user_habit_id = ? AND log_date = CURDATE()',
+    [userHabitId]
+  );
+  const alreadyDoneToday = todayLog.length > 0;
+
+  // 2. Insert or update the log
   await pool.query(
     `INSERT INTO fitness_habit_logs (user_habit_id, log_date, value, is_completed)
      VALUES (?, CURDATE(), ?, 1)
@@ -275,15 +283,24 @@ const logHabit = async (userHabitId, value) => {
     [userHabitId, value || null]
   );
 
-  // Update streak
-  const [habit] = await pool.query('SELECT * FROM fitness_user_habits WHERE id = ?', [userHabitId]);
-  if (habit[0]) {
-    const newStreak = habit[0].current_streak + 1;
-    const longestStreak = Math.max(newStreak, habit[0].longest_streak);
-    await pool.query(
-      'UPDATE fitness_user_habits SET current_streak = ?, longest_streak = ?, total_completed = total_completed + 1 WHERE id = ?',
-      [newStreak, longestStreak, userHabitId]
-    );
+  // 3. Update streak only if it's the FIRST completion of the day
+  if (!alreadyDoneToday) {
+    const [habit] = await pool.query('SELECT current_streak, longest_streak FROM fitness_user_habits WHERE id = ?', [userHabitId]);
+    if (habit[0]) {
+      // Check if yesterday was completed to continue streak, otherwise start from 1
+      const [yesterdayLog] = await pool.query(
+        'SELECT id FROM fitness_habit_logs WHERE user_habit_id = ? AND log_date = DATE_SUB(CURDATE(), INTERVAL 1 DAY)',
+        [userHabitId]
+      );
+      
+      const newStreak = yesterdayLog.length > 0 ? habit[0].current_streak + 1 : 1;
+      const longestStreak = Math.max(newStreak, habit[0].longest_streak);
+      
+      await pool.query(
+        'UPDATE fitness_user_habits SET current_streak = ?, longest_streak = ?, total_completed = total_completed + 1 WHERE id = ?',
+        [newStreak, longestStreak, userHabitId]
+      );
+    }
   }
 };
 

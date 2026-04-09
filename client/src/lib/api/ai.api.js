@@ -57,7 +57,10 @@ export const aiAPI = {
     api.post('/ai/chat/sessions', { session_type: sessionType, title, subject }),
   deleteSession: (sessionId) =>
     api.delete(`/ai/chat/sessions/${sessionId}`),
+  clearChatHistory: (type) =>
+    api.delete('/ai/chat/sessions/clear', { params: { type } }),
   updateSessionTitle: (sessionId, title) =>
+
     api.put(`/ai/chat/sessions/${sessionId}`, { title }),
 
   // ═══ CHAT HISTORY ═══

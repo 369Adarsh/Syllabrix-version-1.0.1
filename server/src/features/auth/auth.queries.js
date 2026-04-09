@@ -25,7 +25,7 @@ const findUserByUsername = async (username) => {
 const findUserById = async (id) => {
   const [rows] = await pool.query(
     `SELECT id, syllabrix_id, username, username_changed_at, full_name, full_name_changed_at,
-            email, user_type, age_group, date_of_birth, phone,
+            email, user_type, admin_role, is_2fa_enabled, age_group, date_of_birth, phone,
             profile_photo_url, cover_photo_url, bio, gender, city, state, country,
             is_verified, is_active, is_profile_complete, is_banned, strike_count,
             last_login_at, email_verified_at, created_at, updated_at
@@ -165,18 +165,18 @@ const createStudentProfile = async (data) => {
   const [result] = await pool.query(
     `INSERT INTO student_profiles
       (user_id, full_name, age, school_name, class_name, board, medium,
-       skills, interests, guardian_user_id, requires_guardian,
+       skills, interests, guardian_user_id, linked_guardian_id, requires_guardian,
        education_level, subject_stream, college_name, university,
        address_line1, address_city, address_state, address_pincode,
        ambition, hobby, favorite_subject, difficult_subject,
        loved_professions, future_vision, sports, sports_level,
        exam_type, exam_target_year, specialization_courses, mandatory_courses)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       data.user_id, data.full_name, data.age || null, data.school_name || null,
       data.class_name || null, data.board || null, data.medium || 'English',
       JSON.stringify(data.skills || []), JSON.stringify(data.interests || []),
-      data.guardian_user_id || null, data.requires_guardian ? 1 : 0,
+      data.guardian_user_id || null, data.linked_guardian_id || null, data.requires_guardian ? 1 : 0,
       data.education_level || 'school',
       data.subject_stream || null,
       data.college_name || null,
@@ -264,11 +264,11 @@ const createInstituteProfile = async (data) => {
 const createParentProfile = async (data) => {
   const [result] = await pool.query(
     `INSERT INTO parent_profiles
-      (user_id, full_name, occupation, relationship, notification_email,
+      (user_id, full_name, guardian_id, occupation, relationship, notification_email,
        hobby_involvement, sports_involvement)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
-      data.user_id, data.full_name, data.occupation || null,
+      data.user_id, data.full_name, data.guardian_id || null, data.occupation || null,
       data.relationship, data.notification_email || null,
       data.hobby_involvement || null, data.sports_involvement || null,
     ]

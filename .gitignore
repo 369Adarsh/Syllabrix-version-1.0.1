@@ -15,3 +15,9 @@ Thumbs.db
 coverage/
 tmp/
 server/.env.ai-keys-to-add.txt
+*.log
+server/*.log
+server/*.txt
+server/test_output.json
+server/scratch/
+trash/

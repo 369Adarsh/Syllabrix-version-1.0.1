@@ -22,7 +22,7 @@ const authenticate = async (req, res, next) => {
 
     // Get user from database (ensures user still exists and is active)
     const [users] = await pool.query(
-      'SELECT id, username, email, user_type, age_group, is_active, is_banned, is_profile_complete, strike_count FROM users WHERE id = ?',
+      'SELECT id, username, email, user_type, admin_role, age_group, is_active, is_banned, is_profile_complete, strike_count FROM users WHERE id = ?',
       [decoded.userId]
     );
 
@@ -55,6 +55,7 @@ const authenticate = async (req, res, next) => {
       username: user.username,
       email: user.email,
       userType: user.user_type,
+      adminRole: user.admin_role,
       ageGroup: user.age_group,
       isActive: user.is_active,
       isBanned: user.is_banned,

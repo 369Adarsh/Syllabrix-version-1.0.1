@@ -11,6 +11,8 @@ import {
   GraduationCap, Users, Star
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { careerAPI } from '@/lib/api/career.api';
+import ProfessionalProfile from '@/components/profile/ProfessionalProfile';
 
 // ═══════════════════════════════════════════════════════════════════
 // CONSTANTS & CONFIG
@@ -285,6 +287,81 @@ const LinkCard = ({ href, label, icon: Icon = LinkIcon }) => {
       </div>
       <ExternalLink size={12} className="text-gray-300 group-hover:text-blue-400 transition-colors" />
     </a>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// PERSONA INTELLIGENCE HEADER
+// ═══════════════════════════════════════════════════════════════════
+const PersonaIntelligenceHeader = ({ user }) => {
+  const p = user?.profile || {};
+  const isStudent = user.user_type === 'student';
+  const isPro = user.user_type === 'professional_learner';
+
+  if (!isStudent && !isPro) return null;
+
+  return (
+    <div className="grid grid-cols-3 gap-3 mb-5">
+      {isStudent ? (
+        <>
+          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-4 text-white shadow-lg shadow-blue-500/10">
+            <div className="flex items-center gap-2 mb-1">
+              <Zap size={14} className="text-blue-200" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-blue-100">Total XP</span>
+            </div>
+            <p className="text-xl font-black">2,450</p>
+            <div className="w-full h-1 bg-white/20 rounded-full mt-2 overflow-hidden">
+              <div className="h-full bg-white w-3/4" />
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <Flame size={14} className="text-orange-500" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Streak</span>
+            </div>
+            <p className="text-xl font-black text-gray-800">12 Days</p>
+            <p className="text-[9px] text-orange-500 font-bold mt-1">Personal Best: 15</p>
+          </div>
+          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <Award size={14} className="text-indigo-500" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Badges</span>
+            </div>
+            <p className="text-xl font-black text-gray-800">8 Earned</p>
+            <p className="text-[9px] text-indigo-500 font-bold mt-1">3 Rare Unlocked</p>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="bg-slate-900 rounded-2xl p-4 text-white shadow-xl">
+            <div className="flex items-center gap-2 mb-1">
+              <CheckCircle size={14} className="text-emerald-400" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Skill Level</span>
+            </div>
+            <p className="text-xl font-black">Expert</p>
+            <p className="text-[9px] text-emerald-400 font-bold mt-1">92nd Percentile</p>
+          </div>
+          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <Star size={14} className="text-amber-500" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Certificates</span>
+            </div>
+            <p className="text-xl font-black text-gray-800">4 Verified</p>
+            <p className="text-[9px] text-indigo-500 font-bold mt-1">Top Endorsed: Python</p>
+          </div>
+          <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <Target size={14} className="text-rose-500" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Roadmap</span>
+            </div>
+            <p className="text-xl font-black text-gray-800">65% Done</p>
+            <div className="w-full h-1 bg-gray-100 rounded-full mt-2 overflow-hidden">
+               <div className="h-full bg-rose-500 w-[65%]" />
+            </div>
+          </div>
+        </>
+      )}
+    </div>
   );
 };
 
@@ -1112,6 +1189,25 @@ export default function MyProfilePage() {
   const [photoLoading, setPhotoLoading] = useState(false);
   const [coverLoading, setCoverLoading] = useState(false);
   const [resumeUrl, setResumeUrl] = useState('');
+  const [dashboardData, setDashboardData] = useState(null);
+
+  const loadDashboardData = useCallback(async () => {
+    try {
+      const res = await careerAPI.getDashboard();
+      setDashboardData(res.data?.data);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (user?.user_type === 'professional_learner' || user?.user_type === 'organization') {
+      loadDashboardData();
+    }
+  }, [user?.user_type, loadDashboardData]);
+
+  const handleRefreshAll = async () => {
+    await refreshUser();
+    await loadDashboardData();
+  };
 
   const saveSection = useCallback(async (data) => {
     try {
@@ -1142,9 +1238,37 @@ export default function MyProfilePage() {
   if (!user) return <div className="flex items-center justify-center min-h-screen bg-[#F3F4F6]"><Loader2 className="animate-spin text-blue-600" size={28} /></div>;
 
   const type   = user.user_type;
+  useEffect(() => {
+    console.log('DEBUG [Profile]:', { type, user });
+  }, [type, user]);
   const p      = user?.profile || {};
   const cfg    = getConfig(type);
   const TypeIcon = cfg.icon;
+  const handleSaveProfessional = useCallback(async (formData) => {
+    try {
+      // 1. Update Core Identity (Name, Bio)
+      await authAPI.updateProfile({
+        full_name: formData.full_name,
+        bio: formData.bio
+      });
+
+      // 2. Update Career Profile
+      await careerAPI.saveProfile({
+        current_role: formData.current_role,
+        current_company: formData.current_company,
+        industry: formData.industry,
+        experience_years: formData.experience_years
+      });
+
+      // 3. Sync State
+      await refreshUser();
+      await handleRefreshAll();
+    } catch (err) {
+      console.error('[SaveProfessional Error]:', err);
+      throw err;
+    }
+  }, [refreshUser, handleRefreshAll]);
+
   const initials = (user.full_name || user.username || '?')[0].toUpperCase();
   const location = [user.city || p.city, user.state || p.state].filter(Boolean).join(', ');
   const currentResumeUrl = resumeUrl || p.resume_url || '';
@@ -1152,10 +1276,28 @@ export default function MyProfilePage() {
 
   return (
     <div className="min-h-screen bg-[#F3F4F6] py-6">
-      <div className="max-w-5xl mx-auto px-4 md:px-6">
+      
+      {/* New Professional/Organization View */}
+      {(type === 'professional_learner' || type === 'organization') && (
+        <div className="max-w-7xl mx-auto px-4 md:px-6">
+          <ProfessionalProfile 
+            user={user} 
+            dashboardData={dashboardData}
+            onEdit={() => {
+              const bioSection = document.getElementById('persona-intel');
+              if (bioSection) bioSection.scrollIntoView({ behavior: 'smooth' });
+            }}
+            onRefresh={handleRefreshAll}
+            onSave={handleSaveProfessional}
+          />
+        </div>
+      )}
 
-        {/* ── 1. COVER BANNER ─────────────────────────────────────────── */}
-        <div className="relative h-40 md:h-56 w-full rounded-2xl overflow-hidden border border-gray-200 shadow-sm group">
+      {/* Legacy/Default View for other roles */}
+      {!(type === 'professional_learner' || type === 'organization') && (
+        <div className="max-w-5xl mx-auto px-4 md:px-6">
+          {/* ── 1. COVER BANNER ─────────────────────────────────────────── */}
+          <div className="relative h-40 md:h-56 w-full rounded-2xl overflow-hidden border border-gray-200 shadow-sm group">
           {user.cover_photo_url
             ? <img src={user.cover_photo_url} alt="Cover" className="w-full h-full object-cover" />
             : <div className={`w-full h-full bg-gradient-to-r ${cfg.cover}`} />}
@@ -1227,7 +1369,10 @@ export default function MyProfilePage() {
           </div>
         </div>
 
-        {/* ── 3. QUICK STATS BAR ───────────────────────────────────── */}
+        {/* ── 3. PERSONA INTELLIGENCE HEADER ────────────── */}
+        <PersonaIntelligenceHeader user={user} />
+
+        {/* ── 4. QUICK STATS BAR ───────────────────────────────────── */}
         <QuickStatsBar user={user} />
 
         {/* ── 4. TWO-COLUMN LAYOUT ─────────────────────────────────── */}
@@ -1280,6 +1425,7 @@ export default function MyProfilePage() {
           </div>
         </div>
       </div>
+    )}
     </div>
   );
 }

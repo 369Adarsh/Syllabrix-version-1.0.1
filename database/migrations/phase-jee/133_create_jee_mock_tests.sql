@@ -1,0 +1,23 @@
+CREATE TABLE IF NOT EXISTS jee_mock_tests (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(300) NOT NULL,
+  exam_type ENUM('main','advanced_p1','advanced_p2') NOT NULL DEFAULT 'main',
+  class_level TINYINT,
+  test_type ENUM('full_mock','chapter_test','topic_test','custom','daily_challenge') NOT NULL DEFAULT 'full_mock',
+  subject_id INT UNSIGNED,
+  chapter_id INT UNSIGNED,
+  duration_minutes INT NOT NULL DEFAULT 180,
+  total_questions INT NOT NULL DEFAULT 90,
+  total_marks INT NOT NULL DEFAULT 300,
+  question_ids JSON NOT NULL,
+  sections JSON,
+  marking_scheme JSON,
+  is_published TINYINT(1) DEFAULT 1,
+  difficulty_label VARCHAR(50) DEFAULT 'Moderate',
+  attempt_count INT UNSIGNED DEFAULT 0,
+  avg_score DECIMAL(5,1) DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (subject_id) REFERENCES jee_subjects(id),
+  FOREIGN KEY (chapter_id) REFERENCES jee_chapters(id),
+  INDEX idx_type (exam_type, test_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

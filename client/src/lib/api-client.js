@@ -10,7 +10,9 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('syllabrix_token');
-    if (token) config.headers.Authorization = `Bearer ${token}`;
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
   }
   // Extend timeout for file uploads
   if (config.headers['Content-Type'] === 'multipart/form-data') {

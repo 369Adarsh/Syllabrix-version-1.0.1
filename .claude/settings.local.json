@@ -2,7 +2,19 @@
   "permissions": {
     "allow": [
       "Bash(node src/database/migrate.js)",
-      "Bash(npx next:*)"
+      "Bash(npx next:*)",
+      "Bash(node:*)",
+      "Bash(echo \"Topic gen PID: $!\")",
+      "Bash(echo \"Questions gen PID: $!\")",
+      "Bash(ls /d/syllabrix-project/server/.env*)",
+      "Bash(ls /d/syllabrix-project/.env*)"
+    ],
+    "additionalDirectories": [
+      "D:\\syllabrix-project\\database\\migrations"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "code-review-graph"
+  ]
 }

@@ -11,9 +11,13 @@
   "dependencies": {
     "@number-flow/react": "^0.6.0",
     "@tailwindcss/typography": "^0.5.19",
+    "@zegocloud/zego-uikit-prebuilt": "^2.17.3",
     "axios": "^1.13.6",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
+    "katex": "^0.16.11",
+    "lodash": "^4.18.1",
+    "lottie-react": "^2.4.1",
     "lucide-react": "^0.577.0",
     "motion": "^12.38.0",
     "next": "14.2.35",
@@ -22,10 +26,16 @@
     "react-hook-form": "^7.71.2",
     "react-hot-toast": "^2.6.0",
     "react-intersection-observer": "^10.0.3",
+    "react-katex": "^3.0.1",
     "react-markdown": "^10.1.0",
+    "recharts": "^3.8.1",
+    "rehype-katex": "^7.0.1",
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
-    "socket.io-client": "^4.8.3"
+    "remark-math": "^6.0.0",
+    "socket.io-client": "^4.8.3",
+    "sonner": "^2.0.7",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "eslint": "^8",

@@ -20,7 +20,12 @@ export default function SignInPage() {
   // Redirect already-authenticated users away from sign-in
   useEffect(() => {
     if (!authLoading && user) {
-      router.push(user.is_profile_complete ? '/home' : '/complete-profile');
+      const isAdmin = user.user_type === 'syllabrix_admin' || user.admin_role;
+      if (isAdmin) {
+        router.push('/admin');
+      } else {
+        router.push(user.is_profile_complete ? '/home' : '/complete-profile');
+      }
     }
   }, [user, authLoading, router]);
 
@@ -41,13 +46,21 @@ export default function SignInPage() {
     setUnverifiedEmail(null);
     setLoading(true);
     try {
-      const loggedInUser = await login(email, password);
+      const loggedInUser = await login(email, password, false);
       toast.success('Welcome back!');
-      router.push(loggedInUser.is_profile_complete ? '/home' : '/complete-profile');
+      const isAdmin = loggedInUser.user_type === 'syllabrix_admin' || loggedInUser.admin_role;
+      if (isAdmin) {
+        router.push('/admin');
+      } else {
+        router.push(loggedInUser.is_profile_complete ? '/home' : '/complete-profile');
+      }
     } catch (err) {
       const msg = err.response?.data?.message || 'Invalid email or password';
       if (msg.toLowerCase().includes('verify your email')) {
         setUnverifiedEmail(email);
+      } else if (msg.includes('Admin Portal')) {
+        // Special case for admins trying to use regular login
+        toast.error(msg, { icon: '🛡️', duration: 4000 });
       } else {
         toast.error(msg);
       }
@@ -158,12 +171,23 @@ export default function SignInPage() {
       </form>
 
       {/* Footer */}
-      <p className="text-center text-[13px] text-gray-500 mt-8">
-        Don&apos;t have an account?{' '}
-        <Link href="/sign-up" className="font-semibold text-blue-600 hover:text-blue-700 transition-colors">
-          Create one free
-        </Link>
-      </p>
+      <div className="mt-8 space-y-4">
+        <p className="text-center text-[13px] text-gray-500">
+          Don&apos;t have an account?{' '}
+          <Link href="/sign-up" className="font-semibold text-blue-600 hover:text-blue-700 transition-colors">
+            Create one free
+          </Link>
+        </p>
+        
+        <div className="pt-4 border-t border-gray-100 flex items-center justify-center">
+          <p className="text-[12px] text-gray-400">
+            Are you an administrator?{' '}
+            <Link href="/admin-sign-in" className="font-bold text-gray-600 hover:text-blue-600 transition-colors">
+              Access Admin Portal
+            </Link>
+          </p>
+        </div>
+      </div>
 
       {/* Trust indicators */}
       <div className="mt-10 pt-6 border-t border-gray-100 flex items-center justify-center gap-6">

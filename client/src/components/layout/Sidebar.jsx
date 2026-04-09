@@ -1,139 +1,464 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  Users, Briefcase, BookOpen, Sparkles,
-  FlaskConical, Trophy, Bookmark, Award, Settings,
-  LogOut, Gamepad2, Play,
-  Mic, MessageSquare, Beaker, Building2, Store, Code, Heart, Star,
-  Home, GraduationCap, X, Newspaper, Map, Brain, Bell, Dumbbell, Compass, Network
+  Home, Compass, MessageSquare, Users, Bell,
+  Sparkles, GraduationCap, Brain, Newspaper,
+  FlaskConical, Map,
+  Gamepad2, Play,
+  Beaker, Mic, Swords, Code, Trophy,
+  Settings, X, LogOut,
+  Building2, Heart, Network, BookOpen, Star, Award,
+  Library, Table2,
+  Shield, Rss, BarChart2, Clock, FileText, ClipboardList, PlusCircle,
+  Zap, Briefcase, ScanSearch, Target, TrendingUp,
+  Bot, BadgeCheck, CalendarDays, UserCircle2
 } from 'lucide-react';
+import { getStudentNavRestrictions } from '@/utils/ageGroup';
+import { parentAPI } from '@/lib/api/parent.api';
 
-const NavLink = ({ href, icon: Icon, label, badge, onClick }) => {
+// ─── Shared primitives ────────────────────────────────────────────────────────
+
+const NavItem = ({
+  href, icon: Icon, label, badge, onClick,
+  activeClass = 'bg-blue-50 text-blue-600',
+  activeIconClass = 'text-blue-600',
+}) => {
   const pathname = usePathname();
-  const active = pathname === href || (href !== '/' && pathname.startsWith(href + '/') && href.length > 1);
+  const searchParams = useSearchParams();
+  
+  // Calculate active state including query params
+  const currentUrl = pathname + (searchParams.toString() ? `?${searchParams.toString()}` : '');
+  const active = currentUrl === href || (href === '/home' && currentUrl === '/home') || (href !== '/home' && pathname.startsWith(href) && !href.includes('?'));
 
   return (
-    <motion.div whileHover={{ x: 2 }} whileTap={{ scale: 0.97 }} transition={{ duration: 0.15 }}>
-      <Link
-        href={href}
-        onClick={onClick}
-        className={`flex items-center gap-2.5 px-3 py-[7px] rounded-lg text-[13px] transition-all duration-100 group relative ${
-          active
-            ? 'bg-blue-50 text-blue-700 font-semibold'
-            : 'text-gray-600 hover:bg-[#F0F2F5] hover:text-gray-800 font-medium'
-        }`}
-      >
-        {active && (
-          <motion.span
-            layoutId="sidebar-active-indicator"
-            className="absolute left-0 top-1 bottom-1 w-[3px] bg-blue-600 rounded-r-full"
-          />
-        )}
-        <Icon
-          size={17}
-          strokeWidth={active ? 2.2 : 1.6}
-          className={active ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600 transition-colors'}
-        />
-        <span className="flex-1 truncate leading-none">{label}</span>
-        {badge && (
-          <span className="w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center flex-shrink-0">
-            {badge}
-          </span>
-        )}
-      </Link>
-    </motion.div>
+    <Link
+      href={href}
+      onClick={onClick}
+      className={`flex items-center gap-2.5 px-3 py-[7px] mx-1 rounded-lg text-[13px] font-medium transition-colors group relative ${
+        active ? activeClass : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'
+      }`}
+    >
+      <Icon
+        size={16}
+        strokeWidth={active ? 2.2 : 1.7}
+        className={active ? activeIconClass : 'text-gray-400 group-hover:text-gray-600 transition-colors'}
+      />
+      <span className="flex-1 truncate leading-none">{label}</span>
+      {badge > 0 && (
+        <span className="min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center px-1 flex-shrink-0">
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
+    </Link>
   );
 };
 
-const SectionLabel = ({ children }) => (
-  <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-gray-400 px-3 pt-4 pb-1 select-none">
-    {children}
+const Section = ({ label }) => (
+  <p className="text-[10px] uppercase tracking-wider text-gray-400 px-4 mt-4 mb-1 select-none font-semibold">
+    {label}
   </p>
 );
 
-export default function Sidebar({ isOpen = false, onClose = () => {} }) {
+// ─── Student sidebar (spec-compliant with age gating) ─────────────────────────
+
+function StudentSidebarContent({ onClose }) {
   const { user, logout } = useAuth();
-  const pathname = usePathname();
   const hasPhoto = user?.profile_photo_url && !user.profile_photo_url.includes('PASTE_');
+  const r = getStudentNavRestrictions(user?.age_group);
+  const props = { onClick: onClose };
 
-  // Close drawer on route change
-  useEffect(() => { onClose(); }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Lock body scroll when mobile drawer open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => { document.body.style.overflow = ''; };
-  }, [isOpen]);
-
-  const navProps = { onClick: onClose };
-
-  const sidebarContent = (
-    <div className="flex flex-col h-full">
-      {/* Mobile-only header */}
-      <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
-        <Link href="/home" onClick={onClose}>
+  return (
+    <div className="flex flex-col h-full bg-white">
+      {/* Logo — mobile drawer only (desktop TopBar shows the logo) */}
+      <div className="md:hidden h-14 flex items-center justify-between px-4 border-b border-gray-100 flex-shrink-0">
+        <Link href="/home" onClick={onClose} className="flex items-center gap-2">
           <Image
             src="/images/logo/syllabrix-logo.png"
             alt="Syllabrix"
-            width={120} height={34}
-            className="h-8 w-auto object-contain"
+            width={110} height={30}
+            className="h-7 w-auto object-contain"
             priority
           />
         </Link>
-        <button
-          onClick={onClose}
-          className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 active:bg-gray-200 transition-colors"
-          aria-label="Close menu"
-        >
+        <button onClick={onClose} className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
           <X size={20} className="text-gray-500" />
         </button>
       </div>
 
       {/* Scrollable nav */}
-      <div
-        className="flex-1 overflow-y-auto py-4 px-2"
-        style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}
-      >
-        <div className="space-y-[1px] mb-1">
-          <NavLink href="/home"     icon={Home}          label="Home"     {...navProps} />
-          <NavLink href="/ai-world" icon={Sparkles}      label="AI World" {...navProps} />
-          <NavLink href="/learn"    icon={GraduationCap} label="Learn"    {...navProps} />
-          <NavLink href="/social"   icon={Users}         label="Social"   {...navProps} />
-          <NavLink href="/explore"  icon={Compass}       label="Explore"  {...navProps} />
-          <NavLink href="/play"     icon={Gamepad2}      label="Play"     {...navProps} />
-        </div>
+      <div className="flex-1 overflow-y-auto py-2" style={{ scrollbarWidth: 'none' }}>
 
-        <SectionLabel>More</SectionLabel>
-        <div className="space-y-[1px] pb-4">
-          <NavLink href="/messages"      icon={MessageSquare} label="Messages"    {...navProps} />
-          <NavLink href="/saved"         icon={Bookmark}      label="Saved"       {...navProps} />
-          <NavLink href="/badges"        icon={Award}         label="Badges"      {...navProps} />
-          <NavLink href="/certificates"  icon={Star}          label="Certificates"{...navProps} />
-          <NavLink href="/leaderboard"   icon={Trophy}        label="Leaderboard" {...navProps} />
-          <NavLink href="/notifications" icon={Bell}          label="Notifications"{...navProps} />
-          <NavLink href="/pricing"       icon={Heart}         label="Premium"     {...navProps} />
-          <NavLink href="/settings"      icon={Settings}      label="Settings"    {...navProps} />
+        {/* MAIN */}
+        <Section label="Main" />
+        <NavItem href="/home"          icon={Home}         label="Home feed"     {...props} />
+        {!r.hideGroups    && <NavItem href="/groups"        icon={Users}        label="Groups"         {...props} />}
+
+        {/* LEARN */}
+        <Section label="Learn" />
+        <NavItem href="/ai-buddy"      icon={Sparkles}     label="AI Buddy"      {...props} />
+        <NavItem href="/ai-library"    icon={Library}      label="AI Library"    {...props} />
+        <NavItem href="/ai-study-table" icon={Table2}      label="AI Study Table" {...props} />
+        <NavItem href="/prep"          icon={GraduationCap} label="PrepSmart"    {...props} />
+        <NavItem href="/jee-command"   icon={Zap}          label="JEE Command"   {...props} />
+        <NavItem href="/mindmap"       icon={Brain}        label="Mind Maps"     {...props} />
+        <NavItem href="/newsroom"      icon={Newspaper}    label="Newsroom"      {...props} />
+
+        {/* EXPLORE CAREERS */}
+        <Section label="Explore Careers" />
+        <NavItem href="/experience-lab"  icon={FlaskConical} label="Experience Lab"  {...props} />
+        <NavItem href="/career-explorer" icon={Map}          label="Career Explorer" {...props} />
+        {r.showMentorship && <NavItem href="/mentorship" icon={Users} label="Mentorship Hub" {...props} />}
+
+        {/* PLAY */}
+        <Section label="Play" />
+        <NavItem href="/arcade"        icon={Gamepad2}     label="Arcade"        {...props} />
+        <NavItem href="/clips"         icon={Play}         label="Clips"         {...props} />
+
+        {/* MORE */}
+        <Section label="More" />
+        <NavItem href="/virtual-lab"   icon={Beaker}       label="Virtual Lab"   {...props} />
+        {!r.hideMockInterview && <NavItem href="/mock-interview" icon={Mic}   label="Mock Interview" {...props} />}
+        {!r.hideDebateArena   && <NavItem href="/debate-arena"  icon={Swords} label="Debate Arena"  {...props} />}
+        {!r.hideCodeLab       && <NavItem href="/code-lab"      icon={Code}   label="Code Lab"      {...props} />}
+        <NavItem href="/leaderboard"   icon={Trophy}       label="Leaderboard"   {...props} />
+
+        {/* Settings pinned before bottom card */}
+        <div className="mt-4 border-t border-gray-100 pt-2">
+          <NavItem href="/settings"    icon={Settings}     label="Settings"      {...props} />
         </div>
       </div>
 
-      {/* User card pinned at bottom */}
+      {/* User card */}
       {user && (
         <div className="flex-shrink-0 border-t border-gray-100 bg-white px-2 py-2">
           <Link
             href="/profile"
             onClick={onClose}
-            className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-[#F0F2F5] transition-colors"
+            className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-gray-50 transition-colors"
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center overflow-hidden flex-shrink-0 ring-2 ring-white">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#378ADD] to-[#534AB7] flex items-center justify-center overflow-hidden flex-shrink-0">
+              {hasPhoto ? (
+                <Image src={user.profile_photo_url} alt="" width={32} height={32} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-white font-bold text-xs">{user.username?.charAt(0)?.toUpperCase()}</span>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[12px] font-semibold text-gray-800 truncate">
+                {user.profile?.full_name || user.username}
+              </p>
+              <p className="text-[10px] text-gray-400 truncate">
+                {user.profile?.class_name ? `Class ${user.profile.class_name}` : user.age_group || 'Student'}
+                {user.profile?.board ? ` · ${user.profile.board}` : ''}
+              </p>
+            </div>
+          </Link>
+          <button
+            onClick={async () => { await logout(); window.location.href = '/sign-in'; }}
+            className="flex items-center gap-2.5 px-3 py-1.5 w-full rounded-lg text-[12px] text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors"
+          >
+            <LogOut size={13} /> Logout
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Parent sidebar ───────────────────────────────────────────────────────────
+
+function ParentSidebarContent({ onClose }) {
+  const { user, logout } = useAuth();
+  const [children, setChildren] = useState([]);
+  const hasPhoto = user?.profile_photo_url && !user.profile_photo_url.includes('PASTE_');
+  const pProps = {
+    onClick: onClose,
+    activeClass: 'bg-emerald-50 text-emerald-700',
+    activeIconClass: 'text-emerald-600',
+  };
+
+  useEffect(() => {
+    parentAPI.getChildren()
+      .then(r => setChildren(r.data?.data || r.data || []))
+      .catch(() => {});
+  }, []);
+
+  const colors = ['from-blue-400 to-blue-600', 'from-pink-400 to-rose-500', 'from-amber-400 to-orange-500', 'from-violet-400 to-purple-500'];
+
+  return (
+    <div className="flex flex-col h-full bg-white">
+      {/* Logo — mobile drawer only */}
+      <div className="md:hidden h-14 flex items-center justify-between px-4 border-b border-gray-100 flex-shrink-0">
+        <Link href="/home" onClick={onClose} className="flex items-center gap-2">
+          <Image src="/images/logo/syllabrix-logo.png" alt="Syllabrix" width={110} height={30} className="h-7 w-auto object-contain" priority />
+        </Link>
+        <button onClick={onClose} className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
+          <X size={20} className="text-gray-500" />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto py-2" style={{ scrollbarWidth: 'none' }}>
+
+        {/* MAIN */}
+        <Section label="Main" />
+        <NavItem href="/home"          icon={Home}         label="Home"          {...pProps} />
+        <NavItem href="/home?tab=feed" icon={Rss}          label="My feed"       {...pProps} />
+        <NavItem href="/explore"       icon={Compass}      label="Explore"       {...pProps} />
+        <NavItem href="/messages"      icon={MessageSquare} label="Messages"     {...pProps} />
+        <NavItem href="/groups"        icon={Users}        label="Groups"        {...pProps} />
+        <NavItem href="/notifications" icon={Bell}         label="Notifications" {...pProps} />
+
+        {/* MY CHILDREN */}
+        <Section label="My Children" />
+        {children.map((child, i) => {
+          const initials = child.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?';
+          const grad = colors[i % colors.length];
+          const firstName = child.full_name?.split(' ')[0] || child.full_name;
+          return (
+            <Link
+              key={child.id}
+              href={`/parent-dashboard/children/${child.id}`}
+              onClick={onClose}
+              className="flex items-center gap-2.5 px-3 py-[7px] mx-1 rounded-lg text-[13px] font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              <div className={`w-4 h-4 rounded-full bg-gradient-to-br ${grad} flex items-center justify-center flex-shrink-0`}>
+                <span className="text-white font-bold" style={{ fontSize: 7 }}>{initials}</span>
+              </div>
+              <span className="truncate">{firstName}{child.class_name ? ` (${child.class_name})` : ''}</span>
+            </Link>
+          );
+        })}
+        <Link
+          href="/parent-dashboard/link-child"
+          onClick={onClose}
+          className="flex items-center gap-2.5 px-3 py-[7px] mx-1 rounded-lg text-[12px] font-medium text-blue-500 hover:bg-blue-50 transition-colors"
+        >
+          <PlusCircle size={14} className="text-blue-400 flex-shrink-0" />
+          Link a child
+        </Link>
+        <NavItem href="/parent-dashboard"              icon={Shield}        label="Safety command"  {...pProps} />
+        <NavItem href="/parent-dashboard/activity"     icon={BarChart2}     label="Activity monitor" {...pProps} />
+        <NavItem href="/parent-dashboard/screen-time"  icon={Clock}         label="Screen time"     {...pProps} />
+        <NavItem href="/parent-dashboard/reports"      icon={FileText}      label="Learning reports" {...pProps} />
+        <NavItem href="/parent-dashboard/approvals"    icon={ClipboardList} label="Approvals"       {...pProps} />
+
+        {/* LEARN */}
+        <Section label="Learn" />
+        <NavItem href="/ai-buddy"  icon={Sparkles}     label="AI Buddy"  {...pProps} />
+        <NavItem href="/prep"      icon={GraduationCap} label="PrepSmart" {...pProps} />
+        <NavItem href="/newsroom"  icon={Newspaper}    label="Newsroom"  {...pProps} />
+        <NavItem href="/mindmap"   icon={Brain}        label="Mind Maps" {...pProps} />
+
+        {/* DISCOVER */}
+        <Section label="Discover" />
+        <NavItem href="/experience-lab"  icon={FlaskConical} label="Experience Lab"  {...pProps} />
+        <NavItem href="/career-explorer" icon={Map}          label="Career Explorer" {...pProps} />
+        <NavItem href="/arcade"          icon={Gamepad2}     label="Arcade"          {...pProps} />
+
+        {/* Settings */}
+        <div className="mt-4 border-t border-gray-100 pt-2">
+          <NavItem href="/settings" icon={Settings} label="Settings" {...pProps} />
+        </div>
+      </div>
+
+      {/* User card */}
+      {user && (
+        <div className="flex-shrink-0 border-t border-gray-100 bg-white px-2 py-2">
+          <Link
+            href="/profile"
+            onClick={onClose}
+            className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-600 to-emerald-800 flex items-center justify-center overflow-hidden flex-shrink-0">
+              {hasPhoto ? (
+                <Image src={user.profile_photo_url} alt="" width={32} height={32} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-white font-bold text-xs">{user.username?.charAt(0)?.toUpperCase()}</span>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[12px] font-semibold text-gray-800 truncate">
+                {user.profile?.full_name || user.username}
+              </p>
+              <p className="text-[10px] text-emerald-600 font-medium truncate">Parent</p>
+            </div>
+          </Link>
+          <button
+            onClick={async () => { await logout(); window.location.href = '/sign-in'; }}
+            className="flex items-center gap-2.5 px-3 py-1.5 w-full rounded-lg text-[12px] text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors"
+          >
+            <LogOut size={13} /> Logout
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Professional Learner sidebar ─────────────────────────────────────────────
+
+function ProfessionalSidebarContent({ onClose }) {
+  const { user, logout } = useAuth();
+  const hasPhoto = user?.profile_photo_url && !user.profile_photo_url.includes('PASTE_');
+  const p = {
+    onClick: onClose,
+    activeClass: 'bg-blue-50 text-blue-600 font-bold',
+    activeIconClass: 'text-blue-600',
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-white">
+      {/* Mobile drawer header */}
+      <div className="md:hidden h-14 flex items-center justify-between px-4 border-b border-gray-100 flex-shrink-0">
+        <Link href="/home" onClick={onClose} className="flex items-center gap-2">
+          <Image src="/images/logo/syllabrix-logo.png" alt="Syllabrix" width={110} height={30} className="h-7 w-auto object-contain" priority />
+        </Link>
+        <button onClick={onClose} className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
+          <X size={20} className="text-gray-500" />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto py-4" style={{ scrollbarWidth: 'none' }}>
+        
+        {/* CAREER */}
+        <Section label="Career" />
+        <NavItem href="/home" icon={Briefcase} label="Dashboard" {...p} />
+        <NavItem href="/career/jobs" icon={ScanSearch} label="Job radar" {...p} />
+        <NavItem href="/career/resume" icon={FileText} label="Resume builder" {...p} />
+        <NavItem href="/career/salary" icon={TrendingUp} label="Salary insights" {...p} />
+
+        {/* SKILLS */}
+        <Section label="Skills" />
+        <NavItem href="/career/skills" icon={Target} label="Skill scanner" {...p} />
+        <NavItem href="/career/learning" icon={Award} label="Learning paths" {...p} />
+        <NavItem href="/ai-buddy" icon={Sparkles} label="AI Mentor" {...p} />
+        <NavItem href="/career/certifications" icon={BadgeCheck} label="Certifications" {...p} />
+
+        {/* NETWORK */}
+        <Section label="Network" />
+        <NavItem href="/home?tab=feed" icon={Rss} label="My feed" {...p} />
+        <NavItem href="/mentorship" icon={UserCircle2} label="Mentors" {...p} />
+        <NavItem href="/groups" icon={Users} label="Groups" {...p} />
+
+        {/* Premium Promo */}
+        <div className="mx-3 mt-8 p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 relative overflow-hidden group">
+          <div className="absolute -right-2 -top-2 w-12 h-12 bg-blue-200/20 rounded-full blur-xl group-hover:scale-150 transition-transform" />
+          <p className="text-[10px] font-black text-blue-700 uppercase tracking-wider mb-1">Upgrade to Premium</p>
+          <p className="text-[9px] text-blue-600 leading-tight mb-3">Unlock deep market insights and AI-driven pathing.</p>
+          <button className="w-full py-2 bg-blue-600 text-white text-[10px] font-black rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
+            UPGRADE NOW
+          </button>
+        </div>
+
+        {/* System */}
+        <div className="mt-8 pt-2 border-t border-gray-50">
+          <NavItem href="/settings" icon={Settings} label="Settings" {...p} />
+          <NavItem href="/support" icon={Heart} label="Support" {...p} />
+        </div>
+      </div>
+
+      {/* User card */}
+      {user && (
+        <div className="flex-shrink-0 border-t border-gray-100 bg-white px-2 py-2">
+          <Link href="/profile" onClick={onClose}
+            className="flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-gray-50 transition-colors">
+            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center overflow-hidden flex-shrink-0">
+              {hasPhoto ? (
+                <Image src={user.profile_photo_url} alt="" width={32} height={32} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-white font-bold text-xs">{user.username?.charAt(0)?.toUpperCase()}</span>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[12px] font-black text-gray-900 truncate">
+                {user.profile?.full_name || user.username}
+              </p>
+              <p className="text-[10px] text-gray-400 font-medium truncate uppercase tracking-widest">Professional</p>
+            </div>
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Generic sidebar for all other user types ─────────────────────────────────
+
+function GenericSidebarContent({ onClose }) {
+  const { user, logout } = useAuth();
+  const hasPhoto = user?.profile_photo_url && !user.profile_photo_url.includes('PASTE_');
+  const props = { onClick: onClose };
+  const type = user?.user_type;
+
+  return (
+    <div className="flex flex-col h-full bg-white">
+      {/* Mobile-only header */}
+      <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
+        <Link href="/home" onClick={onClose}>
+          <Image src="/images/logo/syllabrix-logo.png" alt="Syllabrix" width={110} height={30} className="h-7 w-auto object-contain" priority />
+        </Link>
+        <button onClick={onClose} className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
+          <X size={20} className="text-gray-500" />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto py-3 px-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db transparent' }}>
+        <NavItem href="/home" icon={Home} label="Dashboard" {...props} />
+
+        {/* Professional Learner / Organization */}
+        {(type === 'professional_learner' || type === 'organization') && (
+          <>
+            <Section label="Professional Intelligence" />
+            <NavItem href="/experience-lab"  icon={FlaskConical} label="Experience Lab"  {...props} />
+            <NavItem href="/career-explorer" icon={Map}          label="Career Roadmap"  {...props} />
+            <NavItem href="/corporate"       icon={Building2}    label="Corporate L&D"   {...props} />
+            <NavItem href="/code-lab"        icon={Code}         label="Code Intelligence" {...props} />
+          </>
+        )}
+
+        {/* Educator types */}
+        {(type === 'teacher' || type === 'institute' || type === 'mentor') && (
+          <>
+            <Section label="Educator Studio" />
+            <NavItem href="/teacher-studio" icon={Sparkles} label="Studio"         {...props} />
+            <NavItem href="/mentorship"     icon={Users}    label="Mentorship"     {...props} />
+            <NavItem href="/ai-study-table" icon={BookOpen} label="Study Copilots" {...props} />
+          </>
+        )}
+
+        {/* Parent */}
+        {type === 'parent' && (
+          <>
+            <Section label="Safety & Oversight" />
+            <NavItem href="/parent-dashboard" icon={Users}  label="Parent Analytics"  {...props} />
+            <NavItem href="/safety"           icon={Heart}  label="Safety Monitor"    {...props} />
+          </>
+        )}
+
+        {/* Shared */}
+        <Section label="Connect" />
+        <NavItem href="/social"   icon={Network}      label="Social Feed"  {...props} />
+        <NavItem href="/explore"  icon={Compass}      label="Discover"     {...props} />
+        <NavItem href="/learn"    icon={GraduationCap} label="Learn Center" {...props} />
+
+        <Section label="Ecosystem" />
+        <NavItem href="/messages"      icon={MessageSquare} label="Messages"     {...props} />
+        <NavItem href="/newsroom"      icon={Newspaper}     label="Newsroom"     {...props} />
+        <NavItem href="/badges"        icon={Award}         label="Badges"       {...props} />
+        <NavItem href="/certificates"  icon={Star}          label="Certificates" {...props} />
+        <NavItem href="/leaderboard"   icon={Trophy}        label="Leaderboard"  {...props} />
+        <NavItem href="/settings"      icon={Settings}      label="Settings"     {...props} />
+      </div>
+
+      {user && (
+        <div className="flex-shrink-0 border-t border-gray-100 bg-white px-2 py-2">
+          <Link href="/profile" onClick={onClose} className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-gray-50 transition-colors">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center overflow-hidden flex-shrink-0">
               {hasPhoto ? (
                 <Image src={user.profile_photo_url} alt="" width={32} height={32} className="w-full h-full object-cover" />
               ) : (
@@ -155,6 +480,28 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
       )}
     </div>
   );
+}
+
+// ─── Root Sidebar component ───────────────────────────────────────────────────
+
+export default function Sidebar({ isOpen = false, onClose = () => {} }) {
+  const { user } = useAuth();
+  const pathname = usePathname();
+
+  useEffect(() => { onClose(); }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    document.body.style.overflow = isOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [isOpen]);
+
+  const isStudent = user?.user_type === 'student';
+  const isParent = user?.user_type === 'parent';
+  const isProfessional = user?.user_type === 'professional_learner' || user?.user_type === 'organization';
+  const Content = isStudent ? StudentSidebarContent
+    : isParent ? ParentSidebarContent
+    : isProfessional ? ProfessionalSidebarContent
+    : GenericSidebarContent;
+  const sidebarContent = <Content onClose={onClose} />;
 
   return (
     <>
@@ -163,9 +510,7 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
         {isOpen && (
           <motion.div
             key="sidebar-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="fixed inset-0 bg-black/50 z-40 md:hidden"
             onClick={onClose}
@@ -173,12 +518,12 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
         )}
       </AnimatePresence>
 
-      {/* Desktop — always visible fixed sidebar */}
-      <aside className="hidden md:flex fixed left-0 top-[56px] bottom-0 w-[220px] bg-white border-r border-gray-200/80 z-40 flex-col">
+      {/* Desktop fixed sidebar */}
+      <aside className="hidden md:flex fixed left-0 top-[56px] bottom-0 w-[200px] bg-white border-r border-gray-200/80 z-40 flex-col">
         {sidebarContent}
       </aside>
 
-      {/* Mobile — slide-in drawer */}
+      {/* Mobile drawer */}
       <motion.div
         className="fixed left-0 top-0 bottom-0 w-[280px] bg-white z-50 flex-col shadow-2xl md:hidden flex"
         animate={{ x: isOpen ? 0 : '-100%' }}
@@ -186,6 +531,14 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
         transition={{ type: 'tween', duration: 0.28, ease: [0.25, 0.46, 0.45, 0.94] }}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
+        {/* Mobile close button for student/parent sidebar (they have their own logo row) */}
+        {(isStudent || isParent) && (
+          <div className="md:hidden flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0 absolute top-0 right-0 z-10">
+            <button onClick={onClose} className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
+              <X size={20} className="text-gray-500" />
+            </button>
+          </div>
+        )}
         {sidebarContent}
       </motion.div>
     </>

@@ -6,6 +6,7 @@
 const { Server } = require('socket.io');
 const { socketOptions } = require('../config/socket');
 const { verifyToken } = require('../utils/token-utils');
+const { socialPool } = require('../database/connection');
 
 let io = null;
 
@@ -34,11 +35,24 @@ const initializeSocket = (httpServer) => {
     }
   });
 
-  io.on('connection', (socket) => {
+  io.on('connection', async (socket) => {
     console.log(`  Socket connected: User ${socket.userId}`);
 
     // Join user's personal room (for notifications)
     socket.join(`user:${socket.userId}`);
+
+    // If user is an admin, join the admin broadcast room for urgent alerts
+    try {
+      const [rows] = await socialPool.query(
+        'SELECT admin_role FROM users WHERE id = ? AND admin_role IS NOT NULL AND is_active = 1 LIMIT 1',
+        [socket.userId]
+      );
+      if (rows.length > 0) {
+        socket.join('room:admins');
+      }
+    } catch (e) {
+      // Non-blocking — don't kill the connection if this check fails
+    }
 
     // ======================== MESSAGING ========================
     socket.on('join:conversation', (data) => {
@@ -127,4 +141,11 @@ const emitToGroup = (groupId, event, data) => {
   }
 };
 
-module.exports = { initializeSocket, getIO, emitToUser, emitToDM, emitToGroup };
+// Helper: broadcast to all connected admin users
+const emitToAdmins = (event, data) => {
+  if (io) {
+    io.to('room:admins').emit(event, data);
+  }
+};
+
+module.exports = { initializeSocket, getIO, emitToUser, emitToDM, emitToGroup, emitToAdmins };

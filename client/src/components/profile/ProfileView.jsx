@@ -7,13 +7,14 @@ import { postsAPI } from '@/lib/api/posts.api';
 import { badgesAPI } from '@/lib/api/badges.api';
 import { uploadAPI } from '@/lib/api/upload.api';
 import PostCard from '@/components/feed/PostCard';
+import ReportModal from '@/components/modals/ReportModal';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
   MapPin, Calendar, Users, BookOpen, Award, Camera, Settings,
   MessageSquare, MoreHorizontal, Loader2, UserPlus, UserCheck,
   Briefcase, GraduationCap, Star, TrendingUp, Grid3X3, List,
-  ExternalLink, Shield, Flame, CheckCircle
+  ExternalLink, Shield, Flame, CheckCircle, ShieldAlert
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -26,6 +27,7 @@ export default function ProfileView({ userId }) {
   const [following, setFollowing] = useState(false);
   const [tab, setTab] = useState('posts');
   const [postsView, setPostsView] = useState('list');
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const isOwn = me?.id?.toString() === userId?.toString();
 
   useEffect(() => {
@@ -150,6 +152,13 @@ export default function ProfileView({ userId }) {
                     className="p-2 rounded-xl bg-gray-100 text-gray-500 hover:bg-blue-50 hover:text-blue-600 transition-all">
                     <MessageSquare size={16} />
                   </Link>
+                  <button
+                    onClick={() => setIsReportModalOpen(true)}
+                    title="Report User"
+                    className="p-2 rounded-xl bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all border border-red-100"
+                  >
+                    <ShieldAlert size={16} />
+                  </button>
                 </>
               )}
             </div>
@@ -319,6 +328,13 @@ export default function ProfileView({ userId }) {
           )}
         </>
       )}
+      {/* ═══ MODALS ═══ */}
+      <ReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        targetUserId={userId}
+        targetName={profile.username}
+      />
     </div>
   );
 }

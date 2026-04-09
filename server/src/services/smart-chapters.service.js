@@ -19,7 +19,7 @@ const ncertExtractor   = require('./ncert-extractor.service');
 // In-memory cache — TTL 12 hr (chapters don't change often)
 const _cache = new Map();
 function _cacheGet(k) { const v = _cache.get(k); if (!v) return null; if (Date.now() > v.exp) { _cache.delete(k); return null; } return v.data; }
-function _cacheSet(k, d) { _cache.set(k, { data: d, exp: Date.now() + 12 * 3600_000 }); }
+function _cacheSet(k, d) { _cache.set(k, { data: d, exp: Date.now() + 6 * 3600_000 }); }
 
 async function getSmartChapters({ board, grade, subject, exam, version }) {
   const ver = (version === 'old') ? 'old' : 'latest';

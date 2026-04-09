@@ -37,8 +37,10 @@ router.post('/buddy/chat', authenticate, ctrl.buddyChat);
 
 // Chat Session Management
 router.post('/chat/sessions', authenticate, ctrl.createSession);
+router.delete('/chat/sessions/clear', authenticate, ctrl.clearSessions); // Clear all sessions of a type
 router.delete('/chat/sessions/:sessionId', authenticate, ctrl.deleteSession);
 router.put('/chat/sessions/:sessionId', authenticate, ctrl.updateSessionTitle);
+
 
 // Chat History — NEW
 router.get('/chat/sessions', authenticate, ctrl.getChatSessions);

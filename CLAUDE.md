@@ -1,77 +1,18 @@
-# SYLLABRIX — Project Instructions for Claude Code
+═══════════════════════════════════════════════════════════
+MESSAGE 1: PASTE THIS FIRST — THE BRUTAL AUDIT
+═══════════════════════════════════════════════════════════
+The JEE Command feature is completely broken. Every page is empty, AI generates nothing, no content exists. Before you fix anything, I need a complete forensic audit. Do ALL of the following right now:
 
-## Project Overview
-Syllabrix is India's first complete education ecosystem platform (ages 5+). AI-powered education with social networking, career exploration, exam prep, virtual labs, and 574+ profession simulations.
+Connect to the database and run SELECT COUNT(*) for EVERY table that starts with "jee_". Show me the table name and row count for each. If a table doesn't exist, say so.
+Find every file in server/src/ that handles JEE routes or JEE AI. List every file path. Open each one. Tell me: does the AI function actually call Gemini, or does it return hardcoded/empty/dummy data? Show me the exact line where it either calls the AI model or returns fake data.
+Check the .env file. Does GEMINI_API_KEY exist? Is it a real key or a placeholder like "your-key-here"? What model name is being used — is it "gemini-2.0-flash" or something else?
+Run the server temporarily and hit these endpoints with curl or a test script. Show me the raw response for each:
 
-## Commands
-- `cd server && npm run dev` — Start backend on port 5000
-- `cd client && npm run dev` — Start frontend on port 3000
-- `cd server && node src/database/migrate.js` — Run database migrations
-- `npm test` — Run tests (in server/ or client/)
+GET /api/jee/subjects
+GET /api/jee/chapters?subject=physics&class=11
+POST /api/jee/ai/doubt with body {"question": "What is Newton's second law?"}
 
-## Tech Stack
-- **Frontend:** Next.js 14 (App Router), Tailwind CSS, Lucide icons
-- **Backend:** Express.js, MySQL (Aiven), JWT auth, Socket.io
-- **AI:** Gemini 2.5 Flash (primary), Groq/Together/Cohere (fallback)
-- **Media:** Cloudinary
-- **Deploy:** Vercel (frontend) + Railway (backend)
 
-## Architecture
-```
-client/src/app/(dashboard)/     — All dashboard pages
-client/src/app/(auth)/          — Sign-in, sign-up, forgot-password
-client/src/app/complete-profile/ — Profile wizard after signup
-client/src/components/layout/   — Sidebar, TopBar, MobileNav
-client/src/components/feed/     — CreatePostBox, PostCard
-client/src/components/ai/       — SpeakButton, MathRenderer, DiagramRenderer, MapView
-client/src/contexts/            — AuthContext (useAuth hook)
-client/src/lib/api/             — API client files (postsAPI, aiAPI, etc.)
-client/src/lib/api-client.js    — Axios instance with JWT interceptor
+Check the frontend. Open jee-command/page.jsx (or wherever the dashboard is). Does it fetch data from API or show hardcoded content? Check the same for syllabus page, PYQ page, and AI tutor page.
 
-server/src/features/            — 36 feature modules (auth, posts, ai, etc.)
-server/src/services/ai.service.js — Gemini/Groq/Together/Cohere fallback chain
-server/src/middleware/           — Auth, validation, rate limiting
-server/src/database/             — Connection pool, migration runner
-server/src/config/env.js         — Environment variable loader
-
-database/migrations/             — 65 SQL migration files
-shared/                          — Shared constants, validation, utils
-```
-
-## CRITICAL Conventions (NEVER violate)
-1. **Pages:** ALWAYS in `client/src/app/(dashboard)/page-name/page.jsx`
-2. **Auth:** ALWAYS use `useAuth()` hook. NEVER prop-drill auth data.
-3. **User field:** `user.username` — NEVER `user.first_name`
-4. **HTTP:** ALWAYS use `client/src/lib/api-client.js` (axios). NEVER use raw `fetch()`
-5. **API exports:** Use CAPITAL names — `postsAPI`, `aiAPI`, `prepAPI`, `paymentsAPI`, `uploadAPI`
-6. **Post creation:** MUST include `post_type: 'regular'` in create payload
-7. **File upload:** `uploadAPI.single(file)` takes raw File object (builds FormData internally)
-8. **Sidebar:** Width `w-[220px]`, dashboard margin `md:ml-[220px]`
-9. **Logo:** `/images/logo/syllabrix-logo.png` (also has -white variant)
-10. **AI model:** `gemini-2.5-flash` — configured in `server/.env.development` as `GEMINI_API_KEY`
-11. **Background:** Dashboard uses `bg-[#F0F2F5]` (Facebook-grade gray)
-12. **Card shadows:** `shadow-[0_1px_2px_rgba(0,0,0,0.1)]` on all cards
-13. **Border radius:** `rounded-xl` (12px) on cards, `rounded-lg` (8px) on buttons
-14. **Font sizes:** 13px body, 12px secondary, 10px labels, 9px micro
-15. **Hover color:** `hover:bg-[#F0F2F5]` on interactive elements
-
-## Database
-- **Host:** mysql-267b741c-adarshksingh369-891a.a.aivencloud.com
-- **Port:** 28164
-- **DB:** defaultdb
-- **User:** avnadmin
-- **SSL:** required (`DB_SSL=true`)
-- **Tables:** 64+ (users, posts, comments, likes, follows, messages, etc.)
-
-## Sensitive Professions (NO practical activities)
-Doctor, Surgeon, Dentist, Nurse, Pharmacist, Electrician, Plumber, Welder, Mechanic, Pilot, Army/Navy/Police Officer, Firefighter, Nuclear/Chemical Engineer — knowledge-only modules for these.
-
-## QA Test Accounts
-All previous QA test accounts have been wiped. Register fresh accounts via /sign-up.
-Syllabrix ID format: S-XXXXXXXXXX (10 chars after dash = first3+lastInitial+phone4+year2)
-- student: S-  (e.g. S-AARS321008)
-- teacher: T-  (e.g. T-MEEI678985)
-- institute: I-  (e.g. I-DPSD540091)
-- parent: G-  (e.g. G-RAJK665578)
-- professional_learner: P-  (e.g. P-PRIN554492)
-- organization: O-  (e.g. O-TECI567824)
+Show me ALL findings. Do not fix anything yet. I need to see the full damage report.
