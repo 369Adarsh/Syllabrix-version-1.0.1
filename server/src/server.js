@@ -27,15 +27,16 @@ const startServer = async () => {
     console.error('  WARNING: Database not connected. Some features will not work.');
   }
 
-  server.listen(config.SERVER_PORT, '0.0.0.0', () => {
+  const PORT = config.SERVER_PORT;
+  server.listen(PORT, '0.0.0.0', () => {
     console.log('');
-    console.log(`  Server running on 0.0.0.0:${config.SERVER_PORT}`);
-    console.log(`  Environment: ${config.NODE_ENV}`);
-    console.log(`  Client URL: ${config.CLIENT_URL}`);
-    console.log(`  Health: http://0.0.0.0:${config.SERVER_PORT}/api/health`);
+    console.log(`  🚀 Server synchronized on 0.0.0.0:${PORT}`);
+    console.log(`  🌍 Public Health Check: ${PORT}/api/health`);
+    console.log(`  🔧 Environment: ${config.NODE_ENV}`);
+    console.log(`  📦 Build Context: ROOT`);
     console.log('');
-    console.log('  Ready to accept requests.');
-    console.log('');
+    console.log('  Ready to accept intelligence requests.');
+    console.log('========================================');
   });
 };
 
