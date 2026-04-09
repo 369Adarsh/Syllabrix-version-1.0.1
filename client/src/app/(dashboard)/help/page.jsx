@@ -8,7 +8,7 @@ import {
 import { supportAPI } from '@/lib/api/tickets.api';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 
 const STATUS_MAP = {
   open: { label: 'Raised', color: 'bg-blue-100 text-blue-700', icon: Clock },

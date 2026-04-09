@@ -8,7 +8,7 @@ import {
   Loader2, Zap, ShieldAlert, History, ArrowRight,
   Database, UserCheck, Target, Award
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 
 export default function LDBootstrapPage() {
   const router = useRouter();
