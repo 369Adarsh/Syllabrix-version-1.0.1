@@ -36,10 +36,19 @@ const Card = ({ children, className = '' }) => (
 function IntelligenceHeader({ user, data, onStrategyOpen, onDownloadReport }) {
   const name = user?.profile?.full_name?.split(' ')[0] || user?.username || 'Learner';
   const industry = data?.profile?.industry || 'General Tech';
+  const isOrg = user?.user_type === 'organization';
+
   return (
     <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-2 print:hidden">
       <div>
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-2">{industry} Intelligence Overview</p>
+        <div className="flex items-center gap-3 mb-2">
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">{industry} Intelligence Overview</p>
+          {isOrg && (
+            <Link href="/corporate/dashboard" className="px-3 py-1 bg-gradient-to-r from-amber-500 to-orange-600 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-orange-500/20 flex items-center gap-1.5 hover:from-amber-400 hover:to-orange-500 transition-all">
+              <Briefcase size={12} /> Org Command Center <ChevronRight size={12} />
+            </Link>
+          )}
+        </div>
         <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-2">
           Welcome back, <span className="text-blue-600">{name}</span>
         </h1>

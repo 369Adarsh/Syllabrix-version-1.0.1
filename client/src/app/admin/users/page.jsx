@@ -18,6 +18,16 @@ const TYPE_COLORS = {
   syllabrix_admin: 'bg-rose-500/15 text-rose-400 border-rose-500/20',
 };
 
+const formatUserId = (u) => {
+  if (u?.syllabrix_id) return u.syllabrix_id;
+  if (!u || !u.id) return 'UNKNOWN';
+  const pMap = { professional_learner: 'P', student: 'S', teacher: 'T', institute: 'I', organization: 'O', parent: 'PA', syllabrix_admin: 'SA' };
+  const prefix = pMap[u.user_type] || 'U';
+  const rawId = String(u.id);
+  const core = rawId.match(/^\d+$/) ? rawId.padStart(10, '0') : rawId.replace(/-/g, '').substring(0, 10).toUpperCase();
+  return `${prefix}-${core}`;
+};
+
 export default function AdminUsersPage() {
   const [users, setUsers] = useState([]);
   const [total, setTotal] = useState(0);
@@ -115,7 +125,7 @@ export default function AdminUsersPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-white/[0.06]">
-              {['User', 'Type', 'Email', 'Reports', 'Last Seen', 'Status', 'Actions'].map(h => (
+              {['ID', 'User', 'Type', 'Email', 'Reports', 'Last Seen', 'Status', 'Actions'].map(h => (
                 <th key={h} className="text-left text-white/30 text-xs font-semibold uppercase tracking-wider px-4 py-3">{h}</th>
               ))}
             </tr>
@@ -124,13 +134,18 @@ export default function AdminUsersPage() {
             {loading ? (
               Array.from({ length: 8 }).map((_, i) => (
                 <tr key={i}>
-                  {Array.from({ length: 7 }).map((_, j) => (
+                  {Array.from({ length: 8 }).map((_, j) => (
                     <td key={j} className="px-4 py-3"><div className="h-4 bg-white/[0.05] rounded-lg animate-pulse" /></td>
                   ))}
                 </tr>
               ))
             ) : users.map(u => (
               <tr key={u.id} className="hover:bg-white/[0.025] transition-colors group">
+                <td className="px-4 py-3 pb-3">
+                  <span className="text-white/40 font-mono text-[10px] tracking-wider bg-white/5 py-1.5 px-2 rounded-md border border-white/5 shadow-sm" title={u.id}>
+                    {formatUserId(u)}
+                  </span>
+                </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500/40 to-purple-500/40 flex items-center justify-center text-white/80 text-xs font-bold shrink-0">
