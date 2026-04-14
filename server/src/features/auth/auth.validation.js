@@ -21,7 +21,13 @@ const registerValidation = [
     .notEmpty().withMessage('Password is required')
     .isLength({ min: 8, max: 128 }).withMessage('Password must be 8-128 characters')
     .matches(/[A-Z]/).withMessage('Password must contain at least one uppercase letter')
-    .matches(/[0-9]/).withMessage('Password must contain at least one number'),
+    .matches(/[0-9]/).withMessage('Password must contain at least one number')
+    .matches(/[^A-Za-z0-9]/).withMessage('Password must contain at least one special character'),
+
+  body('password_hint')
+    .optional()
+    .trim()
+    .isLength({ max: 255 }).withMessage('Password hint must be less than 255 characters'),
 
   body('user_type')
     .notEmpty().withMessage('User type is required')

@@ -81,7 +81,7 @@ const generateGID = async () => {
 // ======================== REGISTER ========================
 
 const register = async (userData) => {
-  const { username: fullName, email, password, user_type, date_of_birth, gender, city, state, phone } = userData;
+  const { username: fullName, email, password, password_hint, user_type, date_of_birth, gender, city, state, phone } = userData;
 
   // Auto-generate a clean username from the full name (frontend sends full name in the username field)
   const firstName = (fullName || 'user').trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z0-9]/g, '') || 'user';
@@ -125,7 +125,7 @@ const register = async (userData) => {
 
   const userId = await queries.createUser({
     username, full_name: fullName, email, password_hash, user_type, age_group,
-    date_of_birth, gender, city, state, country: 'India', syllabrix_id, phone,
+    date_of_birth, gender, city, state, country: 'India', syllabrix_id, phone, password_hint,
   });
 
   // Create Parent Profile with G-ID immediately if parent

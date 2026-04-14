@@ -56,22 +56,22 @@ const findUserBySyllabrixId = async (syllabrixId) => {
 const createUser = async (userData) => {
   const {
     username, full_name, email, password_hash, user_type, age_group,
-    date_of_birth, gender, city, state, country, syllabrix_id, google_id
+    date_of_birth, gender, city, state, country, syllabrix_id, google_id, password_hint
   } = userData;
 
   const { phone } = userData;
   try {
     const [result] = await pool.query(
-      `INSERT INTO users (syllabrix_id, username, full_name, email, password_hash, user_type, age_group,
+      `INSERT INTO users (syllabrix_id, username, full_name, email, password_hash, password_hint, user_type, age_group,
                           date_of_birth, gender, city, state, country, google_id, phone, is_active)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
-      [syllabrix_id || null, username, full_name || null, email, password_hash, user_type, age_group,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+      [syllabrix_id || null, username, full_name || null, email, password_hash, password_hint || null, user_type, age_group,
        date_of_birth || null, gender || null, city || null, state || null, country || 'India', google_id || null, phone || null]
     );
     return result.insertId;
   } catch (e) {
     // Fallback if new columns don't exist yet
-    if (e.message.includes('syllabrix_id') || e.message.includes('google_id') || e.message.includes('phone')) {
+    if (e.message.includes('syllabrix_id') || e.message.includes('google_id') || e.message.includes('phone') || e.message.includes('password_hint')) {
       const [result] = await pool.query(
         `INSERT INTO users (username, email, password_hash, user_type, age_group,
                             date_of_birth, gender, city, state, country, is_active)

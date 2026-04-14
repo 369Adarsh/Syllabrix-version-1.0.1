@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import {
   Loader2, ArrowRight, Eye, EyeOff,
   GraduationCap, BookOpen, Building2, Briefcase, Building,
-  User, Mail, Phone, Lock, Calendar,
+  User, Mail, Phone, Lock, Calendar, CheckCircle2, XCircle,
 } from 'lucide-react';
 
 const PERSONAL_EMAIL_DOMAINS = ['gmail','yahoo','hotmail','outlook','rediffmail','ymail','icloud','live','msn','aol','protonmail'];
@@ -54,6 +54,49 @@ function InputField({ icon: Icon, label, type = 'text', value, onChange, placeho
   );
 }
 
+const PASSWORD_RULES = [
+  { label: 'At least 8 characters',          test: p => p.length >= 8 },
+  { label: 'One uppercase letter (A–Z)',      test: p => /[A-Z]/.test(p) },
+  { label: 'One number (0–9)',                test: p => /[0-9]/.test(p) },
+  { label: 'One special character (!@#$…)',   test: p => /[^A-Za-z0-9]/.test(p) },
+];
+
+function PasswordStrength({ password }) {
+  if (!password) return null;
+  const passed = PASSWORD_RULES.filter(r => r.test(password)).length;
+  const strength = passed <= 1 ? 'Weak' : passed === 2 ? 'Fair' : passed === 3 ? 'Good' : 'Strong';
+  const barColor = passed <= 1 ? 'bg-red-400' : passed === 2 ? 'bg-amber-400' : passed === 3 ? 'bg-blue-400' : 'bg-emerald-500';
+  const textColor = passed <= 1 ? 'text-red-500' : passed === 2 ? 'text-amber-500' : passed === 3 ? 'text-blue-500' : 'text-emerald-600';
+
+  return (
+    <div className="mt-2 space-y-2">
+      {/* Strength bar */}
+      <div className="flex items-center gap-2">
+        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden flex gap-0.5">
+          {[0, 1, 2, 3].map(i => (
+            <div key={i} className={`flex-1 rounded-full transition-all duration-300 ${i < passed ? barColor : 'bg-gray-200'}`} />
+          ))}
+        </div>
+        <span className={`text-[11px] font-bold ${textColor}`}>{strength}</span>
+      </div>
+      {/* Requirement checklist */}
+      <ul className="space-y-1">
+        {PASSWORD_RULES.map(rule => {
+          const ok = rule.test(password);
+          return (
+            <li key={rule.label} className={`flex items-center gap-1.5 text-[12px] transition-colors ${ok ? 'text-emerald-600' : 'text-gray-400'}`}>
+              {ok
+                ? <CheckCircle2 size={13} className="shrink-0 text-emerald-500" />
+                : <XCircle size={13} className="shrink-0 text-gray-300" />}
+              {rule.label}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 export default function SignUpPage() {
   const { register } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -70,6 +113,7 @@ export default function SignUpPage() {
     guardian_id: '',
     password: '',
     confirmPassword: '',
+    password_hint: '',
   });
 
   const [addChild, setAddChild] = useState(false);
@@ -101,8 +145,9 @@ export default function SignUpPage() {
       toast.error('Passwords do not match');
       return;
     }
-    if (form.password.length < 8) {
-      toast.error('Password must be at least 8 characters');
+    const failedRules = PASSWORD_RULES.filter(r => !r.test(form.password));
+    if (failedRules.length > 0) {
+      toast.error(failedRules[0].label.replace(/^O/, 'Password needs at least o').replace(/^A/, 'Password needs a'));
       return;
     }
 
@@ -128,6 +173,7 @@ export default function SignUpPage() {
         username: form.fullName.trim(),
         email: form.email.trim().toLowerCase(),
         password: form.password,
+        password_hint: form.password_hint.trim() || undefined,
         user_type: form.user_type,
         date_of_birth: form.date_of_birth || undefined,
         phone: form.phone || undefined,
@@ -306,6 +352,7 @@ export default function SignUpPage() {
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </InputField>
+          <PasswordStrength password={form.password} />
 
           <InputField
             icon={Lock}
@@ -320,6 +367,21 @@ export default function SignUpPage() {
               {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </InputField>
+
+          <div className="pt-2">
+            <InputField
+              icon={BookOpen}
+              label="Password Hint (Optional)"
+              type="text"
+              value={form.password_hint}
+              onChange={e => update('password_hint', e.target.value)}
+              placeholder="A word or phrase to help you remember your password"
+            />
+            <p className="text-[11px] text-gray-500 mt-1.5 ml-1 flex items-start gap-1">
+              <span className="text-blue-500 font-bold">ℹ</span>
+              Make sure your hint does not contain your actual password.
+            </p>
+          </div>
         </div>
 
         <button
