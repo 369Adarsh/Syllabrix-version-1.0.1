@@ -175,10 +175,21 @@ const RESUME_TABLE_MAP = {
   organization: 'career_profiles', // For orgs in career dashboard
 };
 
+const ALLOWED_RESUME_MIME = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.oasis.opendocument.text',
+  'application/rtf', 'text/rtf',
+  'text/plain',
+];
+
 const uploadResumeFile = async (userId, userType, file) => {
   if (!file) throw ApiError.badRequest('No file provided.');
-  if (file.mimetype !== 'application/pdf') throw ApiError.badRequest('Resume must be a PDF file.');
-  if (file.size > 5 * 1024 * 1024) throw ApiError.badRequest('Resume must be under 5MB.');
+  if (!ALLOWED_RESUME_MIME.includes(file.mimetype)) {
+    throw ApiError.badRequest('Resume must be PDF, Word (.doc/.docx), ODT, RTF, or TXT. Max 10MB.');
+  }
+  if (file.size > 10 * 1024 * 1024) throw ApiError.badRequest('Resume must be under 10MB.');
 
   const result = await uploadToCloudinary(file.buffer, {
     folder: 'resumes',

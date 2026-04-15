@@ -47,10 +47,11 @@ const uploadAvatar = multer({
 const uploadResumePdf = multer({
   storage,
   fileFilter: (req, file, cb) => {
+    const allowed = ['.pdf', '.doc', '.docx', '.odt', '.rtf', '.txt'];
     const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, ext === '.pdf');
+    cb(null, allowed.includes(ext));
   },
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB for resumes
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB for resumes
 }).single('resume');
 
 module.exports = { uploadSingle, uploadMultiple, uploadAvatar, uploadResumePdf };

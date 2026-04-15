@@ -12,8 +12,9 @@ import {
   Users, Loader2, Award, Zap, Globe,
   MapPin, Share2, Crown, ZapIcon, Download,
   PlayCircle, MoreHorizontal, X, ArrowUpRight,
-  ExternalLink
+  ExternalLink, UploadCloud, File, Trash2
 } from 'lucide-react';
+import { uploadAPI } from '@/lib/api/upload.api';
 import { postsAPI } from '@/lib/api/posts.api';
 import CreatePostBox from '@/components/feed/CreatePostBox';
 import PostCard from '@/components/feed/PostCard';
@@ -607,6 +608,122 @@ function StrategicSuite({ data, loading }) {
   );
 }
 
+function ResumeCard({ data, onUploaded }) {
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const resumeUrl = data?.resume_url || null;
+  const atsScore  = data?.atsScore  || 0;
+  const missing   = data?.missingKeywords || [];
+
+  const ACCEPTED = '.pdf,.doc,.docx,.odt,.rtf,.txt';
+
+  const handleFile = async (file) => {
+    if (!file) return;
+    const maxMB = 10;
+    if (file.size > maxMB * 1024 * 1024) {
+      const { default: toast } = await import('react-hot-toast');
+      toast.error(`File too large. Max ${maxMB}MB.`);
+      return;
+    }
+    setUploading(true);
+    try {
+      const { default: toast } = await import('react-hot-toast');
+      // Step 1: upload to Cloudinary
+      const uploadRes = await uploadAPI.resume(file);
+      const url = uploadRes.data?.data?.url || uploadRes.data?.url;
+      if (!url) throw new Error('Upload failed — no URL returned.');
+
+      // Step 2: save URL to career_resumes table
+      await careerAPI.uploadResume({
+        resume_url: url,
+        version_name: file.name.replace(/\.[^.]+$/, '') || 'Resume',
+      });
+
+      toast.success('Resume uploaded & dashboard synced!');
+      onUploaded(); // re-fetch dashboard data
+    } catch (err) {
+      const { default: toast } = await import('react-hot-toast');
+      toast.error(err.response?.data?.message || 'Upload failed. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const onInputChange = (e) => handleFile(e.target.files?.[0]);
+  const onDrop = (e) => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files?.[0]); };
+
+  const ext = resumeUrl ? resumeUrl.split('.').pop().split('?')[0].toUpperCase() : null;
+  const fileName = resumeUrl ? decodeURIComponent(resumeUrl.split('/').pop().split('?')[0]) : null;
+
+  return (
+    <Card className="rounded-xl p-4 border-gray-100 shadow-sm">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
+            <FileText size={13} />
+          </div>
+          <h3 className="text-[13px] font-bold text-gray-800">Resume</h3>
+        </div>
+        {resumeUrl && (
+          <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
+            ATS {atsScore}/100
+          </span>
+        )}
+      </div>
+
+      {/* Current resume */}
+      {resumeUrl ? (
+        <div className="mb-3 flex items-center gap-2.5 p-2.5 bg-gray-50 border border-gray-100 rounded-xl">
+          <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0">
+            <File size={13} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-black text-gray-900 truncate">{fileName}</p>
+            <p className="text-[9px] text-gray-400 font-medium uppercase tracking-widest">{ext} · Primary Resume</p>
+          </div>
+          <a href={resumeUrl} target="_blank" rel="noreferrer"
+            className="text-[9px] font-black text-blue-600 hover:underline shrink-0">View</a>
+        </div>
+      ) : (
+        <p className="text-[10px] text-gray-400 font-medium mb-3">No resume uploaded yet. Upload one to boost your ATS score.</p>
+      )}
+
+      {/* Missing keywords */}
+      {missing.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-1">
+          {missing.slice(0, 4).map(k => (
+            <span key={k} className="text-[9px] font-bold text-amber-700 bg-amber-50 border border-amber-100 px-1.5 py-0.5 rounded-md">
+              +{k}
+            </span>
+          ))}
+          {missing.length > 4 && <span className="text-[9px] text-gray-400 font-medium">+{missing.length - 4} more</span>}
+        </div>
+      )}
+
+      {/* Drop zone */}
+      <label
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={onDrop}
+        className={`flex flex-col items-center justify-center gap-1.5 w-full py-4 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+          dragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-400 hover:bg-gray-50'
+        } ${uploading ? 'opacity-60 pointer-events-none' : ''}`}
+      >
+        <input type="file" accept={ACCEPTED} onChange={onInputChange} className="hidden" disabled={uploading} />
+        {uploading ? (
+          <Loader2 size={18} className="text-blue-600 animate-spin" />
+        ) : (
+          <UploadCloud size={18} className="text-gray-400" />
+        )}
+        <p className="text-[10px] font-bold text-gray-500 text-center">
+          {uploading ? 'Uploading…' : dragOver ? 'Drop to upload' : resumeUrl ? 'Drop new resume to replace' : 'Drop resume here or click'}
+        </p>
+        <p className="text-[9px] text-gray-400">PDF, Word, ODT, RTF, TXT · max 10 MB</p>
+      </label>
+    </Card>
+  );
+}
+
 function OnboardingPrompt() {
   return (
     <Card className="rounded-xl p-5 border-dashed border-blue-200 bg-blue-50/50 flex flex-col items-center text-center">
@@ -922,7 +1039,15 @@ export default function ProfessionalDashboard() {
               </div>
 
               <MarketPulseGrid data={data} loading={loading} />
-              <StrategicSuite data={data} loading={loading} />
+
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                <div className="xl:col-span-2">
+                  <StrategicSuite data={data} loading={loading} />
+                </div>
+                <div>
+                  <ResumeCard data={data} onUploaded={loadDashboard} />
+                </div>
+              </div>
 
               {error && (
                 <div className="flex items-center gap-2 p-3 bg-red-50 rounded-xl text-[11px] text-red-600 border border-red-100 italic">
