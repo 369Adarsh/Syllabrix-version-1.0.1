@@ -8,9 +8,9 @@ const pdf = require('pdf-parse');
  */
 async function extractTextFromPdfUrl(url) {
   try {
-    const response = await axios.get(url, { 
+    const response = await axios.get(url, {
       responseType: 'arraybuffer',
-      timeout: 10000 // 10s timeout
+      timeout: 30000 // 30s timeout for Cloudinary downloads
     });
     
     const buffer = Buffer.from(response.data);

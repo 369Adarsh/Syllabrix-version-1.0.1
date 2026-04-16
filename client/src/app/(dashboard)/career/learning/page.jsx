@@ -499,7 +499,7 @@ export default function LearningPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-12 px-4 md:px-0 pb-20">
+    <div className="max-w-6xl mx-auto space-y-6 sm:space-y-12 px-3 sm:px-4 md:px-0 pb-20">
       {/* Header & Impulse */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
@@ -509,25 +509,25 @@ export default function LearningPage() {
               </div>
               <span className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em]">Learning Hub</span>
            </div>
-           <h1 className="text-4xl font-black text-gray-900 tracking-tighter uppercase leading-none mb-3">
+           <h1 className="text-2xl sm:text-4xl font-black text-gray-900 tracking-tighter uppercase leading-none mb-3">
              My Learning Hub
            </h1>
            <p className="text-sm text-gray-400 font-medium max-w-lg">
              Build your IT skills with adaptive roadmaps, deep theory, and interactive challenge labs.
            </p>
         </div>
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-3">
            <button
              onClick={() => setShowForm(o => !o)}
-             className="flex items-center justify-center gap-2 px-8 py-4 bg-blue-600 text-white rounded-[24px] font-black uppercase tracking-widest text-xs hover:bg-blue-700 transition-all shadow-xl shadow-blue-100"
+             className="flex items-center justify-center gap-2 px-5 sm:px-8 py-3 sm:py-4 bg-blue-600 text-white rounded-[24px] font-black uppercase tracking-widest text-xs hover:bg-blue-700 transition-all shadow-xl shadow-blue-100"
            >
              {showForm ? <X size={16} strokeWidth={3} /> : <Plus size={16} strokeWidth={3} />}
-             {showForm ? 'Cancel' : 'New Mastery Path'}
+             {showForm ? 'Cancel' : 'New Path'}
            </button>
            {paths.length > 0 && (
              <button
                onClick={handleClearAll}
-               className="flex items-center justify-center gap-2 px-8 py-4 bg-white border border-red-200 text-red-600 rounded-[24px] font-black uppercase tracking-widest text-xs hover:bg-red-50 transition-all"
+               className="flex items-center justify-center gap-2 px-5 sm:px-8 py-3 sm:py-4 bg-white border border-red-200 text-red-600 rounded-[24px] font-black uppercase tracking-widest text-xs hover:bg-red-50 transition-all"
              >
                Start Fresh
              </button>
@@ -541,7 +541,7 @@ export default function LearningPage() {
             initial={{ opacity: 0, scale: 0.95, y: -20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
-            className="bg-white border border-gray-100 rounded-[48px] p-12 shadow-2xl relative overflow-hidden"
+            className="bg-white border border-gray-100 rounded-[32px] sm:rounded-[48px] p-5 sm:p-8 md:p-12 shadow-2xl relative overflow-hidden"
           >
             <div className="absolute top-0 left-0 w-full h-2 bg-blue-600" />
             
@@ -555,7 +555,7 @@ export default function LearningPage() {
                </div>
             </div>
 
-            <form onSubmit={handleGenerate} className="grid grid-cols-1 md:grid-cols-2 gap-10">
+            <form onSubmit={handleGenerate} className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-8 md:gap-10">
               <div className="md:col-span-2 space-y-6">
                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Select target skill</label>
                 
@@ -634,13 +634,13 @@ export default function LearningPage() {
 
               <div>
                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Duration (Days)</label>
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
                    {[7, 10, 14, 21, 30].map(d => (
                      <button
                        key={d}
                        type="button"
                        onClick={() => setTotalDays(d)}
-                       className={`py-4 rounded-2xl border text-xs font-black transition-all ${
+                       className={`py-3 sm:py-4 rounded-2xl border text-xs font-black transition-all ${
                          totalDays === d ? 'bg-blue-600 border-blue-600 text-white shadow-lg' : 'bg-white border-gray-100 text-gray-400 hover:border-blue-200'
                        }`}
                      >

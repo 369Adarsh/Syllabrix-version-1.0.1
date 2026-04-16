@@ -89,7 +89,8 @@ const ResumePreview = ({ profile, user, skills, workHistory, onUpdate, syncing }
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
     pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    pdf.save(`${user?.name || 'Resume'}_Architecture.pdf`);
+    const fullName = user?.full_name || user?.username || 'Resume';
+    pdf.save(`${fullName}_Resume.pdf`);
   };
 
   const syncProfile = (data) => onUpdate?.('profile', data);
@@ -180,10 +181,10 @@ const ResumePreview = ({ profile, user, skills, workHistory, onUpdate, syncing }
             <aside className="w-[75mm] bg-slate-900 text-white p-10 flex flex-col group/sidebar">
               {/* Profile Image/Initial */}
               <div className="w-24 h-24 bg-white/10 rounded-3xl mb-12 flex items-center justify-center border border-white/20 relative overflow-hidden">
-                 {user?.avatar_url ? (
-                   <img src={user.avatar_url} className="w-full h-full object-cover" />
+                 {user?.profile_photo_url ? (
+                   <img src={user.profile_photo_url} alt="" className="w-full h-full object-cover" />
                  ) : (
-                   <span className="text-4xl font-black text-white/40">{user?.name?.charAt(0)}</span>
+                   <span className="text-4xl font-black text-white/40">{(user?.full_name || user?.username || '?').charAt(0).toUpperCase()}</span>
                  )}
                  <div className="absolute inset-x-0 bottom-0 bg-indigo-500 h-1" />
               </div>
@@ -200,7 +201,9 @@ const ResumePreview = ({ profile, user, skills, workHistory, onUpdate, syncing }
                   </li>
                   <li className="flex items-start gap-4">
                     <div className="p-2.5 bg-white/5 rounded-xl"><MapPin size={12} className="text-indigo-300" /></div>
-                    <span className="text-[11px] font-medium text-slate-300 leading-relaxed mt-1">{user?.city || 'Bengaluru, India'}</span>
+                    <span className="text-[11px] font-medium text-slate-300 leading-relaxed mt-1">
+                      {[user?.city, user?.state, user?.country].filter(Boolean).join(', ') || 'India'}
+                    </span>
                   </li>
                   {profile?.website && (
                     <li className="flex items-start gap-4">
@@ -275,7 +278,7 @@ const ResumePreview = ({ profile, user, skills, workHistory, onUpdate, syncing }
               {/* Header Title */}
               <div className="mb-20">
                 <h1 className="text-6xl font-black text-slate-900 tracking-tighter uppercase leading-[0.85] mb-6">
-                  {user?.name?.split(' ').map((n, i) => (
+                  {(user?.full_name || user?.username || 'Your Name').split(' ').map((n, i) => (
                     <span key={i} className={i % 2 !== 0 ? 'text-indigo-600' : ''}>{n} </span>
                   ))}
                 </h1>
@@ -319,7 +322,7 @@ const ResumePreview = ({ profile, user, skills, workHistory, onUpdate, syncing }
                             <EditableField value={item.role} onSave={(v) => updateHistory(i, 'role', v)} />
                           </h4>
                           <span className="text-sm font-black text-indigo-600 uppercase tracking-widest">
-                            <EditableField value={item.company || item.company_name} onSave={(v) => updateHistory(i, 'company', v)} />
+                            <EditableField value={item.company || item.company_name || ''} onSave={(v) => updateHistory(i, 'company', v)} />
                           </span>
                         </div>
                         <div className="text-[10px] font-black text-slate-400 bg-slate-50 px-4 py-1.5 rounded-full uppercase tracking-[0.2em] whitespace-nowrap">

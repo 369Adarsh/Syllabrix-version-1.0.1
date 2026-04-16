@@ -199,76 +199,41 @@ export default function SalaryPage() {
     : SALARY_DATA;
 
   return (
-    <div className="max-w-[1280px] mx-auto pb-20 space-y-12">
+    <div className="max-w-[1280px] mx-auto pb-20 space-y-8 sm:space-y-12 px-3 sm:px-4">
       {/* Hero Header */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-700 to-violet-800 rounded-[48px] p-8 md:p-16 text-white shadow-2xl shadow-blue-200">
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white opacity-5 blur-[100px] -mr-40 -mt-40 pointer-events-none" />
+      <section className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-700 to-violet-800 rounded-[32px] sm:rounded-[48px] p-6 sm:p-10 md:p-16 text-white shadow-2xl shadow-blue-200">
+        <div className="absolute top-0 right-0 w-48 sm:w-[500px] h-48 sm:h-[500px] bg-white opacity-5 blur-[100px] -mr-20 sm:-mr-40 -mt-20 sm:-mt-40 pointer-events-none" />
         <div className="relative z-10 max-w-2xl">
-           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 backdrop-blur-md rounded-full border border-white/20 mb-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
-             <Sparkles size={14} className="text-blue-200" />
-             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-100">AI Intelligence Active</span>
+           <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 backdrop-blur-md rounded-full border border-white/20 mb-5 sm:mb-8">
+             <Sparkles size={12} className="text-blue-200" />
+             <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-blue-100">AI Intelligence Active</span>
            </div>
-           <h1 className="text-4xl md:text-6xl font-black tracking-tighter mb-6 leading-[0.9]">
+           <h1 className="text-2xl sm:text-4xl md:text-6xl font-black tracking-tighter mb-4 sm:mb-6 leading-tight sm:leading-[0.9]">
              Salary <span className="text-blue-200">Intelligence</span> Lab
            </h1>
-           <p className="text-base md:text-lg text-blue-100/80 font-medium leading-relaxed max-w-lg mb-0">
+           <p className="text-sm md:text-lg text-blue-100/80 font-medium leading-relaxed max-w-lg">
              Global benchmarking, regional nuances, and AI-calibrated trajectories for the 2026 professional landscape.
            </p>
         </div>
-
-        {/* Profile Sync Floating Card */}
-        <AnimatePresence>
-          {profile?.current_role && (
-            <motion.div 
-               initial={{ opacity: 0, x: 20 }}
-               animate={{ opacity: 1, x: 0 }}
-               className="hidden xl:block absolute top-16 right-16 w-80 bg-white/10 backdrop-blur-xl border border-white/20 rounded-[32px] p-8 shadow-2xl"
-            >
-               <div className="flex items-center gap-4 mb-6">
-                 <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-blue-600 shadow-lg">
-                    <ShieldCheck size={24} />
-                 </div>
-                 <div>
-                    <p className="text-[10px] font-black text-blue-200 uppercase tracking-widest leading-none mb-1">Positioning</p>
-                    <h4 className="text-lg font-black text-white">{profile.current_role}</h4>
-                 </div>
-               </div>
-               <div className="space-y-4">
-                 <div>
-                    <div className="flex justify-between text-[10px] font-black text-blue-100 uppercase tracking-widest mb-1.5">
-                       <span>Market Alignment</span>
-                       <span>84%</span>
-                    </div>
-                    <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                       <div className="h-full bg-blue-300 w-[84%]" />
-                    </div>
-                 </div>
-                 <p className="text-[11px] text-blue-100/60 font-medium italic">
-                    You are currently trending in the 92nd percentile for your domain.
-                 </p>
-               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </section>
 
       {/* Control Bar */}
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between sticky top-4 z-20">
-         <div className="relative w-full md:max-w-md group">
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+         <div className="relative group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors" size={18} />
-            <input 
+            <input
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search roles, skills, or domains..."
-              className="w-full bg-white border border-gray-100 rounded-[24px] py-4 pl-12 pr-6 text-sm font-bold shadow-xl shadow-gray-100/50 outline-none focus:ring-4 focus:ring-blue-50 transition-all placeholder:text-gray-300 translate-y-0 hover:-translate-y-1"
+              className="w-full sm:w-80 md:w-96 bg-white border border-gray-100 rounded-[24px] py-3 sm:py-4 pl-12 pr-6 text-sm font-bold shadow-xl shadow-gray-100/50 outline-none focus:ring-4 focus:ring-blue-50 transition-all placeholder:text-gray-300"
             />
          </div>
          <div className="flex gap-2">
-            <button className="px-6 py-4 bg-white border border-gray-100 rounded-2xl text-[11px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-gray-50 transition-all shadow-sm">
+            <button className="flex-1 sm:flex-none px-4 sm:px-6 py-3 sm:py-4 bg-white border border-gray-100 rounded-2xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-gray-50 transition-all shadow-sm">
                <Filter size={14} /> Filter
             </button>
-            <button className="px-6 py-4 bg-white border border-gray-100 rounded-2xl text-[11px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-gray-50 transition-all shadow-sm">
+            <button className="flex-1 sm:flex-none px-4 sm:px-6 py-3 sm:py-4 bg-white border border-gray-100 rounded-2xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-gray-50 transition-all shadow-sm">
                <PieChart size={14} /> Export
             </button>
          </div>
@@ -319,8 +284,8 @@ export default function SalaryPage() {
       </AnimatePresence>
 
       {/* Geographic Intelligence */}
-      <section className="bg-white rounded-[40px] border border-gray-100 p-8 md:p-12 shadow-sm shadow-gray-100/50">
-         <div className="flex items-center justify-between mb-12">
+      <section className="bg-white rounded-[32px] sm:rounded-[40px] border border-gray-100 p-5 sm:p-8 md:p-12 shadow-sm shadow-gray-100/50">
+         <div className="flex items-center justify-between mb-8 sm:mb-12">
             <div>
                <h2 className="text-2xl font-black text-gray-900 tracking-tight">Geographic Nuances</h2>
                <p className="text-[13px] text-gray-400 font-bold uppercase tracking-widest mt-1">Multiplier Matrix — Q1 2026</p>
@@ -331,7 +296,7 @@ export default function SalaryPage() {
             </div>
          </div>
 
-         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+         <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-6">
             {LOCATIONS.map((l, i) => (
               <motion.div 
                 key={i}
@@ -360,21 +325,21 @@ export default function SalaryPage() {
       </section>
 
       {/* Specialized AI Insight Footer Card */}
-      <section className="bg-blue-600 rounded-[40px] p-8 md:p-12 text-white relative overflow-hidden group">
-         <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-[100px] -mr-40 -mt-40 transition-transform duration-1000 group-hover:scale-125" />
-         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-            <div className="space-y-4 text-center md:text-left">
+      <section className="bg-blue-600 rounded-[32px] sm:rounded-[40px] p-6 sm:p-8 md:p-12 text-white relative overflow-hidden group">
+         <div className="absolute top-0 right-0 w-48 sm:w-96 h-48 sm:h-96 bg-white/10 rounded-full blur-[100px] -mr-20 sm:-mr-40 -mt-20 sm:-mt-40 transition-transform duration-1000 group-hover:scale-125" />
+         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6 sm:gap-8">
+            <div className="space-y-3 sm:space-y-4 text-center md:text-left">
                <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full animate-pulse">
                   <Zap size={14} className="text-blue-200" />
                   <span className="text-[9px] font-black uppercase tracking-widest">Next Career Jump</span>
                </div>
-               <h3 className="text-3xl font-black tracking-tight leading-none">Increase your Market Fit to 95%</h3>
+               <h3 className="text-xl sm:text-3xl font-black tracking-tight leading-tight">Increase your Market Fit to 95%</h3>
                <p className="text-blue-100/70 text-sm font-medium max-w-md">
                  Based on your current trajectory, adding <span className="text-white font-black underline underline-offset-4">Cloud Governance</span> could unlock a 35% premium in North American markets.
                </p>
             </div>
-            <button className="px-10 py-5 bg-white text-blue-700 text-[14px] font-black rounded-[24px] shadow-2xl hover:bg-blue-50 transition-all flex items-center gap-3 active:scale-95 group">
-               Get Personalized Report <ArrowUpRight size={20} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+            <button className="w-full sm:w-auto px-6 sm:px-10 py-4 sm:py-5 bg-white text-blue-700 text-[13px] sm:text-[14px] font-black rounded-[24px] shadow-2xl hover:bg-blue-50 transition-all flex items-center justify-center gap-3 active:scale-95">
+               Get Personalized Report <ArrowUpRight size={18} />
             </button>
          </div>
       </section>

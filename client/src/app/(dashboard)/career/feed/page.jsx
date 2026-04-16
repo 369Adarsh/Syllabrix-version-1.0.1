@@ -40,20 +40,20 @@ const MOCK_POSTS = [
 ];
 
 const MainLayout = ({ children }) => (
-  <div className="max-w-[1440px] mx-auto px-4 lg:px-8 py-8">
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-      {/* Left Sidebar - 3 cols */}
-      <aside className="hidden lg:block lg:col-span-3 sticky top-24 h-[calc(100vh-120px)]">
+  <div className="max-w-[1440px] mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-8">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-start">
+      {/* Left Sidebar - 3 cols, hidden on mobile */}
+      <aside className="hidden lg:block lg:col-span-3 sticky top-24 max-h-[calc(100vh-120px)]">
         <FeedSidebar />
       </aside>
 
       {/* Main Feed - 6 cols */}
-      <main className="lg:col-span-6 space-y-8 min-h-screen pb-20">
+      <main className="lg:col-span-6 space-y-6 sm:space-y-8 min-h-screen pb-20">
         {children}
       </main>
 
-      {/* Right Sidebar - 3 cols */}
-      <aside className="hidden lg:block lg:col-span-3 sticky top-24 h-[calc(100vh-120px)] overflow-y-auto pr-2 no-scrollbar">
+      {/* Right Sidebar - 3 cols, hidden on mobile */}
+      <aside className="hidden lg:block lg:col-span-3 sticky top-24 max-h-[calc(100vh-120px)] overflow-y-auto pr-2 no-scrollbar">
         <FeedWidgets />
       </aside>
     </div>
@@ -72,37 +72,37 @@ export default function CareerFeedPage() {
   return (
     <div className="bg-[#FBFCFD] min-h-screen">
       {/* Search Header - Integration with Career Dashboard */}
-      <div className="sticky top-[0px] z-[40] bg-white/80 backdrop-blur-xl border-b border-gray-100 px-8 py-4 flex items-center justify-between shadow-sm shadow-gray-100/20">
-        <div className="flex items-center gap-4">
-           <h2 className="text-xl font-black text-gray-900 tracking-tighter">CareerIntel</h2>
-           <nav className="flex items-center gap-8 ml-10">
+      <div className="sticky top-[0px] z-[40] bg-white/80 backdrop-blur-xl border-b border-gray-100 px-4 sm:px-8 py-3 sm:py-4 flex items-center justify-between shadow-sm shadow-gray-100/20">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+           <h2 className="text-base sm:text-xl font-black text-gray-900 tracking-tighter shrink-0">CareerIntel</h2>
+           <nav className="hidden sm:flex items-center gap-4 md:gap-8 ml-4 md:ml-10">
              <button className="text-[11px] font-black text-blue-600 uppercase tracking-widest border-b-2 border-blue-600 pb-2 transition-all">Feed</button>
              <button className="text-[11px] font-black text-gray-400 uppercase tracking-widest hover:text-gray-900 transition-colors pb-2">Communities</button>
-             <button className="text-[11px] font-black text-gray-400 uppercase tracking-widest hover:text-gray-900 transition-colors pb-2">Mentors</button>
+             <button className="hidden md:block text-[11px] font-black text-gray-400 uppercase tracking-widest hover:text-gray-900 transition-colors pb-2">Mentors</button>
            </nav>
         </div>
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-2 sm:gap-6 shrink-0">
            <div className="relative group hidden md:block">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors" size={16} />
-              <input 
+              <input
                 placeholder="Search insights..."
-                className="bg-gray-50 border border-transparent focus:border-blue-100 focus:bg-white rounded-2xl py-2.5 pl-12 pr-4 text-[13px] font-medium w-72 outline-none transition-all shadow-sm shadow-transparent focus:shadow-blue-50"
+                className="bg-gray-50 border border-transparent focus:border-blue-100 focus:bg-white rounded-2xl py-2.5 pl-12 pr-4 text-[13px] font-medium w-56 lg:w-72 outline-none transition-all shadow-sm shadow-transparent focus:shadow-blue-50"
               />
            </div>
-           
-           <div className="flex items-center gap-2 pr-4 border-r border-gray-100">
-             <button className="p-2.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all relative group">
-                <Bell size={20} />
-                <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-blue-600 rounded-full border-2 border-white group-hover:scale-125 transition-transform" />
+
+           <div className="flex items-center gap-1 sm:gap-2 pr-2 sm:pr-4 border-r border-gray-100">
+             <button className="p-2 sm:p-2.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all relative group">
+                <Bell size={18} />
+                <span className="absolute top-2 right-2 w-2 h-2 bg-blue-600 rounded-full border-2 border-white group-hover:scale-125 transition-transform" />
              </button>
-             <button className="p-2.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
-                <MessageSquare size={20} />
+             <button className="hidden sm:flex p-2.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
+                <MessageSquare size={18} />
              </button>
            </div>
 
-           <div className="flex items-center gap-3 pl-2 ring-offset-2 hover:ring-2 ring-blue-100 rounded-full p-1 transition-all cursor-pointer">
-              <div className="w-9 h-9 rounded-full bg-blue-50 border border-blue-100 overflow-hidden shadow-sm">
+           <div className="flex items-center cursor-pointer">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-50 border border-blue-100 overflow-hidden shadow-sm">
                 <img src={user?.profile_photo_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username || 'User'}`} alt="" />
               </div>
            </div>

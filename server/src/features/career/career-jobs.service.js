@@ -68,7 +68,7 @@ Format Example:
     "fit_category": "stretch",
     "match_reasons": ["Next logic step in career path", "Strong existing cloud foundation"],
     "missing_skills": ["L7 Load Balancing at scale", "Distributed consensus protocols"],
-    "apply_url": "https://www.google.com/about/careers"
+    "apply_url": "https://careers.google.com/jobs/results/?q=Senior+Solutions+Architect&location=Bangalore"
   },
   {
     "company_name": "Deloitte",
@@ -82,12 +82,40 @@ Format Example:
     "fit_category": "high",
     "match_reasons": ["BTP governance experience matches perfectly"],
     "missing_skills": [],
-    "apply_url": "https://careers.deloitte.com"
+    "apply_url": "https://apply.deloitte.com/careers/SearchJobs/SAP%20BTP%20Consultant?listFilterMode=1"
   }
 ]
 
-Rules:
-- apply_url must be the company's real careers page
+CRITICAL RULES for apply_url — read carefully:
+- apply_url MUST be the company's OWN career portal with the role title embedded as a search/filter parameter — so the user lands directly on filtered results for that role.
+- NEVER use LinkedIn, Naukri, Indeed, Glassdoor, or any third-party job board.
+- NEVER use a homepage like "https://careers.deloitte.com" with no search params — the user must not have to search manually.
+- The URL must open filtered results on the COMPANY'S OWN website showing that specific role.
+- Use the company's actual careers search endpoint. Examples of correct patterns:
+  • Google → https://careers.google.com/jobs/results/?q={role}&location={location}
+  • Microsoft → https://jobs.microsoft.com/global/en/search?q={role}&lc={location}
+  • Amazon → https://www.amazon.jobs/en/search?query={role}&country=IND&city={location}
+  • SAP → https://jobs.sap.com/search/?q={role}&localefilter=India
+  • IBM → https://www.ibm.com/employment/search.html?q={role}&country=IN
+  • Deloitte → https://apply.deloitte.com/careers/SearchJobs/{role}?listFilterMode=1
+  • Accenture India → https://www.accenture.com/in-en/careers/jobsearch?q={role}&lc=India
+  • Infosys → https://career.infosys.com/joblist#SearchKey={role}
+  • TCS → https://ibegin.tcs.com/iBegin/#searchresult/{role}/{location}
+  • Wipro → https://careers.wipro.com/careers-home/jobs?q={role}&location={location}
+  • HCL → https://www.hcltech.com/careers/job-search?searchKeyword={role}
+  • Cognizant → https://careers.cognizant.com/global/en/search-results?keywords={role}&location={location}
+  • Capgemini → https://www.capgemini.com/in-en/careers/job-search/?search_term={role}&country=India
+  • Tech Mahindra → https://careers.techmahindra.com/search/#q={role}&location={location}
+  • L&T → https://www.lnttechservices.com/careers/job-search?q={role}
+  • Mindtree → https://careers.mindtree.com/jobs?q={role}&location={location}
+  • Mphasis → https://careers.mphasis.com/jobs?q={role}&location={location}
+  • Hexaware → https://hexaware.com/careers/job-search/?q={role}
+  • Oracle India → https://careers.oracle.com/jobs?q={role}&country=IN
+  • Salesforce India → https://www.salesforce.com/company/careers/india/search/?q={role}
+  • Adobe India → https://adobe.wd5.myworkdayjobs.com/external_experienced?q={role}&locationCountry=India
+  • Cisco India → https://jobs.cisco.com/jobs/SearchJobs/{role}?21178=%5B167%5D
+- For any company not listed above: use their official careers site search URL with the role as a query param. If you cannot determine the exact search URL pattern, use https://www.google.com/search?q={role}+{company}+careers+{location}&ibp=htl;jobs as fallback (Google Jobs pulls directly from company career pages).
+- URL-encode the role title (spaces → +, special chars encoded).
 - company_logo_url should be a valid high-resolution logo link (e.g. use https://logo.clearbit.com/domain.com)`;
 
   const jobs = await callGeminiJSON(prompt);

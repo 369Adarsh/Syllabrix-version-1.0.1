@@ -209,27 +209,29 @@ Return ONLY valid JSON (no markdown):
       ]
     );
 
-    // 6. Trigger Skill Analysis (Sync with Career Profile)
+    // 6–8. Run skill analysis, ATS scoring and job refresh in background
+    // (fire-and-forget so the response is not delayed by 3 extra AI calls)
     const mockReq = { user: req.user, body: { resume_text: resumeText } };
-    const mockRes = { 
-      json: (data) => data, 
-      status: () => ({ json: (data) => data }) 
+    const mockRes = {
+      json: (data) => data,
+      status: () => ({ json: (data) => data })
     };
-    await skillsService.analyzeSkills(mockReq, mockRes);
-
-    // 7. Trigger ATS Analysis on the new text
     const analysisReq = { user: req.user, body: { resume_id: resumeId } };
-    const analysis = await exports.analyzeResume(analysisReq, mockRes);
 
-    // 8. Force Job Market Refresh (Sync with new profile)
-    await jobsService.refreshJobMatches(mockReq, mockRes).catch(err => console.error('Job refresh during calibration failed:', err));
+    setImmediate(() => {
+      skillsService.analyzeSkills(mockReq, mockRes)
+        .catch(e => console.error('[Calibrate BG] Skill analysis failed:', e.message));
+      exports.analyzeResume(analysisReq, mockRes)
+        .catch(e => console.error('[Calibrate BG] ATS analysis failed:', e.message));
+      jobsService.refreshJobMatches(mockReq, mockRes)
+        .catch(e => console.error('[Calibrate BG] Job refresh failed:', e.message));
+    });
 
     return res.json(successResponse({
       message: 'Systematic calibration complete',
       resume_id: resumeId,
       professional_id: user.professional_id || `P-${userId.toString().padStart(11, '0')}`,
       work_history: extraction.work_history || [],
-      analysis: analysis.data || analysis
     }));
 
   } catch (error) {

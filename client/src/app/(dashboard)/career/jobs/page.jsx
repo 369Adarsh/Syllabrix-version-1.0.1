@@ -3,11 +3,20 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { careerAPI } from '@/lib/api/career.api';
 import {
-  Briefcase, RefreshCw, ExternalLink, ChevronDown, ChevronUp,
+  RefreshCw, ExternalLink, ChevronDown, ChevronUp,
   MapPin, IndianRupee, Clock, Sparkles, CheckCircle2, AlertCircle,
-  Bookmark, Send, X, Building2, Zap, Target, Bot, Search,
-  Filter, ArrowRight, BarChart3, Globe
+  Bookmark, X, Building2, Zap, Target, Bot, Search,
+  BarChart3, Globe, ArrowRight
 } from 'lucide-react';
+
+// ── Fallback apply URL when AI didn't generate one ───────────────────────────
+function buildApplyUrl(job) {
+  if (job.apply_url) return job.apply_url;
+  // Google Jobs deep link as last resort — pulls from company career pages directly
+  const q   = encodeURIComponent(`${job.role_title} ${job.company_name}`);
+  const loc = encodeURIComponent(job.location || 'India');
+  return `https://www.google.com/search?q=${q}+careers+${loc}&ibp=htl;jobs`;
+}
 
 function Skeleton({ className = '' }) {
   return <div className={`animate-pulse bg-gray-100 rounded-[24px] ${className}`} />;
@@ -194,44 +203,47 @@ function JobCard({ job, onAction, index }) {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 mt-8 pt-6 border-t border-gray-50">
-                {job.apply_url && (
-                  <a
-                    href={job.apply_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white text-xs font-black rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Send size={14} /> APPLY NOW <ArrowRight size={14} />
-                  </a>
-                )}
+              <div className="mt-8 pt-6 border-t border-gray-50 space-y-4">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <a
+                  href={buildApplyUrl(job)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex items-center gap-2 px-4 sm:px-6 py-2.5 bg-blue-600 text-white text-xs font-black rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
+                >
+                  <ExternalLink size={13} />
+                  Apply at {job.company_name}
+                </a>
                 <button
                   onClick={(e) => handleAction(e, 'saved')}
                   disabled={actioning || job.user_action === 'saved'}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-100 text-gray-700 text-xs font-bold rounded-2xl hover:bg-gray-50 transition-all disabled:opacity-50 shadow-sm"
+                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 bg-white border border-gray-100 text-gray-700 text-xs font-bold rounded-2xl hover:bg-gray-50 transition-all disabled:opacity-50 shadow-sm"
                 >
-                  <Bookmark size={14} className={job.user_action === 'saved' ? 'fill-blue-600 text-blue-600' : ''} /> 
-                  {job.user_action === 'saved' ? 'SAVED' : 'SAVE FOR LATER'}
+                  <Bookmark size={13} className={job.user_action === 'saved' ? 'fill-blue-600 text-blue-600' : ''} />
+                  <span className="hidden sm:inline">{job.user_action === 'saved' ? 'SAVED' : 'SAVE'}</span>
+                  <span className="sm:hidden">{job.user_action === 'saved' ? '✓' : 'Save'}</span>
                 </button>
                 <button
                   onClick={(e) => handleAction(e, 'applied')}
                   disabled={actioning || job.user_action === 'applied'}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-100 text-gray-700 text-xs font-bold rounded-2xl hover:bg-gray-50 transition-all disabled:opacity-50 shadow-sm"
+                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 bg-white border border-gray-100 text-gray-700 text-xs font-bold rounded-2xl hover:bg-gray-50 transition-all disabled:opacity-50 shadow-sm"
                 >
-                  <CheckCircle2 size={14} className={job.user_action === 'applied' ? 'text-emerald-500' : ''} />
-                  {job.user_action === 'applied' ? 'APPLIED' : 'MARK APPLIED'}
+                  <CheckCircle2 size={13} className={job.user_action === 'applied' ? 'text-emerald-500' : ''} />
+                  <span className="hidden sm:inline">{job.user_action === 'applied' ? 'APPLIED' : 'MARK APPLIED'}</span>
+                  <span className="sm:hidden">{job.user_action === 'applied' ? 'Applied' : 'Applied?'}</span>
                 </button>
-                
+
                 {job.user_action !== 'dismissed' && (
                   <button
                     onClick={(e) => handleAction(e, 'dismissed')}
                     disabled={actioning}
-                    className="flex items-center gap-2 px-5 py-2.5 text-gray-400 text-xs font-bold rounded-2xl hover:bg-red-50 hover:text-red-500 transition-all disabled:opacity-50 ml-auto"
+                    className="flex items-center gap-1.5 px-3 py-2.5 text-gray-400 text-xs font-bold rounded-2xl hover:bg-red-50 hover:text-red-500 transition-all disabled:opacity-50 ml-auto"
                   >
-                    <X size={14} /> DISMISS
+                    <X size={13} /> <span className="hidden sm:inline">DISMISS</span>
                   </button>
                 )}
+                </div>
               </div>
             </div>
           </motion.div>
@@ -321,7 +333,7 @@ export default function JobsPage() {
   }, [jobs]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+    <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-5 sm:py-8 space-y-6 sm:space-y-12">
       {/* Premium Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="space-y-2">
@@ -335,36 +347,36 @@ export default function JobsPage() {
                </span>
              )}
           </div>
-          <h1 className="text-4xl font-black text-gray-900 tracking-tight flex items-center gap-3">
+          <h1 className="text-2xl sm:text-4xl font-black text-gray-900 tracking-tight flex items-center gap-3">
              Job <span className="text-blue-600">Radar</span>
           </h1>
-          <p className="text-sm font-medium text-gray-500 max-w-lg">
+          <p className="text-sm font-medium text-gray-500 max-w-lg hidden sm:block">
             AI-powered market calibration identifying optimal high-trajectory roles based on your unique skill profile and career momentum.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
            <button
              onClick={handleRefresh}
              disabled={refreshing}
-             className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black rounded-2xl shadow-xl shadow-blue-200 transition-all flex items-center gap-2 group disabled:opacity-50"
+             className="px-4 sm:px-6 py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black rounded-2xl shadow-xl shadow-blue-200 transition-all flex items-center gap-2 group disabled:opacity-50"
            >
              <RefreshCw size={14} className={refreshing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'} />
-             {refreshing ? 'RECALIBRATING...' : 'SYNC MARKET FEED'}
+             {refreshing ? 'Syncing...' : 'Sync Feed'}
            </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-10">
         {/* Left side: List */}
-        <div className="lg:col-span-3 space-y-8">
+        <div className="lg:col-span-3 space-y-5 sm:space-y-8">
            {/* Filters */}
-          <div className="flex flex-wrap gap-2 p-1.5 bg-gray-100/50 rounded-2xl w-fit">
+          <div className="flex flex-wrap gap-1.5 sm:gap-2 p-1.5 bg-gray-100/50 rounded-2xl w-full sm:w-fit overflow-x-auto">
             {tabs.map(tab => (
               <button
                 key={tab.value}
                 onClick={() => setCategory(tab.value)}
-                className={`flex items-center gap-2 py-2 px-5 text-[10px] font-black rounded-xl transition-all uppercase tracking-widest ${
+                className={`flex items-center gap-1.5 py-2 px-3 sm:px-5 text-[9px] sm:text-[10px] font-black rounded-xl transition-all uppercase tracking-widest whitespace-nowrap ${
                   category === tab.value
                     ? 'bg-white shadow-md text-blue-600 scale-105'
                     : 'text-gray-400 hover:text-gray-600'

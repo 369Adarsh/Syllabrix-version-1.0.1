@@ -32,7 +32,7 @@ export const careerAPI = {
   setResumePrimary:    (id)         => api.put(`/career/resume/${id}/set-primary`),
   getATSScore:         ()           => api.get('/career/resume/ats-score'),
   uploadResume:        (data)       => api.post('/career/resume/upload', data),
-  calibrateResume:     (data)       => api.post('/career/resume/calibrate', data),
+  calibrateResume:     (data)       => api.post('/career/resume/calibrate', data, { timeout: 90000 }),
   analyzeResume:       (data)       => api.post('/career/resume/analyze', data),
   optimizeResume:      (data)       => api.post('/career/resume/optimize', data),
   generateCoverLetter: (data)       => api.post('/career/resume/cover-letter', data),
@@ -53,6 +53,12 @@ export const careerAPI = {
   generateDayContent:  (id, day)    => api.post(`/career/learning/${id}/generate-day`, { day }),
   getGapSolution:      (skillName)  => api.post('/career/learning/gap-solution', { skill_name: skillName }),
   clearLearningPaths:  ()           => api.post('/career/learning/clear'),
+
+  // ── Certifications ────────────────────────────────────────────────────────
+  listCertifications:  ()           => api.get('/career/certifications'),
+  addCertification:    (data)       => api.post('/career/certifications', data),
+  updateCertification: (id, data)   => api.put(`/career/certifications/${id}`, data),
+  deleteCertification: (id)         => api.delete(`/career/certifications/${id}`),
 
   // ── Salary ────────────────────────────────────────────────────────────────
   getSalary:           (params)     => api.get('/career/salary', { params }),

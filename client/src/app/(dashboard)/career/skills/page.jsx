@@ -246,7 +246,7 @@ export default function SkillsPage() {
   const marketFit = profile?.marketFitScore || 0;
 
   return (
-    <div className="max-w-5xl mx-auto pb-20 space-y-8">
+    <div className="max-w-5xl mx-auto pb-20 space-y-6 sm:space-y-8 px-3 sm:px-4">
       <AnimatePresence>
         {selectedGap && <GapSolutionOverlay gap={selectedGap} onClose={() => setSelectedGap(null)} />}
       </AnimatePresence>
@@ -258,7 +258,7 @@ export default function SkillsPage() {
               <div className="px-3 py-1 bg-blue-50 text-blue-600 text-[9px] font-black uppercase tracking-widest rounded-full border border-blue-100">Skill Intelligence Engine</div>
               <Sparkles size={14} className="text-blue-600 animate-pulse" />
            </div>
-           <h1 className="text-4xl font-black text-gray-900 tracking-tighter flex items-center gap-3">
+           <h1 className="text-2xl sm:text-4xl font-black text-gray-900 tracking-tighter flex items-center gap-3">
              Skill <span className="text-blue-600">Scanner</span>
            </h1>
            <p className="text-sm text-gray-500 mt-2 font-medium max-w-lg leading-relaxed">
@@ -285,8 +285,8 @@ export default function SkillsPage() {
             className="relative"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-indigo-600/10 blur-[100px] pointer-events-none" />
-            <Card className="p-10 border-blue-100 bg-white/80 backdrop-blur-xl relative z-10">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            <Card className="p-5 sm:p-8 md:p-10 border-blue-100 bg-white/80 backdrop-blur-xl relative z-10">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12">
                 <div className="space-y-8">
                   <div className="space-y-2">
                     <h3 className="text-2xl font-black text-gray-900 tracking-tight">Supply Intelligence</h3>
@@ -373,7 +373,7 @@ export default function SkillsPage() {
             className="space-y-8"
           >
             {/* Main Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
               <Card className="p-8 flex flex-col items-center">
                  <div className="relative w-32 h-32 mb-6">
                     <svg className="w-full h-full transform -rotate-90">
@@ -433,8 +433,8 @@ export default function SkillsPage() {
             </div>
 
             {/* In-depth Breakdown */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-               <Card className="p-10">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-8">
+               <Card className="p-5 sm:p-8 md:p-10">
                   <div className="flex items-center justify-between mb-8">
                      <h3 className="text-xl font-black text-gray-900 flex items-center gap-3 uppercase">
                         <CheckCircle2 size={24} className="text-blue-600" />
@@ -453,7 +453,7 @@ export default function SkillsPage() {
                   </div>
                </Card>
 
-               <Card className="p-10 border-blue-100 bg-amber-50/5">
+               <Card className="p-5 sm:p-8 md:p-10 border-blue-100 bg-amber-50/5">
                   <div className="flex items-center justify-between mb-8">
                      <h3 className="text-xl font-black text-gray-900 flex items-center gap-3 uppercase">
                         <Target size={24} className="text-blue-600" />

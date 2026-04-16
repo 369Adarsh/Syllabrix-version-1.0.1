@@ -1275,27 +1275,22 @@ export default function MyProfilePage() {
   const hasResume = !['institute','organization','parent'].includes(type);
 
   return (
-    <div className="min-h-screen bg-[#F3F4F6] py-6">
-      
-      {/* New Professional/Organization View */}
+    <div className="min-h-screen bg-[#F1F4F8]">
+
+      {/* New Professional/Organization View — full-width, self-contained layout */}
       {(type === 'professional_learner' || type === 'organization') && (
-        <div className="max-w-7xl mx-auto px-4 md:px-6">
-          <ProfessionalProfile 
-            user={user} 
-            dashboardData={dashboardData}
-            onEdit={() => {
-              const bioSection = document.getElementById('persona-intel');
-              if (bioSection) bioSection.scrollIntoView({ behavior: 'smooth' });
-            }}
-            onRefresh={handleRefreshAll}
-            onSave={handleSaveProfessional}
-          />
-        </div>
+        <ProfessionalProfile
+          user={user}
+          dashboardData={dashboardData}
+          onEdit={() => {}}
+          onRefresh={handleRefreshAll}
+          onSave={handleSaveProfessional}
+        />
       )}
 
       {/* Legacy/Default View for other roles */}
       {!(type === 'professional_learner' || type === 'organization') && (
-        <div className="max-w-5xl mx-auto px-4 md:px-6">
+        <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
           {/* ── 1. COVER BANNER ─────────────────────────────────────────── */}
           <div className="relative h-40 md:h-56 w-full rounded-2xl overflow-hidden border border-gray-200 shadow-sm group">
           {user.cover_photo_url

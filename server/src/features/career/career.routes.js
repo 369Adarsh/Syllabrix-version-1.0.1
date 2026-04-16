@@ -8,6 +8,7 @@ const resumeService = require('./career-resume.service');
 const interviewService = require('./career-interview.service');
 const learningService = require('./career-learning.service');
 const onboardingService = require('./career-onboarding.service');
+const certService = require('./career-certifications.service');
 
 // All routes require authentication
 router.use(authenticate);
@@ -64,6 +65,12 @@ router.post('/learning/bridge-gap',  asyncHandler(learningService.bridgeGap));
 router.put('/learning/:id/complete-day', asyncHandler(learningService.completeDay));
 router.post('/learning/:id/generate-day', asyncHandler(learningService.generateDayContent));
 router.post('/learning/clear',            asyncHandler(learningService.clearPaths));
+
+// ── Certifications ────────────────────────────────────────────────────────────
+router.get('/certifications',        asyncHandler(certService.list));
+router.post('/certifications',       asyncHandler(certService.add));
+router.put('/certifications/:id',    asyncHandler(certService.update));
+router.delete('/certifications/:id', asyncHandler(certService.remove));
 
 // ── Salary ────────────────────────────────────────────────────────────────────
 router.get('/salary',                asyncHandler(async (req, res) => {
