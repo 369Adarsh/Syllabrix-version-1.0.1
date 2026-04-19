@@ -6,7 +6,7 @@ import {
   RefreshCw, ExternalLink, ChevronDown, ChevronUp,
   MapPin, IndianRupee, Clock, Sparkles, CheckCircle2, AlertCircle,
   Bookmark, X, Building2, Zap, Target, Bot, Search,
-  BarChart3, Globe, ArrowRight
+  BarChart3, Globe, ArrowRight, Loader2, ChevronLeft
 } from 'lucide-react';
 
 // ── Fallback apply URL when AI didn't generate one ───────────────────────────
@@ -253,6 +253,114 @@ function JobCard({ job, onAction, index }) {
   );
 }
 
+const POPULAR_COMPANIES = [
+  'Google', 'Microsoft', 'Amazon', 'Infosys', 'TCS', 'Wipro',
+  'Accenture', 'Deloitte', 'SAP', 'IBM', 'Cognizant', 'HCL',
+  'Capgemini', 'Tech Mahindra', 'Oracle', 'Salesforce',
+];
+
+function CompanySearch({ onResults }) {
+  const [query, setQuery]           = useState('');
+  const [role, setRole]             = useState('');
+  const [searching, setSearching]   = useState(false);
+  const [searchError, setSearchError] = useState(null);
+  const [showRoleInput, setShowRoleInput] = useState(false);
+
+  const handleSearch = async (companyName) => {
+    const co = companyName || query.trim();
+    if (!co) return;
+    setSearching(true);
+    setSearchError(null);
+    try {
+      const res = await careerAPI.searchCompanyJobs(co, role);
+      onResults(res.data?.data || [], co);
+    } catch (err) {
+      setSearchError(err.response?.data?.message || 'Could not fetch jobs. Try again.');
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  return (
+    <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm space-y-4">
+      <div className="flex items-center gap-2 mb-1">
+        <Building2 size={16} className="text-blue-600" />
+        <h3 className="text-sm font-bold text-gray-900">Search by Company</h3>
+        <span className="text-xs text-gray-400 ml-1">— find jobs at any company</span>
+      </div>
+
+      {/* Main search row */}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSearch()}
+            placeholder="e.g. Google, Infosys, SAP..."
+            className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-300 transition-all"
+          />
+        </div>
+        <button
+          onClick={() => setShowRoleInput(v => !v)}
+          className={`px-3 py-2.5 text-xs font-medium rounded-xl border transition-all ${showRoleInput ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300'}`}
+          title="Filter by role"
+        >
+          + Role
+        </button>
+        <button
+          onClick={() => handleSearch()}
+          disabled={searching || !query.trim()}
+          className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 shrink-0"
+        >
+          {searching ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+          {searching ? 'Searching...' : 'Search'}
+        </button>
+      </div>
+
+      {/* Optional role filter */}
+      <AnimatePresence>
+        {showRoleInput && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+            <input
+              type="text"
+              value={role}
+              onChange={e => setRole(e.target.value)}
+              placeholder="Filter by role (optional) — e.g. Software Engineer, Data Analyst"
+              className="w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Error */}
+      {searchError && (
+        <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 rounded-xl px-3 py-2">
+          <AlertCircle size={13} /> {searchError}
+        </div>
+      )}
+
+      {/* Popular companies */}
+      <div>
+        <p className="text-xs text-gray-400 mb-2">Popular companies</p>
+        <div className="flex flex-wrap gap-1.5">
+          {POPULAR_COMPANIES.map(co => (
+            <button
+              key={co}
+              onClick={() => { setQuery(co); handleSearch(co); }}
+              disabled={searching}
+              className="px-3 py-1.5 bg-gray-50 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 border border-gray-200 text-gray-600 text-xs font-medium rounded-lg transition-all disabled:opacity-40"
+            >
+              {co}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function JobsPage() {
   const [jobs, setJobs] = useState([]);
   const [profile, setProfile] = useState(null);
@@ -262,6 +370,8 @@ export default function JobsPage() {
   const [error, setError] = useState(null);
   const [total, setTotal] = useState(0);
   const [showDismissed, setShowDismissed] = useState(false);
+  const [companyResults, setCompanyResults] = useState(null); // { jobs, company }
+  const [activeView, setActiveView] = useState('radar'); // 'radar' | 'company'
 
   const loadProfile = async () => {
     try {
@@ -311,6 +421,12 @@ export default function JobsPage() {
     setJobs(prev => prev.map(j => j.id === jobId ? { ...j, user_action: action } : j));
   };
 
+  const handleCompanyResults = (results, company) => {
+    setCompanyResults({ jobs: results, company });
+    setActiveView('company');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const tabs = [
     { label: 'ALL OPPORTUNITIES', value: '' },
     { label: 'ELITE MATCHES',     value: 'high',   icon: <Sparkles size={12} /> },
@@ -333,180 +449,180 @@ export default function JobsPage() {
   }, [jobs]);
 
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-5 sm:py-8 space-y-6 sm:space-y-12">
-      {/* Premium Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-             <span className="px-3 py-1 bg-blue-50 text-[10px] font-black text-blue-600 rounded-lg uppercase tracking-[0.2em] flex items-center gap-1.5">
-                <Bot size={12} /> Career Intelligence active
-             </span>
-             {lastUpdated && (
-               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                  Last Sync: {lastUpdated}
-               </span>
-             )}
-          </div>
-          <h1 className="text-2xl sm:text-4xl font-black text-gray-900 tracking-tight flex items-center gap-3">
-             Job <span className="text-blue-600">Radar</span>
+    <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-5 sm:py-8 space-y-5">
+
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <Bot size={20} className="text-blue-600" />
+            {activeView === 'company' ? (
+              <span>Jobs at <span className="text-blue-600">{companyResults?.company}</span></span>
+            ) : (
+              <span>Job <span className="text-blue-600">Radar</span></span>
+            )}
           </h1>
-          <p className="text-sm font-medium text-gray-500 max-w-lg hidden sm:block">
-            AI-powered market calibration identifying optimal high-trajectory roles based on your unique skill profile and career momentum.
+          <p className="text-sm text-gray-500 mt-0.5">
+            {activeView === 'company'
+              ? `${companyResults?.jobs?.length || 0} AI-matched roles found — personalised to your profile`
+              : 'AI-matched roles based on your skill profile and career momentum'}
           </p>
         </div>
-
-        <div className="flex items-center gap-3 shrink-0">
-           <button
-             onClick={handleRefresh}
-             disabled={refreshing}
-             className="px-4 sm:px-6 py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black rounded-2xl shadow-xl shadow-blue-200 transition-all flex items-center gap-2 group disabled:opacity-50"
-           >
-             <RefreshCw size={14} className={refreshing ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'} />
-             {refreshing ? 'Syncing...' : 'Sync Feed'}
-           </button>
+        <div className="flex items-center gap-2 shrink-0">
+          {activeView === 'company' && (
+            <button
+              onClick={() => setActiveView('radar')}
+              className="flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-200 text-gray-600 text-sm font-medium rounded-xl hover:border-gray-300 transition-all"
+            >
+              <ChevronLeft size={14} /> Back to Radar
+            </button>
+          )}
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-all disabled:opacity-50"
+          >
+            <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+            {refreshing ? 'Syncing...' : 'Sync'}
+          </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-10">
-        {/* Left side: List */}
-        <div className="lg:col-span-3 space-y-5 sm:space-y-8">
-           {/* Filters */}
-          <div className="flex flex-wrap gap-1.5 sm:gap-2 p-1.5 bg-gray-100/50 rounded-2xl w-full sm:w-fit overflow-x-auto">
-            {tabs.map(tab => (
-              <button
-                key={tab.value}
-                onClick={() => setCategory(tab.value)}
-                className={`flex items-center gap-1.5 py-2 px-3 sm:px-5 text-[9px] sm:text-[10px] font-black rounded-xl transition-all uppercase tracking-widest whitespace-nowrap ${
-                  category === tab.value
-                    ? 'bg-white shadow-md text-blue-600 scale-105'
-                    : 'text-gray-400 hover:text-gray-600'
-                }`}
-              >
-                {tab.icon} {tab.label}
-              </button>
-            ))}
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 lg:gap-8">
 
-          {error && (
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="flex items-center gap-3 p-4 bg-red-50 rounded-[24px] text-xs font-bold text-red-600 border border-red-100"
-            >
-              <AlertCircle size={18} /> {error}
-            </motion.div>
-          )}
+        {/* Main column */}
+        <div className="lg:col-span-3 space-y-4">
 
-          {/* Job list */}
-          <div className="space-y-4">
-            {loading ? (
-              <div className="space-y-4">
-                {[1,2,3,4].map(i => <Skeleton key={i} className="h-28" />)}
-              </div>
-            ) : visible.length === 0 ? (
-              <div className="bg-white rounded-[40px] border border-dashed border-gray-200 py-24 text-center">
-                <div className="w-20 h-20 rounded-3xl bg-blue-50 flex items-center justify-center mx-auto mb-6">
-                  <Search size={32} className="text-blue-300" />
-                </div>
-                <h2 className="text-xl font-black text-gray-900 mb-2">No Matches Calibrated</h2>
-                <p className="text-sm text-gray-500 mb-8 max-w-xs mx-auto">
-                  Adjust your filters or sync with the market feed to discover high-fit opportunities.
-                </p>
-                <button
-                  onClick={handleRefresh}
-                  className="px-8 py-3 bg-gray-900 text-white text-xs font-black rounded-2xl hover:bg-black transition-all"
-                >
-                  START SYNC
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="space-y-4">
-                  {visible.map((job, idx) => (
-                    <JobCard key={job.id} job={job} onAction={handleAction} index={idx} />
+          {/* Company Search (always visible) */}
+          <CompanySearch onResults={handleCompanyResults} />
+
+          <AnimatePresence mode="wait">
+            {/* ── Company results view ── */}
+            {activeView === 'company' && (
+              <motion.div key="company" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-3">
+                {(companyResults?.jobs || []).length === 0 ? (
+                  <div className="bg-white border border-dashed border-gray-200 rounded-2xl py-16 text-center">
+                    <Search size={28} className="text-gray-300 mx-auto mb-3" />
+                    <p className="text-sm text-gray-500">No jobs found for this company.</p>
+                  </div>
+                ) : (
+                  (companyResults.jobs).map((job, idx) => (
+                    <JobCard key={idx} job={job} onAction={() => {}} index={idx} />
+                  ))
+                )}
+              </motion.div>
+            )}
+
+            {/* ── AI Radar view ── */}
+            {activeView === 'radar' && (
+              <motion.div key="radar" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
+                {/* Fit filters */}
+                <div className="flex flex-wrap gap-1.5 p-1 bg-gray-100 rounded-xl w-full sm:w-fit">
+                  {tabs.map(tab => (
+                    <button
+                      key={tab.value}
+                      onClick={() => setCategory(tab.value)}
+                      className={`flex items-center gap-1.5 py-1.5 px-3 sm:px-4 text-xs font-semibold rounded-lg transition-all whitespace-nowrap ${
+                        category === tab.value ? 'bg-white shadow text-blue-600' : 'text-gray-400 hover:text-gray-600'
+                      }`}
+                    >
+                      {tab.icon} {tab.label}
+                    </button>
                   ))}
                 </div>
-                
-                {dismissedCount > 0 && !showDismissed && (
-                  <button
-                    onClick={() => setShowDismissed(true)}
-                    className="w-full py-4 text-[10px] font-black text-gray-400 hover:text-gray-600 border border-dashed border-gray-200 rounded-[32px] transition-all uppercase tracking-[0.2em] hover:bg-gray-50"
-                  >
-                    View {dismissedCount} archived results
-                  </button>
+
+                {error && (
+                  <div className="flex items-center gap-2.5 p-3 bg-red-50 rounded-xl text-xs text-red-600 border border-red-100">
+                    <AlertCircle size={14} /> {error}
+                  </div>
                 )}
-              </>
+
+                {loading ? (
+                  <div className="space-y-3">
+                    {[1,2,3,4].map(i => <Skeleton key={i} className="h-24" />)}
+                  </div>
+                ) : visible.length === 0 ? (
+                  <div className="bg-white border border-dashed border-gray-200 rounded-2xl py-16 text-center">
+                    <Search size={28} className="text-gray-300 mx-auto mb-3" />
+                    <p className="text-sm font-semibold text-gray-700 mb-1">No matches yet</p>
+                    <p className="text-xs text-gray-400 mb-5">Sync with the market feed to discover personalised roles.</p>
+                    <button onClick={handleRefresh} className="px-5 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-black transition-all">
+                      Sync Now
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-3">
+                      {visible.map((job, idx) => (
+                        <JobCard key={job.id} job={job} onAction={handleAction} index={idx} />
+                      ))}
+                    </div>
+                    {dismissedCount > 0 && !showDismissed && (
+                      <button onClick={() => setShowDismissed(true)}
+                        className="w-full py-3 text-xs text-gray-400 hover:text-gray-600 border border-dashed border-gray-200 rounded-2xl transition-all hover:bg-gray-50">
+                        Show {dismissedCount} dismissed
+                      </button>
+                    )}
+                  </>
+                )}
+              </motion.div>
             )}
-          </div>
+          </AnimatePresence>
         </div>
 
-        {/* Right side: Insights Panel */}
-        <div className="space-y-6">
-          <div className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-[32px] p-8 text-white shadow-2xl shadow-blue-200/50 relative overflow-hidden group">
-             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-2xl group-hover:scale-150 transition-transform duration-1000" />
-             <div className="relative z-10">
-                <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center mb-6">
-                   <Target size={20} />
+        {/* Right sidebar */}
+        <div className="space-y-4">
+          <div className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-2xl p-5 text-white shadow-lg shadow-blue-200/40 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-8 -mt-8 blur-2xl" />
+            <div className="relative z-10">
+              <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center mb-4">
+                <Target size={18} />
+              </div>
+              <h3 className="text-sm font-bold leading-tight mb-2">
+                Target: {profile?.target_role || jobs[0]?.role_title || 'Not set'}
+              </h3>
+              <p className="text-blue-100 text-xs leading-relaxed mb-4">
+                {total > 0
+                  ? `${total} positions matched to your profile.`
+                  : 'Sync your profile to discover matched positions.'}
+              </p>
+              <div className="space-y-2">
+                <div className="flex justify-between text-[10px] text-blue-100/70">
+                  <span>Market Readiness</span>
+                  <span>{profile ? (total > 0 ? 'High' : 'Medium') : 'Low'}</span>
                 </div>
-                <h3 className="text-xl font-black leading-tight mb-3">
-                  Target: {profile?.target_role || jobs[0]?.role_title || 'N/A'}
-                </h3>
-                <p className="text-blue-100 text-[11px] font-bold leading-relaxed mb-8">
-                  {total > 0 
-                    ? `Your current skill trajectory is converging with ${total} premium positions in your target sector.`
-                    : 'Analyze your profile to discover premium positions in your target sector.'}
-                </p>
-                
-                {/* Dynamic Readiness Score */}
-                <div className="space-y-4 mb-8">
-                   <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-blue-100/70">
-                      <span>Market Readiness</span>
-                      <span>{profile ? (total > 0 ? 'High' : 'Medium') : 'Low'}</span>
-                   </div>
-                   <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                      <motion.div 
-                        initial={{ width: 0 }}
-                        animate={{ width: profile ? (total > 0 ? '85%' : '45%') : '15%' }}
-                        className="h-full bg-white rounded-full" 
-                      />
-                   </div>
+                <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
+                  <motion.div initial={{ width: 0 }} animate={{ width: profile ? (total > 0 ? '85%' : '45%') : '15%' }} className="h-full bg-white rounded-full" />
                 </div>
-             </div>
+              </div>
+            </div>
           </div>
 
-          <div className="bg-white rounded-[32px] border border-gray-100 p-8 shadow-sm">
-             <div className="flex items-center justify-between mb-8">
-                <h3 className="text-sm font-black text-gray-900 tracking-tight uppercase">Quick Pulse</h3>
-                <BarChart3 size={18} className="text-blue-600" />
-             </div>
-             <div className="space-y-6">
-                <div className="flex items-center gap-4">
-                   <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
-                      <Sparkles size={18} />
-                   </div>
-                   <div>
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">High Fit</p>
-                      <p className="text-lg font-black text-gray-900">{jobs.filter(j => j.fit_category === 'high').length}</p>
-                   </div>
+          <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wide">Quick Stats</h3>
+              <BarChart3 size={15} className="text-blue-500" />
+            </div>
+            <div className="space-y-3">
+              {[
+                { label: 'High Fit',  value: jobs.filter(j => j.fit_category === 'high').length,   color: 'text-emerald-600', icon: <Sparkles size={14} /> },
+                { label: 'Locations', value: new Set(jobs.map(j => j.location)).size,               color: 'text-blue-600',    icon: <Globe size={14} />    },
+                { label: 'Saved',     value: jobs.filter(j => j.user_action === 'saved').length,    color: 'text-purple-600',  icon: <Bookmark size={14} /> },
+                { label: 'Applied',   value: jobs.filter(j => j.user_action === 'applied').length,  color: 'text-gray-700',    icon: <CheckCircle2 size={14} /> },
+              ].map(s => (
+                <div key={s.label} className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-xs text-gray-500">{s.icon} {s.label}</span>
+                  <span className={`text-sm font-bold ${s.color}`}>{s.value}</span>
                 </div>
-                <div className="flex items-center gap-4">
-                   <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
-                      <Globe size={18} />
-                   </div>
-                   <div>
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Locations</p>
-                      <p className="text-lg font-black text-gray-900">{new Set(jobs.map(j => j.location)).size}</p>
-                   </div>
-                </div>
-             </div>
+              ))}
+            </div>
           </div>
 
-          <div className="bg-gray-900 rounded-[32px] p-8 text-white relative overflow-hidden group">
-             <Sparkles className="absolute -right-2 -bottom-2 text-white/5 w-24 h-24 rotate-12" />
-             <h3 className="text-xs font-black uppercase tracking-widest text-blue-400 mb-2">Pro Tip</h3>
-             <p className="text-[11px] font-bold text-gray-400 leading-relaxed">
-                Applying to &quot;Elite Matches&quot; within 24 hours of sync increases response rates by 42%.
-             </p>
+          <div className="bg-gray-900 rounded-2xl p-5 text-white">
+            <p className="text-xs font-semibold text-blue-400 mb-1.5">Pro Tip</p>
+            <p className="text-xs text-gray-400 leading-relaxed">
+              Applying to Elite Matches within 24 hours of sync increases response rates by 42%.
+            </p>
           </div>
         </div>
       </div>

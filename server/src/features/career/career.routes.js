@@ -9,6 +9,7 @@ const interviewService = require('./career-interview.service');
 const learningService = require('./career-learning.service');
 const onboardingService = require('./career-onboarding.service');
 const certService = require('./career-certifications.service');
+const youtubeService = require('./career-youtube.service');
 
 // All routes require authentication
 router.use(authenticate);
@@ -39,6 +40,7 @@ router.get('/jobs/count',            asyncHandler(jobsService.getJobCount));
 router.get('/jobs/:id',              asyncHandler(jobsService.getJob));
 router.post('/jobs/refresh',         asyncHandler(jobsService.refreshJobMatches));
 router.put('/jobs/:id/action',       asyncHandler(jobsService.updateJobAction));
+router.post('/jobs/company-search',  asyncHandler(jobsService.searchCompanyJobs));
 
 // ── Resume ────────────────────────────────────────────────────────────────────
 router.get('/resume/versions',       asyncHandler(resumeService.listVersions));
@@ -65,6 +67,9 @@ router.post('/learning/bridge-gap',  asyncHandler(learningService.bridgeGap));
 router.put('/learning/:id/complete-day', asyncHandler(learningService.completeDay));
 router.post('/learning/:id/generate-day', asyncHandler(learningService.generateDayContent));
 router.post('/learning/clear',            asyncHandler(learningService.clearPaths));
+
+// ── YouTube video search ───────────────────────────────────────────────────────
+router.get('/youtube/search',        asyncHandler(youtubeService.searchVideo));
 
 // ── Certifications ────────────────────────────────────────────────────────────
 router.get('/certifications',        asyncHandler(certService.list));

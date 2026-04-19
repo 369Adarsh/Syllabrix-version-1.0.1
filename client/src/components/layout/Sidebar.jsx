@@ -207,7 +207,7 @@ function ParentSidebarContent({ onClose }) {
         {/* MAIN */}
         <Section label="Main" />
         <NavItem href="/home"          icon={Home}         label="Home"          {...pProps} />
-        <NavItem href="/home?tab=feed" icon={Rss}          label="My feed"       {...pProps} />
+        <NavItem href="/career/feed" icon={Rss}          label="My feed"       {...pProps} />
         <NavItem href="/explore"       icon={Compass}      label="Explore"       {...pProps} />
         <NavItem href="/messages"      icon={MessageSquare} label="Messages"     {...pProps} />
         <NavItem href="/groups"        icon={Users}        label="Groups"        {...pProps} />
@@ -341,7 +341,7 @@ function ProfessionalSidebarContent({ onClose }) {
 
         {/* NETWORK */}
         <Section label="Network" />
-        <NavItem href="/home?tab=feed" icon={Rss} label="My feed" {...p} />
+        <NavItem href="/career/feed" icon={Rss} label="My feed" {...p} />
         <NavItem href="/mentorship" icon={UserCircle2} label="Mentors" {...p} />
         <NavItem href="/groups" icon={Users} label="Groups" {...p} />
 

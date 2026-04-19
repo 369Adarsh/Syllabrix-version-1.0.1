@@ -67,4 +67,5 @@ module.exports = {
     RESEND_API_KEY: process.env.RESEND_API_KEY || '',
     FROM: process.env.EMAIL_FROM || 'support@syllabrix.com',
   },
+  YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY || '',
 };

@@ -26,6 +26,7 @@ export const careerAPI = {
   getJobCount:         ()           => api.get('/career/jobs/count'),
   refreshJobMatches:   ()           => api.post('/career/jobs/refresh'),
   updateJobAction:     (id, action) => api.put(`/career/jobs/${id}/action`, { action }),
+  searchCompanyJobs:   (company, role) => api.post('/career/jobs/company-search', { company, role }),
 
   // ── Resume ────────────────────────────────────────────────────────────────
   listResumeVersions:  ()           => api.get('/career/resume/versions'),
@@ -62,4 +63,7 @@ export const careerAPI = {
 
   // ── Salary ────────────────────────────────────────────────────────────────
   getSalary:           (params)     => api.get('/career/salary', { params }),
+
+  // ── YouTube ───────────────────────────────────────────────────────────────
+  searchYouTube:       (query)      => api.get('/career/youtube/search', { params: { query } }),
 };

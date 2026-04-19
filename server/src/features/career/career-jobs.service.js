@@ -201,6 +201,67 @@ exports.getJob = async (req, res) => {
   return res.json(successResponse(job));
 };
 
+exports.searchCompanyJobs = async (req, res) => {
+  const userId = req.user.id;
+  const { company, role = '' } = req.body;
+
+  if (!company?.trim()) {
+    return res.status(400).json({ success: false, message: 'Company name is required.' });
+  }
+
+  const [[cp]] = await pool.query('SELECT * FROM career_profiles WHERE user_id = ?', [userId]);
+  const [[sp]] = await pool.query('SELECT * FROM career_skill_profiles WHERE user_id = ?', [userId]);
+
+  const skills = Array.isArray(sp?.skills_detected)
+    ? sp.skills_detected.slice(0, 15).map(s => s.name)
+    : [];
+
+  const roleHint = role.trim() ? `The user is specifically interested in "${role}" roles.` : '';
+
+  const companyDomain = company.toLowerCase().replace(/\s+/g, '') + '.com';
+
+  const prompt = `You are a career advisor for the Indian job market (2026).
+
+Generate 8 realistic current job openings at "${company}" that match this professional's background.
+
+CANDIDATE PROFILE:
+- Experience: ${cp?.experience_years || 0} years
+- Current role: ${cp?.current_role || 'Professional'}
+- Skills: ${skills.join(', ') || 'General professional skills'}
+- Industry: ${cp?.industry || 'Technology'}
+- Location: ${cp?.preferred_location || 'India'}
+${roleHint}
+
+INSTRUCTIONS:
+- All 8 jobs MUST be at "${company}" — no other companies.
+- Generate a realistic mix of roles matching the candidate's profile: 3 high-fit, 3 medium-fit, 2 stretch.
+- Use the company's REAL careers website for apply_url with the role as a search/query parameter.
+- company_logo_url: use https://logo.clearbit.com/${companyDomain}
+
+Return ONLY a valid JSON array, no markdown. Schema per object:
+{
+  "company_name": "${company}",
+  "company_logo_url": "https://logo.clearbit.com/${companyDomain}",
+  "role_title": "...",
+  "location": "...",
+  "salary_range": "₹X-Y LPA",
+  "job_type": "full_time",
+  "experience_required": "X-Y years",
+  "fit_score": 0-100,
+  "fit_category": "high" | "medium" | "stretch",
+  "match_reasons": ["..."],
+  "missing_skills": ["..."],
+  "apply_url": "https://..."
+}`;
+
+  const jobs = await callGeminiJSON(prompt);
+  if (!Array.isArray(jobs) || jobs.length === 0) {
+    return res.status(500).json({ success: false, message: 'Could not fetch jobs for this company. Try again.' });
+  }
+
+  return res.json({ success: true, data: jobs, company });
+};
+
 exports.updateJobAction = async (req, res) => {
   const { action } = req.body;
   const valid = ['saved', 'applied', 'dismissed', 'interviewing'];
