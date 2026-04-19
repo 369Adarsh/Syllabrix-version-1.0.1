@@ -25,6 +25,18 @@ class AdminController {
   }
 
   /**
+   * Admin notification alerts (pending reports, open tickets, new users)
+   */
+  async getAdminAlerts(req, res) {
+    try {
+      const result = await AdminService.getAdminAlerts();
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  /**
    * Content moderation reports
    */
   async getReports(req, res) {
@@ -63,6 +75,19 @@ class AdminController {
       const { status, reason } = req.body;
       
       const result = await AdminService.setUserStatus(id, status, req.user.id, reason);
+      res.json(result);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  /**
+   * Manually verify a user's email
+   */
+  async verifyUserEmail(req, res) {
+    try {
+      const { id } = req.params;
+      const result = await AdminService.verifyUserEmail(id, req.user.id);
       res.json(result);
     } catch (error) {
       res.status(400).json({ error: error.message });
@@ -173,12 +198,18 @@ class AdminController {
    */
   async getAuditLogs(req, res) {
     try {
-      const pagination = {
-        page: parseInt(req.query.page) || 1,
-        limit: parseInt(req.query.limit) || 20
+      const filters = {
+        action_type: req.query.action_type || null,
+        search:      req.query.search      || null,
+        date_from:   req.query.date_from   || null,
+        date_to:     req.query.date_to     || null,
       };
-      const logs = await AdminService.getAuditLogs(pagination);
-      res.json(logs);
+      const pagination = {
+        page:  parseInt(req.query.page)  || 1,
+        limit: parseInt(req.query.limit) || 30,
+      };
+      const result = await AdminService.getAuditLogs(filters, pagination);
+      res.json(result);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
@@ -284,9 +315,16 @@ class AdminController {
   async getUserActivity(req, res) {
     try {
       const { id } = req.params;
-      const { limit, startDate, endDate } = req.query;
-      const activity = await AdminService.getUserActivity(id, parseInt(limit) || 50, startDate, endDate);
-      res.json(activity);
+      const { limit, page, startDate, endDate, actionGroup } = req.query;
+      const result = await AdminService.getUserActivity(
+        id,
+        parseInt(page) || 1,
+        parseInt(limit) || 30,
+        startDate || null,
+        endDate || null,
+        actionGroup || null
+      );
+      res.json(result);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }

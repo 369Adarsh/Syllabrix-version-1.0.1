@@ -4,6 +4,27 @@ const config = require('../config/env');
 
 const getSslConfig = (dbConfig) => dbConfig.SSL ? { rejectUnauthorized: false } : undefined;
 
+// Wraps a pool so every query is timed and slow queries are recorded by SyllaTrace
+function withQueryTrace(pool, poolName) {
+  const originalQuery = pool.query.bind(pool);
+  pool.query = async function tracedQuery(sql, params) {
+    const start = Date.now();
+    try {
+      const result = await originalQuery(sql, params);
+      const ms = Date.now() - start;
+      if (ms >= 150) {
+        try { require('../middleware/trace.middleware').recordSlowQuery(sql, ms, poolName); } catch (_) {}
+      }
+      return result;
+    } catch (err) {
+      const ms = Date.now() - start;
+      try { require('../middleware/trace.middleware').recordSlowQuery(`[ERROR] ${sql}`, ms, poolName); } catch (_) {}
+      throw err;
+    }
+  };
+  return pool;
+}
+
 // Syllabrix Social Pool
 const socialPool = mysql.createPool({
   host: config.DB_SOCIAL.HOST,
@@ -33,6 +54,10 @@ const ldPool = mysql.createPool({
   charset: 'utf8mb4',
   timezone: '+00:00',
 });
+
+// Apply query tracing to both pools
+withQueryTrace(socialPool, 'social');
+withQueryTrace(ldPool, 'corporate');
 
 const testConnection = async () => {
   let socialOk = false;

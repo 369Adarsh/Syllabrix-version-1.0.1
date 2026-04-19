@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { adminAPI } from '@/lib/api/admin.api';
 import UserActivityPanel from '@/components/admin/UserActivityPanel';
-import { Search, Filter, Ban, CheckCircle, Eye, UserCheck, ChevronLeft, ChevronRight, Activity } from 'lucide-react';
+import { Search, Ban, CheckCircle, ShieldCheck, ChevronLeft, ChevronRight, Activity, MailCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
 const USER_TYPES = ['all', 'student', 'teacher', 'institute', 'parent', 'professional_learner', 'organization'];
@@ -71,6 +71,19 @@ export default function AdminUsersPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
+  const handleVerifyEmail = async (userId, username) => {
+    setActionLoading(`verify-${userId}`);
+    try {
+      await adminAPI.verifyUserEmail(userId);
+      toast.success(`@${username} email verified and account activated.`);
+      fetchUsers();
+    } catch (e) {
+      toast.error('Verification failed: ' + (e.response?.data?.error || e.message));
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleStatusChange = async (userId, currentActive, username) => {
     const newStatus = currentActive ? 'banned' : 'active';
     const reason = currentActive ? prompt(`Reason for banning @${username}:`) : 'Account reinstated by admin';
@@ -120,103 +133,155 @@ export default function AdminUsersPage() {
       {/* Count */}
       <p className="text-white/30 text-xs font-medium">{total.toLocaleString()} users found</p>
 
-      {/* Table */}
-      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-white/[0.06]">
-              {['ID', 'User', 'Type', 'Email', 'Reports', 'Last Seen', 'Status', 'Actions'].map(h => (
-                <th key={h} className="text-left text-white/30 text-xs font-semibold uppercase tracking-wider px-4 py-3">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/[0.04]">
-            {loading ? (
-              Array.from({ length: 8 }).map((_, i) => (
-                <tr key={i}>
-                  {Array.from({ length: 8 }).map((_, j) => (
-                    <td key={j} className="px-4 py-3"><div className="h-4 bg-white/[0.05] rounded-lg animate-pulse" /></td>
-                  ))}
-                </tr>
-              ))
-            ) : users.map(u => (
-              <tr key={u.id} className="hover:bg-white/[0.025] transition-colors group">
-                <td className="px-4 py-3 pb-3">
-                  <span className="text-white/40 font-mono text-[10px] tracking-wider bg-white/5 py-1.5 px-2 rounded-md border border-white/5 shadow-sm" title={u.id}>
-                    {formatUserId(u)}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500/40 to-purple-500/40 flex items-center justify-center text-white/80 text-xs font-bold shrink-0">
-                      {u.full_name?.[0] || u.username?.[0] || '?'}
-                    </div>
-                    <div>
-                      <p className="text-white/85 font-semibold leading-tight">{u.full_name || u.username}</p>
-                      <p className="text-white/30 text-xs">@{u.username}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full border uppercase tracking-wide ${TYPE_COLORS[u.user_type] || 'bg-white/10 text-white/40 border-white/10'}`}>
-                    {u.user_type?.replace('_', ' ')}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-white/50 text-xs">{u.email}</td>
-                <td className="px-4 py-3">
-                  {u.report_count > 0 ? (
-                    <span className="text-red-400 font-bold text-xs bg-red-500/10 px-2 py-1 rounded-lg border border-red-500/20">{u.report_count} reports</span>
-                  ) : (
-                    <span className="text-white/20 text-xs">Clean</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-white/30 text-xs">
-                  {u.last_seen ? new Date(u.last_seen).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Never'}
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider ${u.is_active ? 'bg-green-500/15 text-green-400 border border-green-500/20' : 'bg-red-500/15 text-red-400 border border-red-500/20'}`}>
-                    {u.is_active ? 'Active' : 'Banned'}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => { setSelectedUser(u); setIsPanelOpen(true); }}
-                      title="Show Activity"
-                      className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-white/[0.05] text-white/50 hover:bg-white/[0.1] border border-white/[0.08]"
-                    >
-                      <Activity size={12} />
-                      Activity
-                    </button>
-                    <button
-                      onClick={() => handleStatusChange(u.id, u.is_active, u.username)}
-                      disabled={actionLoading === u.id}
-                      className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-all ${
-                        u.is_active
-                          ? 'bg-red-500/15 text-red-400 hover:bg-red-500/25 border border-red-500/25'
-                          : 'bg-green-500/15 text-green-400 hover:bg-green-500/25 border border-green-500/25'
-                      } disabled:opacity-50`}
-                    >
-                      {u.is_active ? <Ban size={12} /> : <CheckCircle size={12} />}
-                      {u.is_active ? 'Ban' : 'Reinstate'}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        
-        {/* Activity Panel */}
-        <UserActivityPanel 
-          user={selectedUser}
-          isOpen={isPanelOpen}
-          onClose={() => setIsPanelOpen(false)}
-        />
+      {/* ── Mobile card list ── */}
+      <div className="md:hidden space-y-3">
+        {loading ? (
+          Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4 animate-pulse h-24" />
+          ))
+        ) : users.map(u => (
+          <div key={u.id} className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500/40 to-purple-500/40 flex items-center justify-center text-white/80 text-sm font-bold shrink-0">
+                  {u.full_name?.[0] || u.username?.[0] || '?'}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-white/85 font-semibold text-sm truncate">{u.full_name || u.username}</p>
+                  <p className="text-white/30 text-xs">@{u.username}</p>
+                </div>
+              </div>
+              <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider shrink-0 ${u.is_active ? 'bg-green-500/15 text-green-400 border border-green-500/20' : 'bg-red-500/15 text-red-400 border border-red-500/20'}`}>
+                {u.is_active ? 'Active' : 'Banned'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase ${TYPE_COLORS[u.user_type] || 'bg-white/10 text-white/40 border-white/10'}`}>
+                {u.user_type?.replace(/_/g, ' ')}
+              </span>
+              {u.email_verified_at
+                ? <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400"><MailCheck size={10} /> Verified</span>
+                : <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">Unverified</span>
+              }
+              {u.report_count > 0 && (
+                <span className="text-red-400 font-bold text-[10px] bg-red-500/10 px-2 py-0.5 rounded-full border border-red-500/20">{u.report_count} reports</span>
+              )}
+            </div>
+            <p className="text-white/30 text-xs truncate">{u.email}</p>
+            <div className="flex items-center gap-2 pt-1">
+              <button onClick={() => { setSelectedUser(u); setIsPanelOpen(true); }}
+                className="flex-1 flex items-center justify-center gap-1.5 text-xs font-bold py-2 rounded-xl bg-white/[0.05] text-white/50 hover:bg-white/[0.08] border border-white/[0.08] transition-all">
+                <Activity size={13} /> Activity
+              </button>
+              {!u.email_verified_at && (
+                <button onClick={() => handleVerifyEmail(u.id, u.username)} disabled={actionLoading === `verify-${u.id}`}
+                  className="flex-1 flex items-center justify-center gap-1.5 text-xs font-bold py-2 rounded-xl bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 border border-emerald-500/25 disabled:opacity-50 transition-all">
+                  <ShieldCheck size={13} /> Verify
+                </button>
+              )}
+              <button onClick={() => handleStatusChange(u.id, u.is_active, u.username)} disabled={actionLoading === u.id}
+                className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-bold py-2 rounded-xl transition-all disabled:opacity-50 ${u.is_active ? 'bg-red-500/15 text-red-400 hover:bg-red-500/25 border border-red-500/25' : 'bg-green-500/15 text-green-400 hover:bg-green-500/25 border border-green-500/25'}`}>
+                {u.is_active ? <><Ban size={13} /> Ban</> : <><CheckCircle size={13} /> Reinstate</>}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
 
-        {/* Pagination */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-white/[0.06]">
-          <p className="text-white/30 text-xs">Page {page} of {totalPages}</p>
+      {/* ── Desktop table ── */}
+      <div className="hidden md:block rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-white/[0.06]">
+                {['ID', 'User', 'Type', 'Email', 'Verified', 'Reports', 'Last Seen', 'Status', 'Actions'].map(h => (
+                  <th key={h} className="text-left text-white/30 text-xs font-semibold uppercase tracking-wider px-4 py-3 whitespace-nowrap">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/[0.04]">
+              {loading ? (
+                Array.from({ length: 8 }).map((_, i) => (
+                  <tr key={i}>
+                    {Array.from({ length: 9 }).map((_, j) => (
+                      <td key={j} className="px-4 py-3"><div className="h-4 bg-white/[0.05] rounded-lg animate-pulse" /></td>
+                    ))}
+                  </tr>
+                ))
+              ) : users.map(u => (
+                <tr key={u.id} className="hover:bg-white/[0.025] transition-colors group">
+                  <td className="px-4 py-3">
+                    <span className="text-white/40 font-mono text-[10px] tracking-wider bg-white/5 py-1.5 px-2 rounded-md border border-white/5">{formatUserId(u)}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500/40 to-purple-500/40 flex items-center justify-center text-white/80 text-xs font-bold shrink-0">
+                        {u.full_name?.[0] || u.username?.[0] || '?'}
+                      </div>
+                      <div>
+                        <p className="text-white/85 font-semibold leading-tight">{u.full_name || u.username}</p>
+                        <p className="text-white/30 text-xs">@{u.username}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`text-[10px] font-bold px-2 py-1 rounded-full border uppercase tracking-wide ${TYPE_COLORS[u.user_type] || 'bg-white/10 text-white/40 border-white/10'}`}>
+                      {u.user_type?.replace(/_/g, ' ')}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-white/50 text-xs">{u.email}</td>
+                  <td className="px-4 py-3">
+                    {u.email_verified_at
+                      ? <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400"><MailCheck size={11} /> Verified</span>
+                      : <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-1 rounded-full border border-amber-500/20">Unverified</span>
+                    }
+                  </td>
+                  <td className="px-4 py-3">
+                    {u.report_count > 0
+                      ? <span className="text-red-400 font-bold text-xs bg-red-500/10 px-2 py-1 rounded-lg border border-red-500/20">{u.report_count} reports</span>
+                      : <span className="text-white/20 text-xs">Clean</span>
+                    }
+                  </td>
+                  <td className="px-4 py-3 text-white/30 text-xs whitespace-nowrap">
+                    {u.last_seen ? new Date(u.last_seen).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Never'}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider ${u.is_active ? 'bg-green-500/15 text-green-400 border border-green-500/20' : 'bg-red-500/15 text-red-400 border border-red-500/20'}`}>
+                      {u.is_active ? 'Active' : 'Banned'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => { setSelectedUser(u); setIsPanelOpen(true); }}
+                        className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-white/[0.05] text-white/50 hover:bg-white/[0.1] border border-white/[0.08]">
+                        <Activity size={12} /> Activity
+                      </button>
+                      {!u.email_verified_at && (
+                        <button onClick={() => handleVerifyEmail(u.id, u.username)} disabled={actionLoading === `verify-${u.id}`}
+                          className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 border border-emerald-500/25 disabled:opacity-50">
+                          <ShieldCheck size={12} /> Verify
+                        </button>
+                      )}
+                      <button onClick={() => handleStatusChange(u.id, u.is_active, u.username)} disabled={actionLoading === u.id}
+                        className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-all disabled:opacity-50 ${u.is_active ? 'bg-red-500/15 text-red-400 hover:bg-red-500/25 border border-red-500/25' : 'bg-green-500/15 text-green-400 hover:bg-green-500/25 border border-green-500/25'}`}>
+                        {u.is_active ? <><Ban size={12} /> Ban</> : <><CheckCircle size={12} /> Reinstate</>}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Activity Panel */}
+      <UserActivityPanel user={selectedUser} isOpen={isPanelOpen} onClose={() => setIsPanelOpen(false)} />
+
+      {/* Pagination — shared */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <p className="text-white/30 text-xs">Page {page} of {totalPages} · {total.toLocaleString()} users</p>
           <div className="flex items-center gap-2">
             <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
               className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-white/40 hover:text-white/70 disabled:opacity-30 transition-all">
@@ -228,7 +293,7 @@ export default function AdminUsersPage() {
             </button>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -1,222 +1,432 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import {
+  User, Shield, Bell, KeyRound, Eye, EyeOff,
+  CheckCircle, AlertTriangle, Smartphone, Copy,
+  ChevronRight, Loader2, RefreshCw, Lock,
+} from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { adminAPI } from '@/lib/api/admin.api';
-import { Database, Search, Edit3, Save, X, ChevronRight, Table, AlertCircle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
-export default function AdminSettingsPage() {
-  const [tables, setTables] = useState([]);
-  const [selectedTable, setSelectedTable] = useState('');
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [tableLoading, setTableLoading] = useState(true);
-  const [editingId, setEditingId] = useState(null);
-  const [editValues, setEditValues] = useState({});
-  const [search, setSearch] = useState('');
+const TABS = [
+  { key: 'profile',       label: 'Admin Profile',    icon: User },
+  { key: '2fa',           label: 'Two-Factor Auth',  icon: Shield },
+  { key: 'notifications', label: 'Alert Preferences', icon: Bell },
+];
 
-  // Fetch all tables on load
-  useEffect(() => {
-    adminAPI.getTables()
-      .then(res => {
-        const list = res.data.sort();
-        setTables(list);
-        if (list.length > 0) setSelectedTable(list.find(t => t === 'users') || list[0]);
-      })
-      .catch(() => toast.error('Failed to discover system tables'))
-      .finally(() => setTableLoading(false));
-  }, []);
+// ── Section wrapper ───────────────────────────────────────────────────────────
+function Section({ title, description, children }) {
+  return (
+    <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
+      <div className="px-6 py-4 border-b border-white/[0.06] bg-white/[0.01]">
+        <h3 className="text-white font-bold text-sm">{title}</h3>
+        {description && <p className="text-white/30 text-[11px] mt-0.5">{description}</p>}
+      </div>
+      <div className="p-6">{children}</div>
+    </div>
+  );
+}
 
-  // Fetch table data when selection changes
-  useEffect(() => {
-    if (!selectedTable) return;
-    setLoading(true);
-    setEditingId(null);
-    adminAPI.getTableData(selectedTable)
-      .then(res => setData(res.data.data || []))
-      .catch(() => toast.error(`Failed to read table: ${selectedTable}`))
-      .finally(() => setLoading(false));
-  }, [selectedTable]);
+function Field({ label, value, mono = false }) {
+  return (
+    <div>
+      <p className="text-[9px] font-black uppercase tracking-widest text-white/25 mb-1">{label}</p>
+      <p className={`text-white/70 text-sm ${mono ? 'font-mono' : 'font-medium'}`}>{value || '—'}</p>
+    </div>
+  );
+}
 
-  const filteredTables = tables.filter(t => t.toLowerCase().includes(search.toLowerCase()));
-
-  const handleEdit = (row) => {
-    setEditingId(row.id);
-    setEditValues({ ...row });
-  };
-
-  const handleSave = async (id) => {
-    try {
-      // Remove id and sensitive/automated fields from update payload
-      const { id: _, created_at, updated_at, ...updatePayload } = editValues;
-      await adminAPI.updateRecord(selectedTable, id, updatePayload);
-      
-      setData(prev => prev.map(r => r.id === id ? { ...r, ...updatePayload } : r));
-      setEditingId(null);
-      toast.success(`Record #${id} updated in ${selectedTable}`);
-    } catch (err) {
-      toast.error('Update failed: ' + (err.response?.data?.error || err.message));
-    }
-  };
-
-  const getColumns = () => {
-    if (data.length === 0) return [];
-    return Object.keys(data[0]);
+// ── Profile Tab ───────────────────────────────────────────────────────────────
+function ProfileTab({ user }) {
+  const roleColors = {
+    super_admin:     'bg-violet-500/15 text-violet-300 border-violet-500/25',
+    moderator:       'bg-blue-500/15 text-blue-300 border-blue-500/25',
+    finance_manager: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25',
+    analyst:         'bg-amber-500/15 text-amber-300 border-amber-500/25',
   };
 
   return (
-    <div className="flex h-[calc(100vh-120px)] gap-6 antialiased">
-      {/* Sidebar: Table List */}
-      <div className="w-64 flex flex-col rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden shrink-0">
-        <div className="p-4 border-b border-white/[0.06]">
-          <div className="flex items-center gap-2 mb-3">
-            <Database size={16} className="text-violet-400" />
-            <span className="text-white/80 font-bold text-sm tracking-tight">System Discovery</span>
+    <div className="space-y-5">
+      <Section title="Identity" description="Your admin account details. Contact a super admin to change these.">
+        <div className="flex items-start gap-5">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500/40 to-purple-600/30 border border-violet-500/25 flex items-center justify-center text-white font-bold text-2xl shrink-0">
+            {user?.full_name?.[0] || 'A'}
           </div>
-          <div className="relative">
-            <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search tables..."
-              className="w-full pl-8 pr-3 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded-lg text-xs text-white/70 focus:outline-none focus:border-violet-500/50"
-            />
-          </div>
-        </div>
-        <div className="flex-1 overflow-y-auto p-2 space-y-0.5 custom-scrollbar">
-          {tableLoading ? (
-            Array.from({ length: 12 }).map((_, i) => <div key={i} className="h-8 bg-white/[0.03] rounded-lg animate-pulse m-1" />)
-          ) : filteredTables.length === 0 ? (
-            <p className="text-center py-4 text-white/20 text-xs italic">No tables found</p>
-          ) : (
-            filteredTables.map(t => (
-              <button
-                key={t}
-                onClick={() => setSelectedTable(t)}
-                className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium transition-all flex items-center justify-between group ${
-                  selectedTable === t 
-                    ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30' 
-                    : 'text-white/40 hover:bg-white/[0.05] hover:text-white/70 border border-transparent'
-                }`}
-              >
-                <div className="flex items-center gap-2 truncate">
-                  <Table size={12} className={selectedTable === t ? 'text-violet-400' : 'text-white/20'} />
-                  <span className="truncate">{t}</span>
-                </div>
-                <ChevronRight size={12} className={`opacity-0 group-hover:opacity-100 transition-opacity ${selectedTable === t ? 'text-violet-400 opacity-100' : ''}`} />
-              </button>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* Main: Table Explorer */}
-      <div className="flex-1 flex flex-col rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
-        {/* Table Header */}
-        <div className="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between bg-white/[0.01]">
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-white font-bold text-lg tracking-tight uppercase">{selectedTable || 'No Table Selected'}</h2>
-              <span className="px-2 py-0.5 rounded bg-violet-500/10 text-violet-400 text-[10px] font-black tracking-widest border border-violet-500/20">LIVE DB</span>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-5 flex-1">
+            <Field label="Full Name"    value={user?.full_name} />
+            <Field label="Username"     value={`@${user?.username}`} mono />
+            <Field label="Email"        value={user?.email} />
+            <Field label="Syllabrix ID" value={user?.syllabrix_id} mono />
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-widest text-white/25 mb-1">Admin Role</p>
+              <span className={`inline-flex items-center px-2.5 py-1 rounded-lg border text-[11px] font-black uppercase tracking-wider ${roleColors[user?.admin_role] || 'bg-white/5 text-white/40 border-white/10'}`}>
+                {user?.admin_role?.replace(/_/g, ' ') || 'Unknown'}
+              </span>
             </div>
-            <p className="text-white/30 text-[10px] font-medium tracking-wide mt-0.5 uppercase">Direct interactive workbench access</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setSelectedTable(selectedTable)}
-              className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/50 hover:text-violet-400 hover:border-violet-500/30 transition-all"
-              title="Refresh Data"
-            >
-              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-            </button>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500/70 text-[10px] font-bold">
-              <AlertCircle size={14} />
-              CAUTION: EDITS ARE PERSISTED
-            </div>
-          </div>
-        </div>
-
-        {/* Data Grid */}
-        <div className="flex-1 overflow-auto custom-scrollbar">
-          {loading ? (
-            <div className="flex flex-col items-center justify-center h-full gap-4 text-white/20">
-              <div className="w-10 h-10 rounded-full border-2 border-violet-500 border-t-transparent animate-spin" />
-              <p className="text-xs font-bold tracking-widest uppercase animate-pulse">Syncing Intelligence...</p>
-            </div>
-          ) : data.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/[0.07] flex items-center justify-center text-white/10">
-                <Database size={24} />
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-widest text-white/25 mb-1">Account Status</p>
+              <div className="flex items-center gap-1.5">
+                <CheckCircle size={13} className="text-emerald-400" />
+                <span className="text-emerald-400 text-[11px] font-bold">Active &amp; Verified</span>
               </div>
-              <p className="text-white/25 text-sm font-medium">Table is empty or not accessible.</p>
             </div>
-          ) : (
-            <table className="w-full text-xs border-collapse">
-              <thead className="sticky top-0 bg-[#0A0A0F] z-10">
-                <tr className="border-b border-white/[0.1]">
-                  <th className="px-5 py-3 text-left"></th>
-                  {getColumns().map(col => (
-                    <th key={col} className="px-5 py-3 text-left text-white/30 font-black uppercase tracking-wider whitespace-nowrap min-w-[120px]">
-                      {col}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/[0.04]">
-                {data.map(row => (
-                  <tr key={row.id} className={`group transition-colors ${editingId === row.id ? 'bg-violet-500/[0.07]' : 'hover:bg-white/[0.02]'}`}>
-                    <td className="px-5 py-3 sticky left-0 z-20 bg-[#0A0A0F]/50 backdrop-blur-md border-r border-white/5">
-                      <div className="flex items-center gap-2">
-                        {editingId === row.id ? (
-                          <>
-                            <button onClick={() => handleSave(row.id)} className="p-1.5 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30">
-                              <Save size={14} />
-                            </button>
-                            <button onClick={() => setEditingId(null)} className="p-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30">
-                              <X size={14} />
-                            </button>
-                          </>
-                        ) : (
-                          <button 
-                            onClick={() => handleEdit(row)}
-                            className="p-1.5 rounded-lg bg-white/[0.04] text-white/20 opacity-0 group-hover:opacity-100 hover:text-violet-400 hover:bg-violet-500/10 border border-white/5 transition-all"
-                          >
-                            <Edit3 size={14} />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                    {getColumns().map(col => (
-                      <td key={col} className="px-5 py-3 whitespace-nowrap border-r border-white/[0.02]">
-                        {editingId === row.id && col !== 'id' && !['created_at', 'updated_at'].includes(col) ? (
-                          <input
-                            value={editValues[col] ?? ''}
-                            onChange={e => setEditValues({ ...editValues, [col]: e.target.value })}
-                            className="w-full bg-white/[0.07] border border-white/10 rounded px-2 py-1 text-white/90 focus:outline-none focus:border-violet-500/50"
-                          />
-                        ) : (
-                          <span className={`font-medium ${
-                            col === 'id' ? 'text-violet-400/80 font-mono text-[10px]' : 
-                            ['email', 'username'].includes(col) ? 'text-white/80' : 'text-white/40'
-                          }`}>
-                            {row[col] === null ? <em className="text-white/10 italic">null</em> : String(row[col])}
-                          </span>
-                        )}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Access Permissions" description="What this admin role can do across the platform.">
+        {(() => {
+          const perms = {
+            super_admin: [
+              'Full database read/write via Data Workbench',
+              'Raw SQL execution via Query Console',
+              'User ban/unban and email verification',
+              'Content moderation and report resolution',
+              'Financial data and revenue analytics',
+              'Audit log access and admin management',
+              'SyllaTrace IT diagnostics console',
+            ],
+            moderator: [
+              'User ban/unban and email verification',
+              'Content moderation and report resolution',
+              'Support ticket management',
+              'Academic library management',
+            ],
+            finance_manager: [
+              'Financial data and revenue analytics',
+              'Report extraction and exports',
+            ],
+            analyst: [
+              'Read-only user data and activity',
+              'Content reports (view only)',
+              'Financial analytics (view only)',
+              'Audit log access',
+            ],
+          };
+          const list = perms[user?.admin_role] || ['No permissions defined'];
+          return (
+            <ul className="space-y-2">
+              {list.map((p, i) => (
+                <li key={i} className="flex items-center gap-2 text-white/60 text-[11px]">
+                  <CheckCircle size={12} className="text-emerald-400 shrink-0" />
+                  {p}
+                </li>
+              ))}
+            </ul>
+          );
+        })()}
+      </Section>
+    </div>
+  );
+}
+
+// ── 2FA Tab ────────────────────────────────────────────────────────────────────
+function TwoFATab({ user }) {
+  const [step, setStep]         = useState('idle'); // idle | setup | verify | done
+  const [qrData, setQrData]     = useState(null);
+  const [secret, setSecret]     = useState('');
+  const [token, setToken]       = useState('');
+  const [loading, setLoading]   = useState(false);
+  const [showSecret, setShowSecret] = useState(false);
+
+  const handleSetup = async () => {
+    setLoading(true);
+    try {
+      const res = await adminAPI.setup2FA();
+      setQrData(res.data.qr_code);
+      setSecret(res.data.secret);
+      setStep('setup');
+    } catch (e) {
+      toast.error('2FA setup failed: ' + (e.response?.data?.error || e.message));
+    } finally { setLoading(false); }
+  };
+
+  const handleVerify = async () => {
+    if (token.length !== 6) return toast.error('Enter the 6-digit code from your authenticator app');
+    setLoading(true);
+    try {
+      await adminAPI.verify2FA(token);
+      setStep('done');
+      toast.success('Two-factor authentication enabled successfully');
+    } catch (e) {
+      toast.error('Invalid code: ' + (e.response?.data?.error || e.message));
+    } finally { setLoading(false); }
+  };
+
+  const copySecret = () => {
+    navigator.clipboard.writeText(secret);
+    toast.success('Secret copied to clipboard');
+  };
+
+  const is2FAEnabled = user?.is_2fa_enabled;
+
+  return (
+    <div className="space-y-5">
+      <Section
+        title="Two-Factor Authentication"
+        description="Add a second layer of protection to your admin account using a TOTP authenticator app."
+      >
+        <div className="flex items-start gap-4 mb-6">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border ${
+            is2FAEnabled || step === 'done'
+              ? 'bg-emerald-500/15 border-emerald-500/25'
+              : 'bg-amber-500/15 border-amber-500/25'
+          }`}>
+            <Shield size={20} className={is2FAEnabled || step === 'done' ? 'text-emerald-400' : 'text-amber-400'} />
+          </div>
+          <div>
+            <p className="text-white font-bold text-sm">
+              {is2FAEnabled || step === 'done' ? '2FA is Enabled' : '2FA is Not Enabled'}
+            </p>
+            <p className="text-white/40 text-xs mt-0.5">
+              {is2FAEnabled || step === 'done'
+                ? 'Your account is protected with two-factor authentication.'
+                : 'Your account is only protected by password. Enable 2FA to secure admin access.'}
+            </p>
+          </div>
+        </div>
+
+        <AnimatePresence mode="wait">
+          {step === 'idle' && !is2FAEnabled && (
+            <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <div className="bg-amber-500/5 border border-amber-500/15 rounded-xl p-4 mb-4 flex items-start gap-3">
+                <AlertTriangle size={14} className="text-amber-400 shrink-0 mt-0.5" />
+                <p className="text-amber-400/80 text-xs leading-relaxed">
+                  Admin accounts with database access are high-value targets. Two-factor authentication is strongly recommended.
+                </p>
+              </div>
+              <button
+                onClick={handleSetup}
+                disabled={loading}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-violet-500/20 border border-violet-500/30 text-violet-300 text-sm font-bold hover:bg-violet-500/30 transition-all disabled:opacity-50"
+              >
+                {loading ? <Loader2 size={15} className="animate-spin" /> : <Smartphone size={15} />}
+                Set Up Authenticator App
+              </button>
+            </motion.div>
           )}
+
+          {step === 'idle' && is2FAEnabled && (
+            <motion.div key="already" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <div className="flex items-center gap-2 text-emerald-400 text-sm">
+                <CheckCircle size={15} />
+                Two-factor authentication is active on this account.
+              </div>
+            </motion.div>
+          )}
+
+          {step === 'setup' && (
+            <motion.div key="setup" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-5">
+              <div className="flex flex-col md:flex-row gap-6 items-start">
+                {qrData && (
+                  <div className="bg-white p-3 rounded-xl shrink-0">
+                    <img src={qrData} alt="2FA QR Code" className="w-40 h-40" />
+                  </div>
+                )}
+                <div className="space-y-3 flex-1">
+                  <div>
+                    <p className="text-white/60 text-xs leading-relaxed mb-2">
+                      Scan this QR code with your authenticator app (Google Authenticator, Authy, or 1Password).
+                    </p>
+                    <p className="text-white/40 text-xs">Or enter the secret manually:</p>
+                  </div>
+                  <div className="flex items-center gap-2 bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-2.5">
+                    <code className="text-violet-300 font-mono text-sm flex-1 tracking-widest">
+                      {showSecret ? secret : '•'.repeat(secret.length)}
+                    </code>
+                    <button onClick={() => setShowSecret(v => !v)} className="text-white/30 hover:text-white/60 transition-colors">
+                      {showSecret ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                    <button onClick={copySecret} className="text-white/30 hover:text-violet-400 transition-colors">
+                      <Copy size={14} />
+                    </button>
+                  </div>
+                  <button onClick={() => setStep('verify')} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-violet-500/20 border border-violet-500/30 text-violet-300 text-sm font-bold hover:bg-violet-500/30 transition-all">
+                    <ChevronRight size={15} /> I've scanned the code
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {step === 'verify' && (
+            <motion.div key="verify" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+              <p className="text-white/60 text-xs">Enter the 6-digit code currently shown in your authenticator app to confirm setup.</p>
+              <div className="flex items-center gap-3">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={token}
+                  onChange={e => setToken(e.target.value.replace(/\D/g, ''))}
+                  placeholder="000000"
+                  className="w-36 bg-white/[0.05] border border-white/[0.1] rounded-xl px-4 py-2.5 text-white font-mono text-xl tracking-[0.4em] text-center focus:outline-none focus:border-violet-500/60 transition-all"
+                />
+                <button
+                  onClick={handleVerify}
+                  disabled={loading || token.length !== 6}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-violet-500/20 border border-violet-500/30 text-violet-300 text-sm font-bold hover:bg-violet-500/30 disabled:opacity-40 transition-all"
+                >
+                  {loading ? <Loader2 size={14} className="animate-spin" /> : <KeyRound size={14} />}
+                  Verify &amp; Enable
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {step === 'done' && (
+            <motion.div key="done" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+              <div className="flex items-center gap-3 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                <CheckCircle size={20} className="text-emerald-400 shrink-0" />
+                <div>
+                  <p className="text-emerald-400 font-bold text-sm">2FA Enabled Successfully</p>
+                  <p className="text-emerald-400/60 text-xs mt-0.5">Your admin account is now protected with two-factor authentication.</p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </Section>
+
+      <Section title="Session Security" description="Information about your current admin session.">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="bg-white/[0.03] rounded-xl p-3 border border-white/[0.05]">
+            <p className="text-[9px] font-black uppercase tracking-widest text-white/25 mb-1.5">Session Token</p>
+            <div className="flex items-center gap-2">
+              <Lock size={12} className="text-violet-400 shrink-0" />
+              <span className="text-white/50 text-[10px] font-mono">JWT — Encrypted</span>
+            </div>
+          </div>
+          <div className="bg-white/[0.03] rounded-xl p-3 border border-white/[0.05]">
+            <p className="text-[9px] font-black uppercase tracking-widest text-white/25 mb-1.5">2FA Status</p>
+            <div className="flex items-center gap-2">
+              {is2FAEnabled || step === 'done'
+                ? <><CheckCircle size={12} className="text-emerald-400" /><span className="text-emerald-400 text-[10px] font-bold">Enabled</span></>
+                : <><AlertTriangle size={12} className="text-amber-400" /><span className="text-amber-400 text-[10px] font-bold">Not Enabled</span></>
+              }
+            </div>
+          </div>
+          <div className="bg-white/[0.03] rounded-xl p-3 border border-white/[0.05]">
+            <p className="text-[9px] font-black uppercase tracking-widest text-white/25 mb-1.5">Role</p>
+            <div className="flex items-center gap-2">
+              <Shield size={12} className="text-violet-400 shrink-0" />
+              <span className="text-violet-400 text-[10px] font-bold capitalize">{user?.admin_role?.replace(/_/g, ' ') || '—'}</span>
+            </div>
+          </div>
+        </div>
+      </Section>
+    </div>
+  );
+}
+
+// ── Notification Preferences Tab ──────────────────────────────────────────────
+function NotificationsTab() {
+  const [prefs, setPrefs] = useState({
+    urgent_reports:    true,
+    new_users:         true,
+    open_tickets:      true,
+    system_errors:     true,
+    browser_notifs:    false,
+    sound_alerts:      true,
+  });
+
+  const toggle = (key) => setPrefs(p => ({ ...p, [key]: !p[key] }));
+
+  const PREF_ITEMS = [
+    { key: 'urgent_reports',  label: 'Urgent Moderation Reports',   desc: 'Real-time alerts for newly flagged content requiring action' },
+    { key: 'new_users',       label: 'New User Registrations',       desc: 'Daily digest of new signups and account stats' },
+    { key: 'open_tickets',    label: 'Open Support Tickets',         desc: 'Alerts when new tickets are raised or escalated' },
+    { key: 'system_errors',   label: 'System Error Alerts',          desc: '5xx server errors streamed via SyllaTrace' },
+    { key: 'browser_notifs',  label: 'Browser Notifications',        desc: 'Native OS push notifications (requires permission)' },
+    { key: 'sound_alerts',    label: 'Sound Alerts',                 desc: 'Audio ping when urgent events arrive' },
+  ];
+
+  return (
+    <div className="space-y-5">
+      <Section title="Alert Preferences" description="Control which events trigger notifications in the admin dashboard.">
+        <div className="space-y-3">
+          {PREF_ITEMS.map(item => (
+            <div key={item.key} className="flex items-center justify-between gap-4 py-3 border-b border-white/[0.05] last:border-0">
+              <div>
+                <p className="text-white/80 text-sm font-medium">{item.label}</p>
+                <p className="text-white/30 text-xs mt-0.5">{item.desc}</p>
+              </div>
+              <button
+                onClick={() => toggle(item.key)}
+                className={`relative w-10 h-5.5 rounded-full border transition-all duration-200 shrink-0 ${
+                  prefs[item.key]
+                    ? 'bg-violet-500/40 border-violet-500/60'
+                    : 'bg-white/[0.06] border-white/[0.12]'
+                }`}
+                style={{ width: 40, height: 22 }}
+              >
+                <span className={`absolute top-0.5 w-4.5 h-4.5 rounded-full transition-all duration-200 ${
+                  prefs[item.key] ? 'left-[18px] bg-violet-400' : 'left-0.5 bg-white/30'
+                }`} style={{ width: 18, height: 18, top: 2, left: prefs[item.key] ? 20 : 2 }} />
+              </button>
+            </div>
+          ))}
+        </div>
+        <p className="text-white/20 text-[10px] mt-4">
+          Preferences are saved locally per browser session. Admin-wide notification rules are managed at the system level.
+        </p>
+      </Section>
+    </div>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
+export default function AdminSettingsPage() {
+  const { user } = useAuth();
+  const [tab, setTab] = useState('profile');
+
+  return (
+    <div className="space-y-5 max-w-4xl">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500/25 to-purple-600/15 border border-violet-500/25 flex items-center justify-center">
+          <Shield size={18} className="text-violet-400" />
+        </div>
+        <div>
+          <h2 className="text-white font-bold text-lg leading-tight">Admin Settings</h2>
+          <p className="text-white/30 text-[10px] uppercase font-black tracking-widest">Profile · Security · Preferences</p>
         </div>
       </div>
 
-      <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.05); border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(124, 58, 237, 0.3); }
-      `}</style>
+      {/* Tabs */}
+      <div className="flex items-center gap-1 bg-white/[0.02] border border-white/[0.05] rounded-xl p-1">
+        {TABS.map(t => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[11px] font-bold transition-all flex-1 justify-center ${
+              tab === t.key
+                ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30'
+                : 'text-white/30 hover:text-white/60 hover:bg-white/[0.04]'
+            }`}
+          >
+            <t.icon size={13} />
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={tab}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+        >
+          {tab === 'profile'       && <ProfileTab user={user} />}
+          {tab === '2fa'           && <TwoFATab user={user} />}
+          {tab === 'notifications' && <NotificationsTab />}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }

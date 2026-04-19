@@ -56,7 +56,7 @@ export default function AdminConsolePage() {
   };
 
   return (
-    <div className="flex flex-col gap-5 h-[calc(100vh-120px)] animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="flex flex-col gap-5 md:h-[calc(100vh-120px)] animate-in fade-in slide-in-from-bottom-4 duration-700">
       
       {/* Dangerous Access Banner */}
       <div className="group relative overflow-hidden rounded-2xl border border-red-500/20 bg-red-500/[0.03] p-4 flex items-center gap-4 transition-all hover:bg-red-500/[0.05]">

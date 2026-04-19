@@ -114,8 +114,8 @@ export default function AdminFinancePage() {
       </div>
 
       {/* Breakdown Table */}
-      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden overflow-x-auto">
+        <table className="w-full text-sm min-w-[500px]">
           <thead>
             <tr className="border-b border-white/[0.06]">
               {['Payment Type', 'Total Revenue', 'Transactions', 'Avg. Value'].map(h => (

@@ -43,13 +43,15 @@ const startServer = async () => {
 
 // Handle unhandled rejections
 process.on('unhandledRejection', (err) => {
-  console.error('UNHANDLED REJECTION:', err.message);
+  console.error('UNHANDLED REJECTION:', err?.message || err);
+  try { require('./middleware/trace.middleware').recordProcessError('unhandledRejection', err); } catch (_) {}
   server.close(() => process.exit(1));
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
   console.error('UNCAUGHT EXCEPTION:', err.message);
+  try { require('./middleware/trace.middleware').recordProcessError('uncaughtException', err); } catch (_) {}
   server.close(() => process.exit(1));
 });
 

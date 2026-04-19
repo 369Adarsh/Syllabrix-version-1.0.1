@@ -10,6 +10,10 @@ const errorHandler = (err, req, res, _next) => {
     console.error('Stack:', err.stack);
   }
 
+  // Attach error context so traceMiddleware can include it in the error buffer
+  res.locals.traceError = err.message;
+  if (err.stack) res.locals.traceErrorStack = err.stack.split('\n').slice(0, 6).join('\n');
+
   // Multer file size error
   if (err.code === 'LIMIT_FILE_SIZE') {
     return res.status(400).json({

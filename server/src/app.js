@@ -14,6 +14,7 @@ const config = require('./config/env');
 const { errorHandler } = require('./middleware/error-handler.middleware');
 const { notFoundHandler } = require('./middleware/not-found.middleware');
 const { requestLogger } = require('./middleware/request-logger.middleware');
+const { traceMiddleware } = require('./middleware/trace.middleware');
 
 // Import routes
 const routes = require('./routes/index');
@@ -67,6 +68,7 @@ if (config.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
 }
 app.use(requestLogger);
+app.use(traceMiddleware);
 
 // ======================== RATE LIMITING ========================
 const limiter = rateLimit({

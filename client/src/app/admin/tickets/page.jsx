@@ -101,10 +101,10 @@ export default function AdminTicketsPage() {
   };
 
   return (
-    <div className="h-[calc(100vh-140px)] flex flex-col gap-6">
-      
+    <div className="flex flex-col gap-4 md:gap-6 md:h-[calc(100vh-140px)]">
+
       {/* Stats Bar */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         {[
           { label: 'Unresolved', count: tickets.filter(t => t.status === 'open').length, icon: AlertCircle, color: 'text-sky-400' },
           { label: 'Critical', count: tickets.filter(t => t.priority === 'urgent').length, icon: BadgeAlert, color: 'text-red-400' },
@@ -123,10 +123,10 @@ export default function AdminTicketsPage() {
         ))}
       </div>
 
-      <div className="flex-1 flex gap-6 overflow-hidden">
-        
-        {/* Ticket List */}
-        <div className="w-[380px] flex flex-col bg-white/[0.02] border border-white/[0.08] rounded-2xl overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row gap-4 md:gap-6 overflow-hidden min-h-0">
+
+        {/* Ticket List — hidden on mobile when a ticket is open */}
+        <div className={`w-full md:w-[380px] flex-col bg-white/[0.02] border border-white/[0.08] rounded-2xl overflow-hidden ${selectedTicket ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-4 border-b border-white/[0.08] space-y-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20" size={14} />
@@ -207,8 +207,8 @@ export default function AdminTicketsPage() {
           </div>
         </div>
 
-        {/* Conversation Detail */}
-        <div className="flex-1 flex flex-col bg-white/[0.02] border border-white/[0.08] rounded-3xl overflow-hidden relative">
+        {/* Conversation Detail — hidden on mobile when no ticket selected */}
+        <div className={`flex-1 flex-col bg-white/[0.02] border border-white/[0.08] rounded-2xl md:rounded-3xl overflow-hidden relative ${!selectedTicket ? 'hidden md:flex' : 'flex'}`}>
           {!selectedTicket ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 bg-[#0D0D14]/50 backdrop-blur-sm z-10">
               <div className="w-20 h-20 rounded-full bg-violet-500/10 flex items-center justify-center border border-violet-500/20 mb-6">
@@ -225,40 +225,49 @@ export default function AdminTicketsPage() {
           ) : (
             <>
               {/* Detail Header */}
-              <div className="p-6 border-b border-white/[0.08] flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-3 mb-1">
-                    <span className="text-[10px] font-black text-white/20">CASE ID: #{selectedTicket.id}</span>
-                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${STATUS_CONFIG[ticketDetails?.status || 'open'].border} ${STATUS_CONFIG[ticketDetails?.status || 'open'].color}`}>
-                      {ticketDetails?.status.replace('_', ' ')}
-                    </span>
+              <div className="p-4 md:p-6 border-b border-white/[0.08] flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-start gap-3">
+                  {/* Back button — mobile only */}
+                  <button
+                    onClick={() => setSelectedTicket(null)}
+                    className="md:hidden mt-0.5 p-1.5 rounded-lg bg-white/[0.05] text-white/40 hover:text-white hover:bg-white/[0.1] transition-all shrink-0"
+                  >
+                    <ArrowLeft size={15} />
+                  </button>
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] font-black text-white/20">CASE ID: #{selectedTicket.id}</span>
+                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${STATUS_CONFIG[ticketDetails?.status || 'open'].border} ${STATUS_CONFIG[ticketDetails?.status || 'open'].color}`}>
+                        {ticketDetails?.status.replace('_', ' ')}
+                      </span>
+                    </div>
+                    <h2 className="text-base md:text-xl font-black text-white leading-tight">{selectedTicket.subject}</h2>
                   </div>
-                  <h2 className="text-xl font-black text-white">{selectedTicket.subject}</h2>
                 </div>
-                
-                <div className="flex gap-2">
+
+                <div className="flex gap-2 ml-8 md:ml-0">
                   {ticketDetails?.status !== 'resolved' && (
-                    <button 
+                    <button
                       onClick={() => updateStatus('resolved')}
-                      className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 rounded-xl text-xs font-bold transition-all border border-emerald-500/20"
+                      className="flex items-center gap-2 px-3 md:px-4 py-2 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 rounded-xl text-xs font-bold transition-all border border-emerald-500/20"
                     >
-                      <CheckCircle2 size={14} />
-                      Resolve Ticket
+                      <CheckCircle2 size={13} />
+                      <span>Resolve</span>
                     </button>
                   )}
                   {ticketDetails?.status !== 'closed' && (
-                    <button 
+                    <button
                       onClick={() => updateStatus('closed')}
-                      className="px-4 py-2 bg-white/[0.05] text-white/40 hover:text-white/60 rounded-xl text-xs font-bold transition-all border border-white/[0.1]"
+                      className="px-3 md:px-4 py-2 bg-white/[0.05] text-white/40 hover:text-white/60 rounded-xl text-xs font-bold transition-all border border-white/[0.1]"
                     >
-                      Close Case
+                      Close
                     </button>
                   )}
                 </div>
               </div>
 
               {/* Chat View */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-6 custom-scrollbar">
                 {/* Initial Description */}
                 <div className="flex gap-4 group">
                   <div className="w-10 h-10 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center shrink-0">
@@ -320,7 +329,7 @@ export default function AdminTicketsPage() {
               </div>
 
               {/* Reply Box */}
-              <div className="p-6 bg-white/[0.02] border-t border-white/[0.08]">
+              <div className="p-3 md:p-6 bg-white/[0.02] border-t border-white/[0.08]">
                 <form onSubmit={handleSendReply} className="relative group">
                   <textarea
                     value={reply}

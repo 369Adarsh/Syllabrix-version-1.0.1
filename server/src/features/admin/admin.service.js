@@ -10,9 +10,9 @@ class AdminService {
     const offset = (pagination.page - 1) * pagination.limit;
 
     let query = `
-      SELECT 
-        u.id, u.username, u.full_name, u.email, u.user_type, u.admin_role,
-        u.is_active, u.is_profile_complete, u.created_at,
+      SELECT
+        u.id, u.syllabrix_id, u.username, u.full_name, u.email, u.user_type, u.admin_role,
+        u.is_active, u.is_profile_complete, u.created_at, u.email_verified_at,
         (SELECT COUNT(*) FROM reports r WHERE r.reported_user_id = u.id) as report_count,
         (SELECT MAX(created_at) FROM user_sessions s WHERE s.user_id = u.id) as last_seen
       FROM users u
@@ -31,8 +31,8 @@ class AdminService {
     }
 
     if (search) {
-      query += ' AND (u.username LIKE ? OR u.email LIKE ? OR u.full_name LIKE ?)';
-      params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+      query += ' AND (u.username LIKE ? OR u.email LIKE ? OR u.full_name LIKE ? OR u.syllabrix_id LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
     }
 
     query += ' ORDER BY u.created_at DESC LIMIT ? OFFSET ?';
@@ -105,6 +105,25 @@ class AdminService {
   }
 
   /**
+   * 3.5. MANUAL EMAIL VERIFICATION
+   * Admin manually verifies a user who skipped email confirmation.
+   */
+  async verifyUserEmail(userId, adminId) {
+    const [target] = await pool.query('SELECT id, email_verified_at FROM users WHERE id = ?', [userId]);
+    if (!target[0]) throw new Error('User not found');
+    if (target[0].email_verified_at) throw new Error('User email is already verified');
+
+    await pool.query(
+      'UPDATE users SET email_verified_at = NOW(), is_active = 1 WHERE id = ?',
+      [userId]
+    );
+
+    await this.logAdminAction(adminId, 'manual_email_verify', 'users', userId, {});
+
+    return { message: 'User email verified and account activated successfully.' };
+  }
+
+  /**
    * 4. FINANCIAL MONITORING
    * Aggregated revenue stats from the payments table.
    */
@@ -172,6 +191,75 @@ class AdminService {
   }
 
   /**
+   * 4.8. ADMIN NOTIFICATION ALERTS
+   * Returns live counts for pending items that need admin attention.
+   */
+  async getAdminAlerts() {
+    const [[{ pending_reports }]] = await pool.query(
+      `SELECT COUNT(*) as pending_reports FROM reports WHERE status = 'pending'`
+    );
+    const [[{ open_tickets }]] = await pool.query(
+      `SELECT COUNT(*) as open_tickets FROM tickets WHERE status IN ('open', 'in_progress')`
+    );
+    const [[{ new_users_today }]] = await pool.query(
+      `SELECT COUNT(*) as new_users_today FROM users WHERE created_at >= CURDATE()`
+    );
+    const [[{ unverified_users }]] = await pool.query(
+      `SELECT COUNT(*) as unverified_users FROM users WHERE email_verified_at IS NULL AND is_active = 1`
+    );
+
+    const alerts = [];
+
+    if (pending_reports > 0) {
+      alerts.push({
+        type: 'pending_reports',
+        count: Number(pending_reports),
+        label: `${pending_reports} Pending Report${pending_reports > 1 ? 's' : ''}`,
+        description: 'Flagged content awaiting moderation review',
+        href: '/admin/moderation',
+        severity: Number(pending_reports) >= 5 ? 'critical' : 'warning',
+      });
+    }
+
+    if (open_tickets > 0) {
+      alerts.push({
+        type: 'open_tickets',
+        count: Number(open_tickets),
+        label: `${open_tickets} Open Ticket${open_tickets > 1 ? 's' : ''}`,
+        description: 'Support tickets waiting for admin response',
+        href: '/admin/tickets',
+        severity: 'info',
+      });
+    }
+
+    if (new_users_today > 0) {
+      alerts.push({
+        type: 'new_users_today',
+        count: Number(new_users_today),
+        label: `${new_users_today} New User${new_users_today > 1 ? 's' : ''} Today`,
+        description: 'Registered since midnight',
+        href: '/admin/users',
+        severity: 'success',
+      });
+    }
+
+    if (unverified_users > 0) {
+      alerts.push({
+        type: 'unverified_users',
+        count: Number(unverified_users),
+        label: `${unverified_users} Unverified Account${unverified_users > 1 ? 's' : ''}`,
+        description: 'Active accounts with unverified email',
+        href: '/admin/users',
+        severity: 'info',
+      });
+    }
+
+    const total_urgent = Number(pending_reports) + Number(open_tickets);
+
+    return { alerts, total_urgent, total_count: alerts.length };
+  }
+
+  /**
    * 5. INTERNAL AUDIT LOGGING
    */
   async logAdminAction(adminId, actionType, targetType, targetId, meta = {}) {
@@ -218,17 +306,63 @@ class AdminService {
     return { success: true, message: `Record ${id} in ${tableName} updated.` };
   }
 
-  async getAuditLogs(pagination = { page: 1, limit: 20 }) {
+  async getAuditLogs(filters = {}, pagination = { page: 1, limit: 30 }) {
     const offset = (pagination.page - 1) * pagination.limit;
+    const { action_type, search, date_from, date_to } = filters;
+
+    let where = 'WHERE 1=1';
+    const params = [];
+
+    if (action_type) {
+      where += ' AND l.action_type = ?';
+      params.push(action_type);
+    }
+    if (search) {
+      where += ' AND (u.username LIKE ? OR u.full_name LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`);
+    }
+    if (date_from) {
+      where += ' AND l.created_at >= ?';
+      params.push(date_from);
+    }
+    if (date_to) {
+      where += ' AND l.created_at <= ?';
+      params.push(date_to + ' 23:59:59');
+    }
+
     const [logs] = await pool.query(`
-      SELECT l.*, u.username as admin_name 
+      SELECT l.*, u.username as admin_name, u.full_name as admin_full_name
       FROM admin_audit_logs l
       LEFT JOIN users u ON l.admin_id = u.id
+      ${where}
       ORDER BY l.created_at DESC
       LIMIT ? OFFSET ?
-    `, [pagination.limit, offset]);
-    
-    return logs;
+    `, [...params, pagination.limit, offset]);
+
+    const [[{ total }]] = await pool.query(
+      `SELECT COUNT(*) as total FROM admin_audit_logs l LEFT JOIN users u ON l.admin_id = u.id ${where}`,
+      params
+    );
+
+    // Safely parse new_value — it may be a string, object, or null
+    const safeLogs = logs.map(log => {
+      let parsed = null;
+      if (log.new_value !== null && log.new_value !== undefined) {
+        try {
+          parsed = typeof log.new_value === 'string' ? JSON.parse(log.new_value) : log.new_value;
+        } catch {
+          parsed = { raw: String(log.new_value) };
+        }
+      }
+      return { ...log, new_value: parsed };
+    });
+
+    return {
+      logs: safeLogs,
+      total: Number(total),
+      page: pagination.page,
+      totalPages: Math.ceil(Number(total) / pagination.limit),
+    };
   }
 
   async runRawQuery(sql, adminId) {
@@ -358,45 +492,51 @@ class AdminService {
   /**
    * 11. UNIFIED USER ACTIVITY INTELLIGENCE (Enhanced with Date Filtering)
    */
-  async getUserActivity(userId, limit = 50, startDate = null, endDate = null) {
+  async getUserActivity(userId, page = 1, limit = 30, startDate = null, endDate = null, actionGroup = null) {
+    const offset = (page - 1) * limit;
     const dateFilter = (startDate && endDate) ? ' AND created_at BETWEEN ? AND ?' : '';
     const dateParams = (startDate && endDate) ? [startDate, endDate] : [];
-    
-    const subQuery = (table, userField, extraCols = '') => `
-      (SELECT _utf8mb4 '${table}_action' COLLATE utf8mb4_unicode_ci as action_type, 
-              _utf8mb4 '${table.replace('post_', '')}' COLLATE utf8mb4_unicode_ci as entity_type, 
-              id as entity_id, ${extraCols || 'NULL'} as summary, created_at 
-       FROM ${table} WHERE ${userField} = ? ${dateFilter})
-    `;
 
-    // Specialized sub-queries for non-standard columns
-    const query = `
-      (SELECT _utf8mb4 'post_created' COLLATE utf8mb4_unicode_ci as action_type, _utf8mb4 'post' COLLATE utf8mb4_unicode_ci as entity_type, id as entity_id, LEFT(content, 100) as summary, created_at FROM posts WHERE user_id = ? ${dateFilter})
+    const GROUP_TYPES = {
+      posts:    ['post_created', 'comment_created'],
+      social:   ['reaction_like', 'followed_user'],
+      sessions: ['session_started'],
+      reports:  ['report_filed'],
+    };
+    const typeList = actionGroup && GROUP_TYPES[actionGroup] ? GROUP_TYPES[actionGroup] : null;
+    const typeFilter = typeList
+      ? `AND action_type IN (${typeList.map(() => '?').join(',')})`
+      : '';
+
+    const innerQuery = `
+      (SELECT _utf8mb4 'post_created' COLLATE utf8mb4_unicode_ci as action_type, _utf8mb4 'post' COLLATE utf8mb4_unicode_ci as entity_type, id as entity_id, LEFT(content, 150) as summary, created_at FROM posts WHERE user_id = ? ${dateFilter})
       UNION ALL
-      (SELECT _utf8mb4 'comment_created' COLLATE utf8mb4_unicode_ci, _utf8mb4 'comment' COLLATE utf8mb4_unicode_ci, id, LEFT(content, 100), created_at FROM post_comments WHERE user_id = ? ${dateFilter})
+      (SELECT _utf8mb4 'comment_created' COLLATE utf8mb4_unicode_ci, _utf8mb4 'comment' COLLATE utf8mb4_unicode_ci, id, LEFT(content, 150), created_at FROM post_comments WHERE user_id = ? ${dateFilter})
       UNION ALL
       (SELECT CONVERT(CONCAT('reaction_', reaction_type) USING utf8mb4) COLLATE utf8mb4_unicode_ci, _utf8mb4 'post' COLLATE utf8mb4_unicode_ci, post_id, NULL, created_at FROM post_likes WHERE user_id = ? ${dateFilter})
       UNION ALL
       (SELECT _utf8mb4 'followed_user' COLLATE utf8mb4_unicode_ci, _utf8mb4 'user' COLLATE utf8mb4_unicode_ci, following_id, NULL, created_at FROM follows WHERE follower_id = ? ${dateFilter})
       UNION ALL
-      (SELECT _utf8mb4 'session_started' COLLATE utf8mb4_unicode_ci, _utf8mb4 'session' COLLATE utf8mb4_unicode_ci, id, LEFT(device_info, 100), created_at FROM user_sessions WHERE user_id = ? ${dateFilter})
+      (SELECT _utf8mb4 'session_started' COLLATE utf8mb4_unicode_ci, _utf8mb4 'session' COLLATE utf8mb4_unicode_ci, id, LEFT(device_info, 150), created_at FROM user_sessions WHERE user_id = ? ${dateFilter})
       UNION ALL
       (SELECT _utf8mb4 'report_filed' COLLATE utf8mb4_unicode_ci, _utf8mb4 'report' COLLATE utf8mb4_unicode_ci, id, reason, created_at FROM reports WHERE reporter_id = ? ${dateFilter})
       UNION ALL
       (SELECT CONVERT(action_type USING utf8mb4) COLLATE utf8mb4_unicode_ci, CONVERT(entity_type USING utf8mb4) COLLATE utf8mb4_unicode_ci, entity_id, CAST(metadata AS CHAR) COLLATE utf8mb4_unicode_ci, created_at FROM activity_log WHERE user_id = ? ${dateFilter})
-      ORDER BY created_at DESC
-      LIMIT ?
     `;
 
-    // Flatten parameters
-    const params = [];
+    const innerParams = [];
     for (let i = 0; i < 7; i++) {
-      params.push(userId, ...dateParams);
+      innerParams.push(userId, ...dateParams);
     }
-    params.push(limit);
+    const typeParams = typeList || [];
 
-    const [rows] = await pool.query(query, params);
-    return rows;
+    const dataQuery  = `SELECT * FROM (${innerQuery}) AS ua WHERE 1=1 ${typeFilter} ORDER BY created_at DESC LIMIT ? OFFSET ?`;
+    const countQuery = `SELECT COUNT(*) as total FROM (${innerQuery}) AS ua WHERE 1=1 ${typeFilter}`;
+
+    const [rows] = await pool.query(dataQuery,  [...innerParams, ...typeParams, limit, offset]);
+    const [[{ total }]] = await pool.query(countQuery, [...innerParams, ...typeParams]);
+
+    return { activities: rows, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 }
 
