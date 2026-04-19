@@ -1238,9 +1238,6 @@ export default function MyProfilePage() {
   if (!user) return <div className="flex items-center justify-center min-h-screen bg-[#F3F4F6]"><Loader2 className="animate-spin text-blue-600" size={28} /></div>;
 
   const type   = user.user_type;
-  useEffect(() => {
-    console.log('DEBUG [Profile]:', { type, user });
-  }, [type, user]);
   const p      = user?.profile || {};
   const cfg    = getConfig(type);
   const TypeIcon = cfg.icon;
