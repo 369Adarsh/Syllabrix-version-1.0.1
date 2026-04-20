@@ -7,48 +7,46 @@ import {
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell
+  Tooltip, ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
 
-// Removed Fake GROWTH_DATA
-
-const REVENUE_BREAKDOWN_COLORS = ['#7c3aed', '#a855f7', '#c084fc', '#e879f9', '#f0abfc'];
+const REVENUE_BREAKDOWN_COLORS = ['#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899'];
 
 function StatCard({ label, value, change, icon: Icon, accent = 'violet', loading }) {
   const accentMap = {
-    violet: { bg: 'from-violet-500/20 to-violet-500/5', border: 'border-violet-500/20', icon: 'text-violet-400', text: 'text-violet-300' },
-    blue:   { bg: 'from-blue-500/20 to-blue-500/5',   border: 'border-blue-500/20',   icon: 'text-blue-400',   text: 'text-blue-300'   },
-    red:    { bg: 'from-red-500/20 to-red-500/5',     border: 'border-red-500/20',     icon: 'text-red-400',    text: 'text-red-300'    },
-    green:  { bg: 'from-green-500/20 to-green-500/5', border: 'border-green-500/20',   icon: 'text-green-400',  text: 'text-green-300'  },
+    violet: { bg: 'bg-indigo-50 border-indigo-200',   icon: 'bg-indigo-100 text-indigo-600',  text: 'text-indigo-600' },
+    blue:   { bg: 'bg-blue-50 border-blue-200',       icon: 'bg-blue-100 text-blue-600',      text: 'text-blue-600'   },
+    red:    { bg: 'bg-red-50 border-red-200',         icon: 'bg-red-100 text-red-600',        text: 'text-red-600'    },
+    green:  { bg: 'bg-emerald-50 border-emerald-200', icon: 'bg-emerald-100 text-emerald-600',text: 'text-emerald-600'},
   };
   const c = accentMap[accent];
   const isPositive = change >= 0;
 
   return (
-    <div className={`relative rounded-2xl border ${c.border} bg-gradient-to-br ${c.bg} p-5 overflow-hidden`}>
+    <div className={`relative rounded-2xl border ${c.bg} p-5 overflow-hidden bg-white`}>
       <div className="flex items-start justify-between mb-4">
-        <div className={`w-10 h-10 rounded-xl bg-white/[0.06] flex items-center justify-center ${c.icon}`}>
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${c.icon}`}>
           <Icon size={20} />
         </div>
         {change !== undefined && (
-          <div className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full ${isPositive ? 'bg-green-500/15 text-green-400' : 'bg-red-500/15 text-red-400'}`}>
+          <div className={`flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full ${isPositive ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
             {isPositive ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
             {Math.abs(change)}%
           </div>
         )}
       </div>
       {loading ? (
-        <div className="h-7 w-24 bg-white/10 rounded-lg animate-pulse mb-1" />
+        <div className="h-7 w-24 bg-gray-100 rounded-lg animate-pulse mb-1" />
       ) : (
-        <p className="text-white font-bold text-2xl mb-1">{value}</p>
+        <p className="text-gray-900 font-bold text-2xl mb-1">{value}</p>
       )}
-      <p className="text-white/40 text-xs font-medium">{label}</p>
+      <p className="text-gray-500 text-xs font-medium">{label}</p>
     </div>
   );
 }
 
 function SectionTitle({ children }) {
-  return <h2 className="text-white/70 text-xs font-bold uppercase tracking-widest mb-3">{children}</h2>;
+  return <h2 className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-3">{children}</h2>;
 }
 
 export default function AdminOverviewPage() {
@@ -92,30 +90,30 @@ export default function AdminOverviewPage() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         {/* User Growth */}
-        <div className="xl:col-span-2 rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5">
+        <div className="xl:col-span-2 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
           <SectionTitle>User Activity (This Week)</SectionTitle>
           <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={growthStats.length > 0 ? growthStats : []} margin={{ top: 5, right: 5, bottom: 0, left: -20 }}>
               <defs>
                 <linearGradient id="userGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#7c3aed" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-              <XAxis dataKey="day" tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+              <XAxis dataKey="day" tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} />
               <Tooltip
-                contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#fff', fontSize: 12 }}
-                cursor={{ stroke: 'rgba(124,58,237,0.3)' }}
+                contentStyle={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, color: '#111827', fontSize: 12 }}
+                cursor={{ stroke: 'rgba(99,102,241,0.2)' }}
               />
-              <Area type="monotone" dataKey="users" stroke="#7c3aed" strokeWidth={2} fill="url(#userGrad)" dot={false} />
+              <Area type="monotone" dataKey="users" stroke="#6366f1" strokeWidth={2} fill="url(#userGrad)" dot={false} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
 
         {/* Revenue Breakdown */}
-        <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
           <SectionTitle>Revenue Breakdown</SectionTitle>
           {breakdownData.length > 0 ? (
             <>
@@ -126,7 +124,7 @@ export default function AdminOverviewPage() {
                       <Cell key={i} fill={REVENUE_BREAKDOWN_COLORS[i % REVENUE_BREAKDOWN_COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(v) => `₹${Number(v).toLocaleString('en-IN')}`} contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#fff', fontSize: 12 }} />
+                  <Tooltip formatter={(v) => `₹${Number(v).toLocaleString('en-IN')}`} contentStyle={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, color: '#111827', fontSize: 12 }} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="space-y-2 mt-2">
@@ -134,41 +132,41 @@ export default function AdminOverviewPage() {
                   <div key={i} className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full" style={{ background: REVENUE_BREAKDOWN_COLORS[i] }} />
-                      <span className="text-white/50 capitalize">{item.name}</span>
+                      <span className="text-gray-500 capitalize">{item.name}</span>
                     </div>
-                    <span className="text-white/80 font-semibold">₹{Number(item.value).toLocaleString('en-IN')}</span>
+                    <span className="text-gray-800 font-semibold">₹{Number(item.value).toLocaleString('en-IN')}</span>
                   </div>
                 ))}
               </div>
             </>
           ) : (
-            <div className="h-[220px] flex items-center justify-center text-white/20 text-sm">No payment data yet</div>
+            <div className="h-[220px] flex items-center justify-center text-gray-300 text-sm">No payment data yet</div>
           )}
         </div>
       </div>
 
       {/* Pending Reports Table */}
-      <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-5">
+      <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <SectionTitle>Latest Pending Reports</SectionTitle>
-          <a href="/admin/moderation" className="text-violet-400 hover:text-violet-300 text-xs font-semibold transition-colors">View All →</a>
+          <a href="/admin/moderation" className="text-indigo-600 hover:text-indigo-800 text-xs font-semibold transition-colors">View All →</a>
         </div>
         {reportsLoading ? (
           <div className="space-y-3">
-            {[1,2,3].map(i => <div key={i} className="h-10 bg-white/[0.04] rounded-xl animate-pulse" />)}
+            {[1,2,3].map(i => <div key={i} className="h-10 bg-gray-100 rounded-xl animate-pulse" />)}
           </div>
         ) : reports.length === 0 ? (
-          <div className="text-center py-8 text-white/25 text-sm">✅ No pending reports. Platform is clean.</div>
+          <div className="text-center py-8 text-gray-400 text-sm">✅ No pending reports. Platform is clean.</div>
         ) : (
-          <div className="divide-y divide-white/[0.05]">
+          <div className="divide-y divide-gray-100">
             {reports.map((r) => (
               <div key={r.id} className="flex items-center gap-4 py-3">
                 <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider ${
-                  r.reason === 'hate_speech' || r.reason === 'self_harm' ? 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse' :
-                  'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                  r.reason === 'hate_speech' || r.reason === 'self_harm' ? 'bg-red-100 text-red-700 border border-red-200 animate-pulse' :
+                  'bg-orange-100 text-orange-700 border border-orange-200'
                 }`}>{r.reason?.replace('_', ' ')}</span>
-                <span className="text-white/60 text-sm flex-1">Reported by <strong className="text-white/80">{r.reporter_name}</strong></span>
-                <span className="text-white/30 text-xs flex items-center gap-1"><Clock size={11} /> {new Date(r.created_at).toLocaleDateString()}</span>
+                <span className="text-gray-600 text-sm flex-1">Reported by <strong className="text-gray-800">{r.reporter_name}</strong></span>
+                <span className="text-gray-400 text-xs flex items-center gap-1"><Clock size={11} /> {new Date(r.created_at).toLocaleDateString()}</span>
               </div>
             ))}
           </div>

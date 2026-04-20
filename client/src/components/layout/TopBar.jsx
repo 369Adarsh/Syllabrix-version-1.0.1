@@ -133,9 +133,8 @@ export default function TopBar({ onMenuClick = () => {} }) {
           {/* Centralized Navigation Links */}
           <nav className="hidden md:flex items-center gap-8 ml-4">
             {[
-              { label: 'Dashboard', href: '/home' },
               { label: 'Mentors', href: '/mentorship' },
-              { label: 'Resources', href: '/explore' }
+              { label: 'HR Explorer', href: '/explore' }
             ].map((link) => {
               const active = pathname === link.href || (link.href === '/home' && pathname === '/');
               return (

@@ -16,7 +16,7 @@ import {
   Library, Table2,
   Shield, Rss, BarChart2, Clock, FileText, ClipboardList, PlusCircle,
   Zap, Briefcase, ScanSearch, Target, TrendingUp,
-  Bot, BadgeCheck, CalendarDays, UserCircle2
+  Bot, BadgeCheck, CalendarDays, UserCircle2, Plus, Search
 } from 'lucide-react';
 import { getStudentNavRestrictions } from '@/utils/ageGroup';
 import { parentAPI } from '@/lib/api/parent.api';
@@ -96,7 +96,7 @@ function StudentSidebarContent({ onClose }) {
         {/* MAIN */}
         <Section label="Main" />
         <NavItem href="/home"          icon={Home}         label="Home feed"     {...props} />
-        {!r.hideGroups    && <NavItem href="/groups"        icon={Users}        label="Groups"         {...props} />}
+        {!r.hideGroups    && <NavItem href="/groups"        icon={Users}        label="Connections"    {...props} />}
 
         {/* LEARN */}
         <Section label="Learn" />
@@ -210,7 +210,7 @@ function ParentSidebarContent({ onClose }) {
         <NavItem href="/career/feed" icon={Rss}          label="My feed"       {...pProps} />
         <NavItem href="/explore"       icon={Compass}      label="Explore"       {...pProps} />
         <NavItem href="/messages"      icon={MessageSquare} label="Messages"     {...pProps} />
-        <NavItem href="/groups"        icon={Users}        label="Groups"        {...pProps} />
+        <NavItem href="/groups"        icon={Users}        label="Connections"   {...pProps} />
         <NavItem href="/notifications" icon={Bell}         label="Notifications" {...pProps} />
 
         {/* MY CHILDREN */}
@@ -302,6 +302,96 @@ function ParentSidebarContent({ onClose }) {
 
 // ─── Professional Learner sidebar ─────────────────────────────────────────────
 
+// ─── HR Professional sidebar ──────────────────────────────────────────────────
+
+function HRSidebarContent({ onClose }) {
+  const { user, logout } = useAuth();
+  const hasPhoto = user?.profile_photo_url && !user.profile_photo_url.includes('PASTE_');
+  const p = {
+    onClick: onClose,
+    activeClass: 'bg-teal-50 text-teal-700 font-bold',
+    activeIconClass: 'text-teal-600',
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-white">
+      {/* Mobile drawer header */}
+      <div className="md:hidden h-14 flex items-center justify-between px-4 border-b border-gray-100 flex-shrink-0">
+        <Link href="/home" onClick={onClose} className="flex items-center gap-2">
+          <Image src="/images/logo/syllabrix-logo.png" alt="Syllabrix" width={110} height={30} className="h-7 w-auto object-contain" priority />
+        </Link>
+        <button onClick={onClose} className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
+          <X size={20} className="text-gray-500" />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto py-4" style={{ scrollbarWidth: 'none' }}>
+
+        {/* RECRUITMENT */}
+        <Section label="Recruitment" />
+        <NavItem href="/home"           icon={Briefcase}   label="HR Dashboard"    {...p} />
+        <NavItem href="/jobs/create"    icon={Plus}        label="Post a Job"      {...p} />
+        <NavItem href="/jobs/my-posts"  icon={FileText}    label="My Job Posts"    {...p} />
+        <NavItem href="/jobs/applicants" icon={Users}      label="Applicants"      {...p} />
+
+        {/* TALENT */}
+        <Section label="Talent" />
+        <NavItem href="/explore"        icon={Search}      label="HR Explorer"     {...p} />
+        <NavItem href="/groups"         icon={Users}       label="Connections"     {...p} />
+        <NavItem href="/career/feed"    icon={Rss}         label="Feed"            {...p} />
+
+        {/* TOOLS */}
+        <Section label="Tools" />
+        <NavItem href="/messages"       icon={MessageSquare} label="Messages"      {...p} />
+        <NavItem href="/career/salary"  icon={TrendingUp}  label="Salary Insights" {...p} />
+        <NavItem href="/ai-buddy"       icon={Sparkles}    label="AI Assistant"    {...p} />
+
+        {/* Upgrade */}
+        <div className="mx-3 mt-8 p-4 rounded-2xl bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal-100 relative overflow-hidden group">
+          <div className="absolute -right-2 -top-2 w-12 h-12 bg-teal-200/20 rounded-full blur-xl group-hover:scale-150 transition-transform" />
+          <p className="text-[10px] font-black text-teal-700 uppercase tracking-wider mb-1">Upgrade to Pro</p>
+          <p className="text-[9px] text-teal-600 leading-tight mb-3">Unlock AI candidate matching & advanced ATS features.</p>
+          <button className="w-full py-2 bg-teal-600 text-white text-[10px] font-black rounded-lg hover:bg-teal-700 transition-colors shadow-sm">
+            UPGRADE NOW
+          </button>
+        </div>
+
+        {/* System */}
+        <div className="mt-8 pt-2 border-t border-gray-50">
+          <NavItem href="/settings" icon={Settings} label="Settings" {...p} />
+          <NavItem href="/support"  icon={Heart}    label="Support"  {...p} />
+        </div>
+      </div>
+
+      {/* User card */}
+      {user && (
+        <div className="flex-shrink-0 border-t border-gray-100 bg-white px-2 py-2">
+          <Link href="/profile" onClick={onClose}
+            className="flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-gray-50 transition-colors">
+            <div className="w-8 h-8 rounded-full bg-teal-600 flex items-center justify-center overflow-hidden flex-shrink-0">
+              {hasPhoto ? (
+                <Image src={user.profile_photo_url} alt="" width={32} height={32} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-white font-bold text-xs">{user.username?.charAt(0)?.toUpperCase()}</span>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[12px] font-black text-gray-900 truncate">
+                {user.profile?.full_name || user.full_name || user.username}
+              </p>
+              <p className="text-[10px] text-gray-400 font-medium truncate">
+                {user.profile?.hr_role || 'HR Professional'}
+              </p>
+            </div>
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Professional sidebar ─────────────────────────────────────────────────────
+
 function ProfessionalSidebarContent({ onClose }) {
   const { user, logout } = useAuth();
   const hasPhoto = user?.profile_photo_url && !user.profile_photo_url.includes('PASTE_');
@@ -341,9 +431,11 @@ function ProfessionalSidebarContent({ onClose }) {
 
         {/* NETWORK */}
         <Section label="Network" />
-        <NavItem href="/career/feed" icon={Rss} label="My feed" {...p} />
-        <NavItem href="/mentorship" icon={UserCircle2} label="Mentors" {...p} />
-        <NavItem href="/groups" icon={Users} label="Groups" {...p} />
+        <NavItem href="/career/feed" icon={Rss}         label="My feed"           {...p} />
+        <NavItem href="/explore"     icon={Search}      label="Find HR Pros"      {...p} />
+        <NavItem href="/groups"      icon={Users}       label="Connections"       {...p} />
+        <NavItem href="/mentorship"  icon={UserCircle2} label="Mentors"           {...p} />
+        <NavItem href="/jobs"        icon={Briefcase}   label="Browse Jobs"       {...p} />
 
         {/* Premium Promo */}
         <div className="mx-3 mt-8 p-4 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 relative overflow-hidden group">
@@ -496,9 +588,11 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
 
   const isStudent = user?.user_type === 'student';
   const isParent = user?.user_type === 'parent';
+  const isHR = user?.user_type === 'hr_professional';
   const isProfessional = user?.user_type === 'professional_learner' || user?.user_type === 'organization';
   const Content = isStudent ? StudentSidebarContent
     : isParent ? ParentSidebarContent
+    : isHR ? HRSidebarContent
     : isProfessional ? ProfessionalSidebarContent
     : GenericSidebarContent;
   const sidebarContent = <Content onClose={onClose} />;

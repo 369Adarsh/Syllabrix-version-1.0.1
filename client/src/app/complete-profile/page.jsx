@@ -144,7 +144,7 @@ const Progress = ({ step, total }) => (
       <span className="text-[11px] text-gray-400">{Math.round((step / total) * 100)}% complete</span>
     </div>
     <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-      <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-500" style={{ width: `${(step / total) * 100}%` }} />
+      <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-500 data-[teal]:from-teal-500 data-[teal]:to-emerald-500" style={{ width: `${(step / total) * 100}%` }} />
     </div>
   </div>
 );
@@ -230,7 +230,7 @@ export default function CompleteProfilePage() {
   const isYoung = age !== null && age < 13;
 
   // ── Steps config ──────────────────────────────────────────────────────────
-  const totalSteps = { student: 6, teacher: 5, institute: 3, parent: 3, professional_learner: 5, organization: 3 }[type] || 3;
+  const totalSteps = { student: 6, teacher: 5, institute: 3, parent: 3, professional_learner: 5, organization: 3, hr_professional: 3 }[type] || 3;
 
   // ── Validation ────────────────────────────────────────────────────────────
   const validate = () => {
@@ -276,6 +276,9 @@ export default function CompleteProfilePage() {
       if (step === 2 && !form.official_company_name?.trim()) { toast.error('Official company name is required'); return false; }
       if (step === 2 && !form.industry) { toast.error('Please select an industry'); return false; }
     }
+    if (type === 'hr_professional') {
+      if (step === 2 && !form.company_name?.trim()) { toast.error('Company name is required'); return false; }
+    }
     return true;
   };
 
@@ -293,6 +296,8 @@ export default function CompleteProfilePage() {
     if (p.loved_professions && !Array.isArray(p.loved_professions)) {
       p.loved_professions = Object.values(p.loved_professions || {}).filter(Boolean);
     }
+    // HR: bio field → about
+    if (type === 'hr_professional' && p.bio) { p.about = p.bio; delete p.bio; }
     return p;
   };
 
@@ -784,6 +789,56 @@ export default function CompleteProfilePage() {
               <h2 className="text-[17px] font-extrabold text-gray-900">About Your Organization</h2>
               <Txt label="About the Company" name="about" form={form} set={set} placeholder="Brief description — what you do, your mission, what makes you unique…" rows={4} />
               <Txt label="How will you use Syllabrix?" name="how_use_platform" form={form} set={set} placeholder="e.g. Post job openings, upskill employees, hire fresh talent, run training programmes…" rows={3} />
+              <NavBtns step={step} total={totalSteps} onBack={() => setStep(2)} onNext={handleNext} loading={loading} isLast onSkip={handleSkip} skipLoading={skipLoading} />
+            </div>
+          )}
+
+          {/* ═══════════════ HR PROFESSIONAL ═══════════════ */}
+          {type === 'hr_professional' && step === 1 && (
+            <div className="space-y-4">
+              <h2 className="text-[17px] font-extrabold text-gray-900">Personal Information</h2>
+              <p className="text-[12px] text-gray-400 -mt-1">Tell us a bit about yourself.</p>
+              <FullNameField form={form} user={user} />
+              <Inp label="Phone Number" name="phone" form={form} set={set} placeholder="+91 XXXXX XXXXX" type="tel" />
+              <Sel label="Gender" name="gender" form={form} set={set} options={['Male','Female','Other','Prefer not to say']} />
+              <div className="grid grid-cols-2 gap-3">
+                <Inp label="City" name="city" form={form} set={set} placeholder="Your city" />
+                <Sel label="State" name="state" form={form} set={set} options={STATES} />
+              </div>
+              <NavBtns step={step} total={totalSteps} onNext={handleNext} onSkip={handleSkip} skipLoading={skipLoading} />
+            </div>
+          )}
+
+          {type === 'hr_professional' && step === 2 && (
+            <div className="space-y-4">
+              <h2 className="text-[17px] font-extrabold text-gray-900">Professional Details</h2>
+              <p className="text-[12px] text-gray-400 -mt-1">Your current role and company.</p>
+              <Inp label="Company / Organisation" name="company_name" form={form} set={set} required placeholder="Company you currently represent" />
+              <Field label="HR Role" required>
+                <select value={form.hr_role || ''} onChange={e => set('hr_role', e.target.value)} className={inp}>
+                  <option value="">Select your role</option>
+                  {['HR Manager','Talent Acquisition','Recruiter','Technical Recruiter','HR Business Partner (HRBP)','Hiring Manager','People Lead','HR Director','HR Professional'].map(r => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+              </Field>
+              <Sel label="Industry" name="industry" form={form} set={set} options={INDUSTRIES} placeholder="Select industry" />
+              <Inp label="Years of HR Experience" name="experience_years" form={form} set={set} placeholder="e.g. 5" type="number" />
+              <Inp label="LinkedIn Profile URL" name="linkedin_url" form={form} set={set} placeholder="https://linkedin.com/in/…" />
+              <NavBtns step={step} total={totalSteps} onBack={() => setStep(1)} onNext={handleNext} onSkip={handleSkip} skipLoading={skipLoading} />
+            </div>
+          )}
+
+          {type === 'hr_professional' && step === 3 && (
+            <div className="space-y-4">
+              <h2 className="text-[17px] font-extrabold text-gray-900">Skills & Goals</h2>
+              <p className="text-[12px] text-gray-400 -mt-1">Help candidates find you and understand your hiring focus.</p>
+              <TagInput label="HR Skills & Expertise" tags={form.skills || []} onChange={v => set('skills', v)} placeholder="e.g. Talent Acquisition, HRIS, Compensation…" />
+              <Txt label="About You" name="bio" form={form} set={set} placeholder="Brief bio — your experience, specialisation, what kind of talent you're looking for…" rows={4} />
+              <Field label="What type of candidates are you looking for?">
+                <CheckGroup label="" options={['Fresh Graduates','Experienced Professionals','Remote Candidates','Interns / Apprentices','Tech / Engineering','Non-Tech / Operations','Sales / Marketing','Management / Leadership']}
+                  selected={form.candidate_preference || []} onChange={v => set('candidate_preference', v)} />
+              </Field>
               <NavBtns step={step} total={totalSteps} onBack={() => setStep(2)} onNext={handleNext} loading={loading} isLast onSkip={handleSkip} skipLoading={skipLoading} />
             </div>
           )}

@@ -278,6 +278,31 @@ class AdminLibraryService {
     await pool.query('DELETE FROM chapters WHERE id = ?', [id]);
   }
 
+  async updateChapter(id, { title, description, chapter_number, estimated_study_time_mins }) {
+    const fields = [], vals = [];
+    if (title !== undefined)                     { fields.push('title = ?');                     vals.push(title); }
+    if (description !== undefined)               { fields.push('description = ?');               vals.push(description || null); }
+    if (chapter_number !== undefined)            { fields.push('chapter_number = ?');            vals.push(chapter_number || null); }
+    if (estimated_study_time_mins !== undefined) { fields.push('estimated_study_time_mins = ?'); vals.push(estimated_study_time_mins || null); }
+    if (!fields.length) return;
+    vals.push(id);
+    await pool.query(`UPDATE chapters SET ${fields.join(', ')} WHERE id = ?`, vals);
+  }
+
+  async bulkCreateChapters(book_id, chapters) {
+    if (!chapters?.length) throw new Error('No chapters provided');
+    const results = [];
+    for (const ch of chapters) {
+      const [r] = await pool.query(
+        `INSERT INTO chapters (book_id, chapter_number, title, description, estimated_study_time_mins)
+         VALUES (?, ?, ?, ?, ?)`,
+        [book_id, ch.chapter_number || null, ch.title, ch.description || null, ch.estimated_study_time_mins || null]
+      );
+      results.push({ id: r.insertId, title: ch.title });
+    }
+    return results;
+  }
+
   // ── TOPICS ─────────────────────────────────────────────────────────────────
 
   async getTopics(chapter_id) {

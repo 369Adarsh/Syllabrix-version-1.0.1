@@ -9,7 +9,8 @@ import {
   GraduationCap, Trophy, Building2, ArrowLeft, Hash, Check,
   Landmark, Shield, Train, Briefcase, Scale, Stethoscope,
   Cpu as CpuIcon, Palette, BookMarked, Sparkles, BarChart3,
-  FolderTree, Star, Clock, ChevronUp, UploadCloud, Layers3
+  FolderTree, Star, Clock, ChevronUp, UploadCloud, Layers3,
+  Pencil, ListOrdered, Copy
 } from 'lucide-react';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -93,17 +94,18 @@ const REALMS = [
 
 // ── Tiny UI primitives ────────────────────────────────────────────────────────
 
-const inputCls = 'w-full px-3 py-2 bg-white/[0.05] border border-white/[0.08] rounded-lg text-white/80 text-sm placeholder-white/20 focus:outline-none focus:border-violet-500/50 transition-all';
+const inputCls = 'w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 text-sm placeholder-gray-400 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all';
 const selectCls = `${inputCls} appearance-none`;
 
-function Modal({ title, onClose, children, wide }) {
+function Modal({ title, onClose, children, wide, size }) {
+  const maxW = size === 'xl' ? 'max-w-4xl' : size === 'lg' ? 'max-w-2xl' : wide ? 'max-w-lg' : 'max-w-md';
   return (
     <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={onClose} />
-      <div className={`relative z-10 bg-[#0d0d1a] border border-white/[0.1] rounded-2xl shadow-2xl w-full ${wide ? 'max-w-lg' : 'max-w-md'} max-h-[90vh] flex flex-col`}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.07] shrink-0">
-          <h3 className="text-white font-bold text-sm">{title}</h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/[0.07] text-white/40 hover:text-white transition-all"><X size={14} /></button>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={onClose} />
+      <div className={`relative z-10 bg-white border border-gray-200 rounded-2xl shadow-2xl w-full ${maxW} max-h-[90vh] flex flex-col`}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+          <h3 className="text-gray-900 font-bold text-sm">{title}</h3>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-all"><X size={14} /></button>
         </div>
         <div className="p-5 overflow-y-auto custom-scrollbar">{children}</div>
       </div>
@@ -114,7 +116,7 @@ function Modal({ title, onClose, children, wide }) {
 function Field({ label, children }) {
   return (
     <div className="space-y-1.5">
-      {label && <label className="text-[9px] uppercase font-black text-white/25 tracking-widest block">{label}</label>}
+      {label && <label className="text-[9px] uppercase font-black text-gray-400 tracking-widest block">{label}</label>}
       {children}
     </div>
   );
@@ -123,9 +125,9 @@ function Field({ label, children }) {
 function Btn({ variant = 'primary', loading, disabled, onClick, children, className = '', size = 'md' }) {
   const sz = size === 'sm' ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm';
   const vars = {
-    primary: 'bg-gradient-to-r from-violet-600 to-violet-700 text-white hover:from-violet-500 hover:to-violet-600 shadow-lg shadow-violet-900/30',
-    ghost:   'bg-white/[0.04] text-white/50 hover:bg-white/[0.07] border border-white/[0.08] hover:text-white/70',
-    danger:  'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20',
+    primary: 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:from-indigo-500 hover:to-violet-500 shadow-lg shadow-indigo-200',
+    ghost:   'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 hover:text-gray-900',
+    danger:  'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200',
   };
   return (
     <button onClick={onClick} disabled={disabled || loading}
@@ -138,12 +140,12 @@ function Btn({ variant = 'primary', loading, disabled, onClick, children, classN
 
 function Badge({ children, color = 'violet' }) {
   const cls = {
-    violet: 'bg-violet-500/15 text-violet-300 border-violet-500/25',
-    blue:   'bg-blue-500/15 text-blue-300 border-blue-500/25',
-    emerald:'bg-emerald-500/15 text-emerald-300 border-emerald-500/25',
-    orange: 'bg-orange-500/15 text-orange-300 border-orange-500/25',
-    amber:  'bg-amber-500/15 text-amber-300 border-amber-500/25',
-    rose:   'bg-rose-500/15 text-rose-300 border-rose-500/25',
+    violet: 'bg-violet-100 text-violet-700 border-violet-200',
+    blue:   'bg-blue-100 text-blue-700 border-blue-200',
+    emerald:'bg-emerald-100 text-emerald-700 border-emerald-200',
+    orange: 'bg-orange-100 text-orange-700 border-orange-200',
+    amber:  'bg-amber-100 text-amber-700 border-amber-200',
+    rose:   'bg-rose-100 text-rose-700 border-rose-200',
   };
   return <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full border uppercase tracking-wider ${cls[color] || cls.violet}`}>{children}</span>;
 }
@@ -292,6 +294,17 @@ export default function AdminLibraryPage() {
     toast.success('Chapter added'); setModal(null);
     adminAPI.getLibraryChapters(book_id).then(r => setBookChapters(p => ({ ...p, [book_id]: r.data || [] }))).catch(() => {});
   };
+  const handleBulkAddChapters = async (chapters, book_id) => {
+    const res = await adminAPI.bulkCreateLibraryChapters({ book_id, chapters });
+    toast.success(`${chapters.length} chapter${chapters.length !== 1 ? 's' : ''} added`);
+    setModal(null);
+    adminAPI.getLibraryChapters(book_id).then(r => setBookChapters(p => ({ ...p, [book_id]: r.data || [] }))).catch(() => {});
+    return res.data; // [{id, title}, ...]
+  };
+  const handleUpdateChapter = async (chapterId, data, book_id) => {
+    await adminAPI.updateLibraryChapter(chapterId, data);
+    adminAPI.getLibraryChapters(book_id).then(r => setBookChapters(p => ({ ...p, [book_id]: r.data || [] }))).catch(() => {});
+  };
 
   const realmMeta = REALMS.find(r => r.id === realm);
 
@@ -299,13 +312,13 @@ export default function AdminLibraryPage() {
     <div className="flex flex-col md:flex-row -m-4 md:-m-6 overflow-hidden" style={{ height: 'calc(100vh - 64px)' }}>
 
       {/* ════ LEFT TREE PANEL ════ */}
-      <div className={`w-full md:w-[275px] shrink-0 bg-[#08080f] border-b md:border-b-0 md:border-r border-white/[0.07] flex-col ${(schoolSel || examSel || univSel) ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`w-full md:w-[275px] shrink-0 bg-gray-50 border-b md:border-b-0 md:border-r border-gray-200 flex-col ${(schoolSel || examSel || univSel) ? 'hidden md:flex' : 'flex'}`}>
 
         {/* Realm switcher tabs */}
-        <div className="p-2.5 border-b border-white/[0.06] flex gap-1.5">
+        <div className="p-2.5 border-b border-gray-200 flex gap-1.5">
           {REALMS.map(r => (
             <button key={r.id} onClick={() => { setRealm(r.id); setSchoolSel(null); setExamSel(null); setUnivSel(null); }}
-              className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${realm === r.id ? `bg-gradient-to-r ${r.grad} text-white shadow-lg` : 'text-white/30 hover:text-white/60 hover:bg-white/[0.04]'}`}>
+              className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${realm === r.id ? `bg-gradient-to-r ${r.grad} text-white shadow-lg` : 'text-gray-400 hover:text-gray-700 hover:bg-white'}`}>
               {r.id === 'school' ? 'School' : r.id === 'competitive' ? 'Exams' : 'Univ.'}
             </button>
           ))}
@@ -314,10 +327,10 @@ export default function AdminLibraryPage() {
         {/* Search */}
         <div className="px-3 pt-3 pb-2">
           <div className="relative">
-            <Search size={11} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25" />
+            <Search size={11} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search…"
-              className="w-full pl-8 pr-7 py-1.5 text-xs bg-white/[0.04] border border-white/[0.06] rounded-lg text-white/70 placeholder-white/20 focus:outline-none focus:border-violet-500/40 transition-all" />
-            {search && <button onClick={() => { setSearch(''); setSearchResults(null); }} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/25"><X size={10} /></button>}
+              className="w-full pl-8 pr-7 py-1.5 text-xs bg-white border border-gray-200 rounded-lg text-gray-700 placeholder-gray-400 focus:outline-none focus:border-indigo-400 transition-all" />
+            {search && <button onClick={() => { setSearch(''); setSearchResults(null); }} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400"><X size={10} /></button>}
           </div>
         </div>
 
@@ -327,11 +340,11 @@ export default function AdminLibraryPage() {
             {['books', 'subjects', 'chapters'].map(key => (
               searchResults[key]?.length > 0 && (
                 <div key={key}>
-                  <p className="text-[8px] uppercase font-black text-white/20 tracking-widest mb-1.5">{key}</p>
+                  <p className="text-[8px] uppercase font-black text-gray-400 tracking-widest mb-1.5">{key}</p>
                   {searchResults[key].map(item => (
-                    <div key={item.id} className="px-2 py-1.5 rounded-lg hover:bg-white/[0.04] cursor-pointer">
-                      <p className="text-white/65 text-xs truncate">{item.title || item.name}</p>
-                      <p className="text-white/25 text-[9px]">{item.board_code} · Class {item.grade}</p>
+                    <div key={item.id} className="px-2 py-1.5 rounded-lg hover:bg-gray-100 cursor-pointer">
+                      <p className="text-gray-700 text-xs truncate">{item.title || item.name}</p>
+                      <p className="text-gray-400 text-[9px]">{item.board_code} · Class {item.grade}</p>
                     </div>
                   ))}
                 </div>
@@ -342,9 +355,9 @@ export default function AdminLibraryPage() {
           /* Realm Trees */
           <div className="flex-1 overflow-y-auto custom-scrollbar">
             {!realm && (
-              <div className="flex flex-col items-center justify-center h-full px-4 text-center space-y-2 opacity-30">
-                <FolderTree size={32} />
-                <p className="text-white/50 text-xs">Select a realm above to browse the library tree</p>
+              <div className="flex flex-col items-center justify-center h-full px-4 text-center space-y-2 opacity-40">
+                <FolderTree size={32} className="text-gray-400" />
+                <p className="text-gray-400 text-xs">Select a realm above to browse the library tree</p>
               </div>
             )}
 
@@ -390,11 +403,11 @@ export default function AdminLibraryPage() {
                   return (
                     <div key={type}>
                       <button onClick={() => setOpenExamGroups(p => ({ ...p, [type]: !p[type] }))}
-                        className="w-full flex items-center gap-2 px-3 py-2 hover:bg-white/[0.03] transition-all">
-                        {openExamGroups[type] ? <ChevronDown size={10} className="text-white/20 shrink-0" /> : <ChevronRight size={10} className="text-white/20 shrink-0" />}
+                        className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-100 transition-all">
+                        {openExamGroups[type] ? <ChevronDown size={10} className="text-gray-400 shrink-0" /> : <ChevronRight size={10} className="text-gray-400 shrink-0" />}
                         <Icon size={12} className={`text-${meta.color}-400 shrink-0`} />
-                        <span className="text-white/60 text-[11px] font-bold flex-1 truncate">{meta.label}</span>
-                        <span className="text-white/20 text-[9px]">{group.exams.length}</span>
+                        <span className="text-gray-700 text-[11px] font-bold flex-1 truncate">{meta.label}</span>
+                        <span className="text-gray-400 text-[9px]">{group.exams.length}</span>
                       </button>
                       {openExamGroups[type] && group.exams.map(exam => (
                         <div key={exam.id}>
@@ -421,11 +434,11 @@ export default function AdminLibraryPage() {
                   return (
                     <div key={cat.id}>
                       <button onClick={() => setOpenUnivCats(p => ({ ...p, [cat.id]: !p[cat.id] }))}
-                        className="w-full flex items-center gap-2 px-3 py-2 hover:bg-white/[0.03] transition-all">
-                        {openUnivCats[cat.id] ? <ChevronDown size={10} className="text-white/20 shrink-0" /> : <ChevronRight size={10} className="text-white/20 shrink-0" />}
-                        <Icon size={12} className="text-emerald-400 shrink-0" />
-                        <span className="text-white/60 text-[11px] font-bold flex-1 truncate">{cat.name}</span>
-                        <span className="text-white/20 text-[9px]">{cat.course_count}</span>
+                        className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-100 transition-all">
+                        {openUnivCats[cat.id] ? <ChevronDown size={10} className="text-gray-400 shrink-0" /> : <ChevronRight size={10} className="text-gray-400 shrink-0" />}
+                        <Icon size={12} className="text-emerald-500 shrink-0" />
+                        <span className="text-gray-700 text-[11px] font-bold flex-1 truncate">{cat.name}</span>
+                        <span className="text-gray-400 text-[9px]">{cat.course_count}</span>
                       </button>
                       {openUnivCats[cat.id] && cat.courses?.map(course => (
                         <TreeRow key={course.id} label={course.short_name || course.name}
@@ -445,9 +458,9 @@ export default function AdminLibraryPage() {
 
         {/* Add Board button (school only) */}
         {realm === 'school' && !searchResults && (
-          <div className="p-3 border-t border-white/[0.06]">
+          <div className="p-3 border-t border-gray-200">
             <button onClick={() => setModal({ type: 'board' })}
-              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 text-xs font-bold transition-all border border-blue-500/20">
+              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-bold transition-all border border-blue-200">
               <Plus size={12} /> Add Board
             </button>
           </div>
@@ -458,18 +471,18 @@ export default function AdminLibraryPage() {
       <div className={`flex-1 flex-col overflow-hidden ${!(schoolSel || examSel || univSel) ? 'hidden md:flex' : 'flex'}`}>
 
         {/* Topbar */}
-        <div className="px-4 md:px-6 py-3 border-b border-white/[0.06] bg-white/[0.01] flex items-center justify-between gap-4 shrink-0">
+        <div className="px-4 md:px-6 py-3 border-b border-gray-200 bg-white flex items-center justify-between gap-4 shrink-0">
           <div className="flex items-center gap-2 min-w-0">
             {/* Mobile: back to tree */}
             <button
               onClick={() => { setSchoolSel(null); setExamSel(null); setUnivSel(null); }}
-              className="md:hidden p-1.5 rounded-lg hover:bg-white/[0.07] text-white/30 hover:text-white/70 transition-all shrink-0"
+              className="md:hidden p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-all shrink-0"
             >
               <ArrowLeft size={14} />
             </button>
             {realm && (
               <button onClick={() => { setRealm(null); setSchoolSel(null); setExamSel(null); setUnivSel(null); }}
-                className="hidden md:flex p-1.5 rounded-lg hover:bg-white/[0.07] text-white/30 hover:text-white/70 transition-all shrink-0">
+                className="hidden md:flex p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-all shrink-0">
                 <ArrowLeft size={14} />
               </button>
             )}
@@ -507,7 +520,8 @@ export default function AdminLibraryPage() {
               sel={schoolSel} content={schoolContent}
               openBooks={openBooks} bookChapters={bookChapters} bookUploads={bookUploads}
               onNav={schoolNav} onToggleBook={toggleBook}
-              onAddChapter={(bid) => setModal({ type: 'chapter', book_id: bid })}
+              onAddChapter={(bid, bookTitle) => setModal({ type: 'bulk_chapters', book_id: bid, bookTitle })}
+              onUpdateChapter={(cid, data, bid) => handleUpdateChapter(cid, data, bid)}
               onDeleteChapter={async (cid, bid) => { await adminAPI.deleteLibraryChapter(cid); adminAPI.getLibraryChapters(bid).then(r => setBookChapters(p => ({ ...p, [bid]: r.data || [] }))).catch(() => {}); }}
               onUploadFile={(bid) => setModal({ type: 'upload', book_id: bid, entity_type: 'book' })}
               onDeleteBook={async (bid) => { if (!confirm('Delete?')) return; await adminAPI.deleteLibraryBook(bid); const r = await adminAPI.getLibraryBooks(schoolSel.id); setSchoolContent(r.data || []); }}
@@ -538,8 +552,14 @@ export default function AdminLibraryPage() {
       {modal?.type === 'class'   && <AddClassModal onClose={() => setModal(null)} board={modal.board} onSave={async (d) => { await adminAPI.createLibraryClass({ ...d, board_id: modal.board?.id }); toast.success('Class added'); setModal(null); adminAPI.getLibraryTree().then(r => setSchoolTree(r.data || [])); schoolNav('board', modal.board); }} />}
       {modal?.type === 'subject' && <AddSubjectModal onClose={() => setModal(null)} cls={modal.cls} onSave={async (d) => { await adminAPI.createLibrarySubject({ ...d, class_id: modal.cls?.id }); toast.success('Subject added'); setModal(null); adminAPI.getLibraryTree().then(r => setSchoolTree(r.data || [])); schoolNav('class', modal.cls); }} />}
       {modal?.type === 'book'    && <AddBookModal onClose={() => setModal(null)} subject={modal.subject} onSave={async (fd) => { await adminAPI.createLibraryBook(fd); toast.success('Book added'); setModal(null); const r = await adminAPI.getLibraryBooks(modal.subject?.id); setSchoolContent(r.data || []); }} />}
-      {modal?.type === 'chapter' && <AddChapterModal onClose={() => setModal(null)} onSave={(d) => handleAddChapter(d, modal.book_id)} />}
-      {modal?.type === 'upload'  && <UploadFileModal onClose={() => setModal(null)} onSave={handleUpload} book_id={modal.book_id} entity_type={modal.entity_type} />}
+      {modal?.type === 'bulk_chapters' && <BulkChapterModal onClose={() => setModal(null)} bookTitle={modal.bookTitle} onSave={(chapters) => handleBulkAddChapters(chapters, modal.book_id)} />}
+      {modal?.type === 'upload'  && <UploadFileModal onClose={() => setModal(null)} onSave={handleUpload} book_id={modal.book_id} entity_type={modal.entity_type} defaultFileType={modal.defaultFileType || 'notes'} />}
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.15); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.35); }
+      `}</style>
     </div>
   );
 }
@@ -550,21 +570,21 @@ function TreeRow({ icon: Icon, label, badge, badgeColor = 'blue', isOpen, isActi
   const pl = [' px-3', ' pl-7', ' pl-12', ' pl-16'][depth] || ' px-3';
   return (
     <button onClick={onClick}
-      className={`w-full flex items-center gap-2${pl} pr-3 py-1.5 text-left transition-all ${isActive ? 'bg-violet-500/10 border-r-2 border-violet-500' : 'hover:bg-white/[0.03]'}`}>
-      {isOpen !== undefined ? (isOpen ? <ChevronDown size={10} className="text-white/20 shrink-0" /> : <ChevronRight size={10} className="text-white/20 shrink-0" />) : <span className="w-2.5 shrink-0" />}
-      {Icon && <Icon size={11} className={`shrink-0 ${isActive ? 'text-violet-400' : 'text-white/25'}`} />}
-      <span className={`text-[11px] font-semibold flex-1 truncate ${isActive ? 'text-violet-300' : 'text-white/50'}`}>{label}</span>
+      className={`w-full flex items-center gap-2${pl} pr-3 py-1.5 text-left transition-all ${isActive ? 'bg-indigo-50 border-r-2 border-indigo-500' : 'hover:bg-gray-100'}`}>
+      {isOpen !== undefined ? (isOpen ? <ChevronDown size={10} className="text-gray-400 shrink-0" /> : <ChevronRight size={10} className="text-gray-400 shrink-0" />) : <span className="w-2.5 shrink-0" />}
+      {Icon && <Icon size={11} className={`shrink-0 ${isActive ? 'text-indigo-600' : 'text-gray-400'}`} />}
+      <span className={`text-[11px] font-semibold flex-1 truncate ${isActive ? 'text-indigo-700' : 'text-gray-500'}`}>{label}</span>
       {badge && <Badge color={badgeColor}>{badge}</Badge>}
-      {count > 0 && <span className="text-white/15 text-[9px] shrink-0">{count}</span>}
+      {count > 0 && <span className="text-gray-400 text-[9px] shrink-0">{count}</span>}
     </button>
   );
 }
 
 function TreeLoader() {
-  return <div className="flex justify-center py-10"><Loader2 size={18} className="animate-spin text-violet-500/50" /></div>;
+  return <div className="flex justify-center py-10"><Loader2 size={18} className="animate-spin text-indigo-400" /></div>;
 }
 function EmptyTree({ text }) {
-  return <p className="text-white/15 text-xs text-center py-8">{text}</p>;
+  return <p className="text-gray-400 text-xs text-center py-8">{text}</p>;
 }
 
 function SchoolBreadcrumb({ realm, schoolSel, examSel, univSel }) {
@@ -585,8 +605,8 @@ function SchoolBreadcrumb({ realm, schoolSel, examSel, univSel }) {
     <div className="flex items-center gap-1 min-w-0 overflow-hidden">
       {parts.map((p, i) => (
         <span key={i} className="flex items-center gap-1 min-w-0">
-          <ChevronRight size={10} className="text-white/15 shrink-0" />
-          <span className={`text-xs font-semibold truncate ${i === parts.length - 1 ? 'text-white/70' : 'text-white/30'}`}>{p}</span>
+          <ChevronRight size={10} className="text-gray-300 shrink-0" />
+          <span className={`text-xs font-semibold truncate ${i === parts.length - 1 ? 'text-gray-700' : 'text-gray-400'}`}>{p}</span>
         </span>
       ))}
     </div>
@@ -599,8 +619,8 @@ function RealmSelector({ stats, onSelect }) {
   return (
     <div className="p-8 space-y-8 max-w-5xl mx-auto">
       <div>
-        <h1 className="text-white font-black text-2xl tracking-tight">Academic Knowledge Repository</h1>
-        <p className="text-white/35 text-sm mt-2 leading-relaxed">
+        <h1 className="text-gray-900 font-black text-2xl tracking-tight">Academic Knowledge Repository</h1>
+        <p className="text-gray-500 text-sm mt-2 leading-relaxed">
           One organized hub for every book, note, and study material across all boards, exams, and university courses.
           Enable AI Indexing on any file — the AI tutor will cite it when answering student questions.
         </p>
@@ -616,8 +636,8 @@ function RealmSelector({ stats, onSelect }) {
             { l: 'Chapters',  v: stats.chapters,  c: 'text-cyan-400' },
             { l: 'AI Indexed',v: stats.ai_indexed,c: 'text-pink-400' },
           ].map(s => (
-            <div key={s.l} className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] text-center">
-              <p className="text-2xl font-black text-white">{(s.v || 0).toLocaleString()}</p>
+            <div key={s.l} className="p-4 rounded-xl bg-white border border-gray-200 shadow-sm text-center">
+              <p className="text-2xl font-black text-gray-900">{(s.v || 0).toLocaleString()}</p>
               <p className={`text-[9px] uppercase font-bold tracking-wider mt-0.5 ${s.c}`}>{s.l}</p>
             </div>
           ))}
@@ -650,12 +670,12 @@ function RealmSelector({ stats, onSelect }) {
         ))}
       </div>
 
-      <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-5 flex items-start gap-3">
-        <Brain size={16} className="text-violet-400 shrink-0 mt-0.5" />
+      <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-5 flex items-start gap-3">
+        <Brain size={16} className="text-indigo-500 shrink-0 mt-0.5" />
         <div className="space-y-1">
-          <p className="text-white/60 text-sm font-bold">How AI Indexing works</p>
-          <p className="text-white/30 text-xs leading-relaxed">
-            Upload any PDF or document to a book. Click the <strong className="text-violet-400">Brain</strong> icon to mark it as AI-indexed.
+          <p className="text-gray-700 text-sm font-bold">How AI Indexing works</p>
+          <p className="text-gray-500 text-xs leading-relaxed">
+            Upload any PDF or document to a book. Click the <strong className="text-indigo-600">Brain</strong> icon to mark it as AI-indexed.
             The AI tutor will then pull context from that file when students ask related questions — giving accurate, source-cited answers.
           </p>
         </div>
@@ -666,13 +686,13 @@ function RealmSelector({ stats, onSelect }) {
 
 // ── School Content ────────────────────────────────────────────────────────────
 
-function SchoolContent({ sel, content, openBooks, bookChapters, bookUploads, onNav, onToggleBook, onAddChapter, onDeleteChapter, onUploadFile, onDeleteBook, onToggleAI, onDeleteUpload }) {
+function SchoolContent({ sel, content, openBooks, bookChapters, bookUploads, onNav, onToggleBook, onAddChapter, onUpdateChapter, onDeleteChapter, onUploadFile, onDeleteBook, onToggleAI, onDeleteUpload }) {
   if (!sel) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-center text-white/20 space-y-2">
-          <School size={48} className="mx-auto opacity-20" />
-          <p className="text-sm">Select a board from the left tree</p>
+        <div className="text-center text-gray-300 space-y-2">
+          <School size={48} className="mx-auto opacity-30" />
+          <p className="text-sm text-gray-400">Select a board from the left tree</p>
         </div>
       </div>
     );
@@ -682,24 +702,24 @@ function SchoolContent({ sel, content, openBooks, bookChapters, bookUploads, onN
     const isBoard = sel.type === 'board';
     return (
       <div className="p-6 space-y-4">
-        <p className="text-white/30 text-xs">{content.length} {isBoard ? 'classes' : 'subjects'}</p>
+        <p className="text-gray-400 text-xs">{content.length} {isBoard ? 'classes' : 'subjects'}</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           {content.map(item => {
             const Icon = isBoard ? Layers : (SUBJECT_ICONS[item.name] || BookOpen);
             return (
               <button key={item.id} onClick={() => onNav(isBoard ? 'class' : 'subject', item, isBoard ? { board: sel } : { board: sel.board, cls: sel })}
-                className="p-4 bg-white/[0.03] border border-white/[0.07] rounded-xl text-left hover:bg-white/[0.06] hover:border-blue-500/25 hover:shadow-lg hover:shadow-blue-500/5 transition-all group">
-                <div className={`w-10 h-10 rounded-xl ${isBoard ? 'bg-blue-500/15' : 'bg-indigo-500/15'} flex items-center justify-center mb-3`}>
-                  {isBoard ? <span className="text-blue-400 font-black text-xl">{item.grade}</span> : <Icon size={18} className="text-indigo-400" />}
+                className="p-4 bg-white border border-gray-200 rounded-xl text-left hover:bg-gray-50 hover:border-indigo-200 hover:shadow-md transition-all group shadow-sm">
+                <div className={`w-10 h-10 rounded-xl ${isBoard ? 'bg-blue-100' : 'bg-indigo-100'} flex items-center justify-center mb-3`}>
+                  {isBoard ? <span className="text-blue-600 font-black text-xl">{item.grade}</span> : <Icon size={18} className="text-indigo-500" />}
                 </div>
-                <p className="text-white/80 font-bold text-sm leading-tight">{isBoard ? (item.grade_label || `Class ${item.grade}`) : item.name}</p>
-                {item.stream && <p className="text-white/25 text-xs mt-0.5">{item.stream}</p>}
-                {item.subject_type && <p className="text-white/25 text-xs capitalize">{item.subject_type}</p>}
-                <p className="text-white/20 text-xs mt-2">{item.subject_count || item.book_count || 0} {isBoard ? 'subjects' : 'books'}</p>
+                <p className="text-gray-800 font-bold text-sm leading-tight">{isBoard ? (item.grade_label || `Class ${item.grade}`) : item.name}</p>
+                {item.stream && <p className="text-gray-400 text-xs mt-0.5">{item.stream}</p>}
+                {item.subject_type && <p className="text-gray-400 text-xs capitalize">{item.subject_type}</p>}
+                <p className="text-gray-400 text-xs mt-2">{item.subject_count || item.book_count || 0} {isBoard ? 'subjects' : 'books'}</p>
               </button>
             );
           })}
-          {content.length === 0 && <p className="col-span-full text-white/20 text-sm text-center py-12">Nothing here yet</p>}
+          {content.length === 0 && <p className="col-span-full text-gray-400 text-sm text-center py-12">Nothing here yet</p>}
         </div>
       </div>
     );
@@ -708,14 +728,15 @@ function SchoolContent({ sel, content, openBooks, bookChapters, bookUploads, onN
   // Subject → Books
   return (
     <div className="p-6 space-y-3">
-      <p className="text-white/30 text-xs">{content.length} books</p>
+      <p className="text-gray-400 text-xs">{content.length} books</p>
       {content.length === 0 && <EmptyBooks />}
       {content.map(book => (
         <BookCard key={book.id} book={book} isOpen={openBooks[book.id]}
           chapters={bookChapters[book.id]} uploads={bookUploads[book.id]}
           entityType="book"
           onToggle={() => onToggleBook(book.id)} onDelete={() => onDeleteBook(book.id)}
-          onAddChapter={() => onAddChapter(book.id)}
+          onAddChapter={() => onAddChapter(book.id, book.title)}
+          onUpdateChapter={(cid, data) => onUpdateChapter(cid, data, book.id)}
           onDeleteChapter={(cid) => onDeleteChapter(cid, book.id)}
           onUploadFile={() => onUploadFile(book.id)}
           onToggleAI={(uid) => onToggleAI(uid, book.id)}
@@ -734,9 +755,9 @@ function CompetitiveContent({ examSel, examSubjects, examBooks, openBooks, bookU
   if (!examSel) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-center text-white/20 space-y-2">
-          <Trophy size={48} className="mx-auto opacity-20" />
-          <p className="text-sm">Select an exam from the left tree</p>
+        <div className="text-center text-gray-300 space-y-2">
+          <Trophy size={48} className="mx-auto opacity-30" />
+          <p className="text-sm text-gray-400">Select an exam from the left tree</p>
         </div>
       </div>
     );
@@ -752,22 +773,22 @@ function CompetitiveContent({ examSel, examSubjects, examBooks, openBooks, bookU
   return (
     <div className="flex h-full">
       {/* Subject list */}
-      <div className="w-56 shrink-0 border-r border-white/[0.06] overflow-y-auto custom-scrollbar py-3">
-        <p className="text-[9px] uppercase font-black text-white/20 tracking-widest px-4 mb-2">Subjects & Papers</p>
+      <div className="w-56 shrink-0 border-r border-gray-200 overflow-y-auto custom-scrollbar py-3">
+        <p className="text-[9px] uppercase font-black text-gray-400 tracking-widest px-4 mb-2">Subjects & Papers</p>
         {Object.entries(grouped).map(([group, subjects]) => (
           <div key={group}>
-            <p className="text-[9px] font-bold text-white/20 px-4 py-1 uppercase tracking-wide">{group}</p>
+            <p className="text-[9px] font-bold text-gray-400 px-4 py-1 uppercase tracking-wide">{group}</p>
             {subjects.map(s => (
               <button key={s.id} onClick={() => { setActiveSub(s); onLoadBooks(s.id); }}
-                className={`w-full flex items-center gap-2 px-4 py-2 text-left transition-all text-xs ${activeSub?.id === s.id ? 'bg-orange-500/10 border-r-2 border-orange-500 text-orange-300' : 'text-white/45 hover:text-white/70 hover:bg-white/[0.03]'}`}>
+                className={`w-full flex items-center gap-2 px-4 py-2 text-left transition-all text-xs ${activeSub?.id === s.id ? 'bg-orange-50 border-r-2 border-orange-500 text-orange-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>
                 <BookOpen size={10} className="shrink-0 opacity-60" />
                 <span className="truncate font-medium">{s.name}</span>
-                {s.book_count > 0 && <span className="text-white/20 text-[9px] ml-auto shrink-0">{s.book_count}</span>}
+                {s.book_count > 0 && <span className="text-gray-400 text-[9px] ml-auto shrink-0">{s.book_count}</span>}
               </button>
             ))}
           </div>
         ))}
-        {examSubjects.length === 0 && <p className="text-white/20 text-xs text-center py-8">No subjects</p>}
+        {examSubjects.length === 0 && <p className="text-gray-400 text-xs text-center py-8">No subjects</p>}
       </div>
       {/* Books */}
       <div className="flex-1 overflow-y-auto p-5 space-y-3 custom-scrollbar">
@@ -775,7 +796,7 @@ function CompetitiveContent({ examSel, examSubjects, examBooks, openBooks, bookU
           <ExamOverview exam={examSel} subjects={examSubjects} />
         ) : (
           <>
-            <p className="text-white/30 text-xs">{examBooks.length} books · {activeSub.name}</p>
+            <p className="text-gray-400 text-xs">{examBooks.length} books · {activeSub.name}</p>
             {examBooks.length === 0 && <EmptyBooks />}
             {examBooks.map(book => (
               <BookCard key={book.id} book={book} isOpen={openBooks[book.id]}
@@ -813,7 +834,7 @@ function ExamOverview({ exam, subjects }) {
           <span className="flex items-center gap-1"><FileText size={11} /> {exam.book_count || 0} books</span>
         </div>
       </div>
-      <p className="text-white/30 text-xs">Select a subject from the left to see books and upload materials.</p>
+      <p className="text-gray-400 text-xs">Select a subject from the left to see books and upload materials.</p>
     </div>
   );
 }
@@ -826,9 +847,9 @@ function UniversityContent({ univSel, univSubjects, univBooks, openBooks, bookUp
   if (!univSel) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-center text-white/20 space-y-2">
-          <Building2 size={48} className="mx-auto opacity-20" />
-          <p className="text-sm">Select a course from the left tree</p>
+        <div className="text-center text-gray-300 space-y-2">
+          <Building2 size={48} className="mx-auto opacity-30" />
+          <p className="text-sm text-gray-400">Select a course from the left tree</p>
         </div>
       </div>
     );
@@ -839,24 +860,24 @@ function UniversityContent({ univSel, univSubjects, univBooks, openBooks, bookUp
   return (
     <div className="flex h-full">
       {/* Semester → Subject list */}
-      <div className="w-56 shrink-0 border-r border-white/[0.06] overflow-y-auto custom-scrollbar py-3">
-        <p className="text-[9px] uppercase font-black text-white/20 tracking-widest px-4 mb-2">
+      <div className="w-56 shrink-0 border-r border-gray-200 overflow-y-auto custom-scrollbar py-3">
+        <p className="text-[9px] uppercase font-black text-gray-400 tracking-widest px-4 mb-2">
           {univSel.short_name || univSel.name}
         </p>
         {semesters.map(([sem, subjects]) => (
           <div key={sem}>
-            <p className="text-[9px] font-bold text-white/20 px-4 py-1 uppercase">{sem}</p>
+            <p className="text-[9px] font-bold text-gray-400 px-4 py-1 uppercase">{sem}</p>
             {subjects.map(s => (
               <button key={s.id} onClick={() => { setActiveSub(s); onLoadBooks(s.id); }}
-                className={`w-full flex items-center gap-2 px-4 py-2 text-left transition-all text-xs ${activeSub?.id === s.id ? 'bg-emerald-500/10 border-r-2 border-emerald-500 text-emerald-300' : 'text-white/45 hover:text-white/70 hover:bg-white/[0.03]'}`}>
+                className={`w-full flex items-center gap-2 px-4 py-2 text-left transition-all text-xs ${activeSub?.id === s.id ? 'bg-emerald-50 border-r-2 border-emerald-500 text-emerald-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>
                 <BookOpen size={10} className="shrink-0 opacity-60" />
                 <span className="flex-1 truncate font-medium">{s.name}</span>
-                {s.credits && <span className="text-white/20 text-[9px] shrink-0">{s.credits}cr</span>}
+                {s.credits && <span className="text-gray-400 text-[9px] shrink-0">{s.credits}cr</span>}
               </button>
             ))}
           </div>
         ))}
-        {semesters.length === 0 && <p className="text-white/20 text-xs text-center py-8">No subjects</p>}
+        {semesters.length === 0 && <p className="text-gray-400 text-xs text-center py-8">No subjects</p>}
       </div>
       {/* Books */}
       <div className="flex-1 overflow-y-auto p-5 space-y-3 custom-scrollbar">
@@ -867,11 +888,11 @@ function UniversityContent({ univSel, univSubjects, univBooks, openBooks, bookUp
               <p className="text-white/60 text-sm mt-0.5">{univSel.level} · {univSel.duration_years} years</p>
               <p className="text-white/50 text-xs mt-3">{semesters.length} semesters · {Object.values(univSubjects || {}).flat().length} subjects</p>
             </div>
-            <p className="text-white/30 text-xs">Select a subject from the left to manage books and materials.</p>
+            <p className="text-gray-400 text-xs">Select a subject from the left to manage books and materials.</p>
           </div>
         ) : (
           <>
-            <p className="text-white/30 text-xs">{univBooks.length} books · {activeSub.name} ({activeSub.subject_code})</p>
+            <p className="text-gray-400 text-xs">{univBooks.length} books · {activeSub.name} ({activeSub.subject_code})</p>
             {univBooks.length === 0 && <EmptyBooks />}
             {univBooks.map(book => (
               <BookCard key={book.id} book={book} isOpen={openBooks[book.id]}
@@ -892,81 +913,104 @@ function UniversityContent({ univSel, univSubjects, univBooks, openBooks, bookUp
 
 function EmptyBooks() {
   return (
-    <div className="text-center text-white/15 py-16 space-y-2">
-      <BookOpen size={40} className="mx-auto opacity-20" />
-      <p className="text-sm">No books yet</p>
-      <p className="text-xs">Upload materials using the button above</p>
+    <div className="text-center text-gray-300 py-16 space-y-2">
+      <BookOpen size={40} className="mx-auto opacity-30" />
+      <p className="text-sm text-gray-400">No books yet</p>
+      <p className="text-xs text-gray-400">Upload materials using the button above</p>
     </div>
   );
 }
 
 // ── BookCard ──────────────────────────────────────────────────────────────────
 
-function BookCard({ book, isOpen, chapters, uploads, entityType, onToggle, onDelete, onAddChapter, onDeleteChapter, onUploadFile, onToggleAI, onDeleteUpload, isPrescribed }) {
+function BookCard({ book, isOpen, chapters, uploads, entityType, onToggle, onDelete, onAddChapter, onUpdateChapter, onDeleteChapter, onUploadFile, onToggleAI, onDeleteUpload, isPrescribed }) {
   const aiCount = uploads?.filter(u => u.ai_indexed).length || 0;
+  const [editingChId, setEditingChId] = useState(null);
+  const [editChVal, setEditChVal] = useState({ chapter_number: '', title: '' });
+  const startEditCh = (ch) => { setEditingChId(ch.id); setEditChVal({ chapter_number: ch.chapter_number ?? '', title: ch.title }); };
+  const saveEditCh = async () => {
+    if (!editChVal.title.trim()) return toast.error('Title required');
+    await onUpdateChapter?.(editingChId, { title: editChVal.title.trim(), chapter_number: editChVal.chapter_number !== '' ? parseInt(editChVal.chapter_number) : null });
+    setEditingChId(null);
+  };
 
   return (
-    <div className="bg-white/[0.025] border border-white/[0.07] rounded-xl overflow-hidden hover:border-white/[0.1] transition-all">
+    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-indigo-200 hover:shadow-sm transition-all">
       <div className="flex items-center gap-3 p-4 cursor-pointer" onClick={onToggle}>
         {book.cover_image_url ? (
-          <img src={book.cover_image_url} alt="" className="w-10 h-12 object-cover rounded-lg shrink-0 border border-white/10" />
+          <img src={book.cover_image_url} alt="" className="w-10 h-12 object-cover rounded-lg shrink-0 border border-gray-200" />
         ) : (
-          <div className="w-10 h-12 rounded-lg bg-gradient-to-br from-violet-500/20 to-blue-500/20 border border-white/[0.07] flex items-center justify-center shrink-0">
-            <FileText size={16} className="text-violet-300" />
+          <div className="w-10 h-12 rounded-lg bg-gradient-to-br from-indigo-100 to-violet-100 border border-indigo-200 flex items-center justify-center shrink-0">
+            <FileText size={16} className="text-indigo-400" />
           </div>
         )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-white/85 font-bold text-sm">{book.title}</span>
+            <span className="text-gray-800 font-bold text-sm">{book.title}</span>
             {(book.is_official || isPrescribed) && <Badge color="emerald">{book.is_official ? 'Official' : 'Prescribed'}</Badge>}
             {book.is_available_free && <Badge color="blue">Free</Badge>}
             {book.priority_rank === 1 && <Badge color="amber">Must Read</Badge>}
             {aiCount > 0 && (
-              <span className="flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-violet-500/15 text-violet-300 border border-violet-500/20">
+              <span className="flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 border border-violet-200">
                 <Brain size={9} /> {aiCount} AI
               </span>
             )}
           </div>
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-            {book.publisher_name && <span className="text-white/30 text-xs">{book.publisher_name}</span>}
-            {book.author && <span className="text-white/25 text-xs">· {book.author}</span>}
-            {book.edition && <span className="text-white/20 text-xs">· {book.edition}</span>}
-            {book.publication_year && <span className="text-white/15 text-xs">· {book.publication_year}</span>}
-            {chapters !== undefined && <span className="text-white/20 text-xs">· {chapters?.length || book.chapter_count || 0} chapters</span>}
-            {uploads?.length > 0 && <span className="text-violet-400/60 text-xs">· {uploads.length} file{uploads.length !== 1 ? 's' : ''}</span>}
+            {book.publisher_name && <span className="text-gray-400 text-xs">{book.publisher_name}</span>}
+            {book.author && <span className="text-gray-400 text-xs">· {book.author}</span>}
+            {book.edition && <span className="text-gray-400 text-xs">· {book.edition}</span>}
+            {book.publication_year && <span className="text-gray-300 text-xs">· {book.publication_year}</span>}
+            {chapters !== undefined && <span className="text-gray-400 text-xs">· {chapters?.length || book.chapter_count || 0} chapters</span>}
+            {uploads?.length > 0 && <span className="text-violet-500 text-xs">· {uploads.length} file{uploads.length !== 1 ? 's' : ''}</span>}
           </div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           {book.google_books_preview_url && (
             <a href={book.google_books_preview_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-               className="p-1.5 rounded-lg bg-white/[0.04] text-white/25 hover:text-white/60 transition-all"><ExternalLink size={12} /></a>
+               className="p-1.5 rounded-lg bg-gray-50 text-gray-300 hover:text-gray-600 transition-all"><ExternalLink size={12} /></a>
           )}
           {onDelete && (
             <button onClick={e => { e.stopPropagation(); onDelete(); }}
-              className="p-1.5 rounded-lg bg-white/[0.04] text-white/25 hover:text-red-400 hover:bg-red-500/10 transition-all"><Trash2 size={12} /></button>
+              className="p-1.5 rounded-lg bg-gray-50 text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all"><Trash2 size={12} /></button>
           )}
-          {isOpen ? <ChevronUp size={14} className="text-white/25" /> : <ChevronDown size={14} className="text-white/25" />}
+          {isOpen ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
         </div>
       </div>
 
       {isOpen && (
-        <div className={`border-t border-white/[0.06] ${chapters !== undefined ? 'grid grid-cols-1 md:grid-cols-2' : ''}`}>
+        <div className={`border-t border-gray-200 ${chapters !== undefined ? 'grid grid-cols-1 md:grid-cols-2' : ''}`}>
           {/* Chapters (school only) */}
           {chapters !== undefined && (
-            <div className="p-4 border-r border-white/[0.05]">
+            <div className="p-4 border-r border-gray-100">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-[9px] uppercase font-black text-white/20 tracking-widest">Chapters ({chapters?.length || 0})</p>
-                {onAddChapter && <button onClick={onAddChapter} className="text-[10px] font-bold text-violet-400 hover:text-violet-300 flex items-center gap-1"><Plus size={10} /> Add</button>}
+                <p className="text-[9px] uppercase font-black text-gray-400 tracking-widest">Chapters ({chapters?.length || 0})</p>
+                {onAddChapter && <button onClick={onAddChapter} className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"><ListOrdered size={10} /> Bulk Add</button>}
               </div>
-              {chapters === undefined ? <Loader2 size={13} className="animate-spin text-white/20" /> :
-               chapters.length === 0 ? <p className="text-white/15 text-xs italic">No chapters yet</p> : (
+              {chapters === undefined ? <Loader2 size={13} className="animate-spin text-gray-400" /> :
+               chapters.length === 0 ? <p className="text-gray-300 text-xs italic">No chapters yet</p> : (
                 <div className="space-y-1 max-h-48 overflow-y-auto custom-scrollbar pr-1">
                   {chapters.map(ch => (
-                    <div key={ch.id} className="flex items-center gap-2 py-1 group">
-                      <span className="text-white/20 font-mono text-[10px] w-5 shrink-0 text-right">{ch.chapter_number || '–'}</span>
-                      <span className="text-white/55 text-xs flex-1 leading-tight">{ch.title}</span>
-                      {ch.estimated_study_time_mins && <span className="text-white/15 text-[9px] flex items-center gap-0.5"><Clock size={9} /> {ch.estimated_study_time_mins}m</span>}
-                      {onDeleteChapter && <button onClick={() => onDeleteChapter(ch.id)} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-500/10 text-red-400/60 transition-all"><Trash2 size={9} /></button>}
+                    <div key={ch.id} className={`flex items-center gap-2 py-1 group rounded transition-colors ${editingChId === ch.id ? 'bg-indigo-50 px-1.5' : ''}`}>
+                      {editingChId === ch.id ? (
+                        <>
+                          <input type="number" value={editChVal.chapter_number} onChange={e => setEditChVal(p => ({ ...p, chapter_number: e.target.value }))}
+                            className="w-10 bg-white border border-gray-200 rounded px-1.5 py-0.5 text-[10px] text-gray-700 font-mono focus:outline-none focus:border-indigo-400" placeholder="#" />
+                          <input value={editChVal.title} onChange={e => setEditChVal(p => ({ ...p, title: e.target.value }))}
+                            onKeyDown={e => { if (e.key === 'Enter') saveEditCh(); if (e.key === 'Escape') setEditingChId(null); }}
+                            autoFocus className="flex-1 bg-white border border-gray-200 rounded px-2 py-0.5 text-xs text-gray-800 focus:outline-none focus:border-indigo-400" />
+                          <button onClick={saveEditCh} className="p-1 rounded bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all"><Check size={10} /></button>
+                          <button onClick={() => setEditingChId(null)} className="p-1 rounded bg-gray-50 text-gray-400 hover:bg-gray-100 transition-all"><X size={10} /></button>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-gray-400 font-mono text-[10px] w-5 shrink-0 text-right">{ch.chapter_number || '–'}</span>
+                          <span className="text-gray-600 text-xs flex-1 leading-tight">{ch.title}</span>
+                          {ch.estimated_study_time_mins && <span className="text-gray-300 text-[9px] flex items-center gap-0.5"><Clock size={9} /> {ch.estimated_study_time_mins}m</span>}
+                          {onUpdateChapter && <button onClick={() => startEditCh(ch)} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-indigo-50 text-indigo-400 transition-all"><Pencil size={9} /></button>}
+                          {onDeleteChapter && <button onClick={() => onDeleteChapter(ch.id)} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 text-red-400 transition-all"><Trash2 size={9} /></button>}
+                        </>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -974,30 +1018,65 @@ function BookCard({ book, isOpen, chapters, uploads, entityType, onToggle, onDel
             </div>
           )}
 
-          {/* Files */}
-          <div className="p-4">
+          {/* Important Notes */}
+          <div className="p-4 bg-amber-50/40">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-[9px] uppercase font-black text-white/20 tracking-widest">Files ({uploads?.length || 0})</p>
-              <button onClick={onUploadFile} className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1"><UploadCloud size={10} /> Upload</button>
+              <div className="flex items-center gap-1.5">
+                <BookMarked size={11} className="text-amber-500" />
+                <p className="text-[9px] uppercase font-black text-amber-600 tracking-widest">Important Notes ({uploads?.length || 0})</p>
+              </div>
+              <button onClick={onUploadFile}
+                className="flex items-center gap-1 text-[10px] font-bold text-amber-600 hover:text-amber-700 px-2 py-1 rounded-lg hover:bg-amber-100 transition-all">
+                <UploadCloud size={10} /> Add Note
+              </button>
             </div>
-            {uploads === undefined ? <Loader2 size={13} className="animate-spin text-white/20" /> :
-             uploads.length === 0 ? <p className="text-white/15 text-xs italic">No files uploaded yet</p> : (
+            {uploads === undefined ? (
+              <Loader2 size={13} className="animate-spin text-amber-400" />
+            ) : uploads.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-5 gap-2">
+                <div className="w-8 h-8 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center">
+                  <BookMarked size={14} className="text-amber-400" />
+                </div>
+                <p className="text-amber-400 text-[10px] font-medium text-center leading-tight">No notes pinned yet.<br />Upload PDFs, summaries or key sheets.</p>
+              </div>
+            ) : (
               <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-1">
-                {uploads.map(up => (
-                  <div key={up.id} className="flex items-center gap-2 p-2 rounded-lg bg-white/[0.03] border border-white/[0.05] group">
-                    <FileText size={11} className="text-white/25 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-white/60 text-xs truncate">{up.file_name || 'File'}</p>
-                      <p className="text-white/20 text-[9px]">{up.file_size_bytes ? `${(up.file_size_bytes/1024/1024).toFixed(1)} MB` : ''}{up.file_type ? ` · ${up.file_type}` : ''}</p>
+                {uploads.map(up => {
+                  const typeColor = {
+                    notes: 'bg-amber-100 text-amber-700 border-amber-200',
+                    pyq: 'bg-orange-100 text-orange-700 border-orange-200',
+                    solutions: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+                    textbook: 'bg-blue-100 text-blue-700 border-blue-200',
+                    reference: 'bg-violet-100 text-violet-700 border-violet-200',
+                    supplement: 'bg-gray-100 text-gray-600 border-gray-200',
+                  }[up.file_type] || 'bg-gray-100 text-gray-600 border-gray-200';
+                  return (
+                    <div key={up.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-white border border-amber-100 shadow-sm group hover:border-amber-200 transition-all">
+                      <div className="w-7 h-7 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
+                        <FileText size={12} className="text-amber-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-gray-800 text-xs font-medium truncate leading-tight">{up.file_name || 'Note'}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          {up.file_type && <span className={`text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border ${typeColor}`}>{up.file_type}</span>}
+                          {up.file_size_bytes && <span className="text-gray-300 text-[9px]">{(up.file_size_bytes/1024/1024).toFixed(1)} MB</span>}
+                        </div>
+                      </div>
+                      <button onClick={() => onToggleAI(up.id)} title={up.ai_indexed ? 'AI active — click to disable' : 'Enable AI indexing'}
+                        className={`p-1.5 rounded-lg transition-all shrink-0 ${up.ai_indexed ? 'bg-violet-100 text-violet-600 shadow-sm shadow-violet-100' : 'bg-gray-50 text-gray-300 hover:text-violet-500 hover:bg-violet-50'}`}>
+                        <Brain size={11} />
+                      </button>
+                      <a href={up.file_url} target="_blank" rel="noopener noreferrer"
+                        className="p-1.5 rounded-lg bg-gray-50 text-gray-300 hover:text-amber-600 hover:bg-amber-50 transition-all shrink-0">
+                        <Eye size={11} />
+                      </a>
+                      <button onClick={() => onDeleteUpload(up.id)}
+                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-50 text-red-400 transition-all shrink-0">
+                        <Trash2 size={10} />
+                      </button>
                     </div>
-                    <button onClick={() => onToggleAI(up.id)} title={up.ai_indexed ? 'AI active — click to disable' : 'Enable AI indexing'}
-                      className={`p-1.5 rounded-lg transition-all shrink-0 ${up.ai_indexed ? 'bg-violet-500/20 text-violet-400 shadow-sm shadow-violet-500/20' : 'bg-white/[0.04] text-white/20 hover:text-white/50'}`}>
-                      <Brain size={11} />
-                    </button>
-                    <a href={up.file_url} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg bg-white/[0.04] text-white/25 hover:text-white/60 transition-all shrink-0"><Eye size={11} /></a>
-                    <button onClick={() => onDeleteUpload(up.id)} className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-500/10 text-red-400/50 transition-all shrink-0"><Trash2 size={10} /></button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -1099,44 +1178,181 @@ function AddBookModal({ onClose, onSave, subject }) {
         </div>
         <Field label="Official URL (NCERT / Board)"><input value={form.ncert_url} onChange={set('ncert_url')} placeholder="https://ncert.nic.in/…" className={inputCls} /></Field>
         <div className="flex items-center gap-5">
-          <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={form.is_official} onChange={set('is_official')} className="accent-violet-500" /><span className="text-white/50 text-xs">Official Textbook</span></label>
-          <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={form.is_available_free} onChange={set('is_available_free')} className="accent-violet-500" /><span className="text-white/50 text-xs">Available Free</span></label>
+          <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={form.is_official} onChange={set('is_official')} className="accent-indigo-500" /><span className="text-gray-600 text-xs">Official Textbook</span></label>
+          <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={form.is_available_free} onChange={set('is_available_free')} className="accent-indigo-500" /><span className="text-gray-600 text-xs">Available Free</span></label>
         </div>
         <Field label="Upload PDF (optional)">
-          <label className="flex items-center gap-3 p-3 rounded-xl border-2 border-dashed border-white/[0.1] hover:border-violet-500/35 cursor-pointer bg-white/[0.02]">
-            <UploadCloud size={18} className={file ? 'text-violet-400' : 'text-white/20'} />
-            <div><p className="text-white/50 text-xs">{file ? file.name : 'Click to upload PDF'}</p><p className="text-white/20 text-[9px]">{file ? `${(file.size/1024/1024).toFixed(1)} MB` : 'Max 50 MB'}</p></div>
+          <label className="flex items-center gap-3 p-3 rounded-xl border-2 border-dashed border-gray-200 hover:border-indigo-400 cursor-pointer bg-gray-50">
+            <UploadCloud size={18} className={file ? 'text-indigo-500' : 'text-gray-400'} />
+            <div><p className="text-gray-600 text-xs">{file ? file.name : 'Click to upload PDF'}</p><p className="text-gray-400 text-[9px]">{file ? `${(file.size/1024/1024).toFixed(1)} MB` : 'Max 50 MB'}</p></div>
             <input type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={e => setFile(e.target.files[0])} />
           </label>
         </Field>
-        <div className="flex gap-2 pt-2 border-t border-white/[0.06]"><Btn variant="ghost" onClick={onClose} className="flex-1">Cancel</Btn><Btn variant="primary" loading={saving} onClick={save} className="flex-1"><BookOpen size={13} /> Add Book</Btn></div>
+        <div className="flex gap-2 pt-2 border-t border-gray-100"><Btn variant="ghost" onClick={onClose} className="flex-1">Cancel</Btn><Btn variant="primary" loading={saving} onClick={save} className="flex-1"><BookOpen size={13} /> Add Book</Btn></div>
       </div>
     </Modal>
   );
 }
 
-function AddChapterModal({ onClose, onSave }) {
-  const [form, setForm] = useState({ chapter_number: '', title: '', description: '', estimated_study_time_mins: '' });
+function BulkChapterModal({ onClose, onSave, bookTitle }) {
+  const uid = () => Math.random().toString(36).slice(2);
+  const emptyRow = () => ({ _id: uid(), chapter_number: '', title: '', description: '', estimated_study_time_mins: '', file: null, fileType: 'textbook' });
+  const [rows, setRows] = useState([emptyRow(), emptyRow(), emptyRow()]);
   const [saving, setSaving] = useState(false);
-  const set = k => e => setForm(p => ({ ...p, [k]: e.target.value }));
+  const [uploadProgress, setUploadProgress] = useState(null); // e.g. "Uploading 2/5…"
+
+  const setRow = (idx, key, val) => setRows(p => p.map((r, i) => i === idx ? { ...r, [key]: val } : r));
+  const addRow = () => setRows(p => [...p, emptyRow()]);
+  const removeRow = (idx) => setRows(p => p.filter((_, i) => i !== idx));
+
+  const handlePaste = (e, idx) => {
+    const text = e.clipboardData.getData('text');
+    const lines = text.trim().split('\n');
+    if (lines.length <= 1) return;
+    e.preventDefault();
+    const newRows = lines.map((line) => {
+      const cols = line.split('\t');
+      const maybeNum = parseInt(cols[0]);
+      if (!isNaN(maybeNum) && cols.length > 1) {
+        return { _id: uid(), chapter_number: String(maybeNum), title: (cols[1] || '').trim(), description: (cols[2] || '').trim(), estimated_study_time_mins: (cols[3] || '').trim(), file: null, fileType: 'textbook' };
+      }
+      return { _id: uid(), chapter_number: '', title: (cols[0] || '').trim(), description: (cols[1] || '').trim(), estimated_study_time_mins: '', file: null, fileType: 'textbook' };
+    });
+    setRows(p => { const next = [...p]; next.splice(idx, 1, ...newRows); return next; });
+  };
+
+  const validRows = rows.filter(r => r.title.trim());
+
+  const save = async () => {
+    if (!validRows.length) return toast.error('Add at least one chapter title');
+    setSaving(true);
+    try {
+      const created = await onSave(validRows.map(r => ({
+        chapter_number: r.chapter_number !== '' ? parseInt(r.chapter_number) : null,
+        title: r.title.trim(),
+        description: r.description.trim() || null,
+        estimated_study_time_mins: r.estimated_study_time_mins !== '' ? parseInt(r.estimated_study_time_mins) : null,
+      })));
+
+      // Upload files for rows that have one
+      const rowsWithFiles = validRows.map((r, i) => ({ ...r, chapterId: created?.[i]?.id })).filter(r => r.file && r.chapterId);
+      if (rowsWithFiles.length > 0) {
+        for (let i = 0; i < rowsWithFiles.length; i++) {
+          const r = rowsWithFiles[i];
+          setUploadProgress(`Uploading material ${i + 1}/${rowsWithFiles.length}…`);
+          const fd = new FormData();
+          fd.append('file', r.file);
+          fd.append('entity_type', 'chapter');
+          fd.append('entity_id', r.chapterId);
+          fd.append('file_type', r.fileType);
+          await adminAPI.uploadLibraryFile(fd).catch(() => toast.error(`Upload failed for "${r.title}"`));
+        }
+        toast.success(`${rowsWithFiles.length} file${rowsWithFiles.length !== 1 ? 's' : ''} uploaded`);
+      }
+    } catch (e) { toast.error(e.response?.data?.error || 'Failed'); setSaving(false); setUploadProgress(null); }
+  };
+
+  const FILE_TYPES = ['textbook', 'reference', 'notes', 'pyq', 'solutions', 'supplement'];
+
   return (
-    <Modal title="Add Chapter" onClose={onClose}>
-      <div className="space-y-3">
-        <div className="grid grid-cols-3 gap-3">
-          <Field label="No."><input type="number" value={form.chapter_number} onChange={set('chapter_number')} placeholder="1" className={inputCls} /></Field>
-          <div className="col-span-2"><Field label="Title *"><input value={form.title} onChange={set('title')} placeholder="Physical World" className={inputCls} /></Field></div>
+    <Modal title={bookTitle ? `Bulk Add Chapters · ${bookTitle}` : 'Bulk Add Chapters'} onClose={onClose} size="xl">
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-indigo-50 border border-indigo-100">
+          <Copy size={13} className="text-indigo-500 shrink-0" />
+          <p className="text-xs text-indigo-700">Paste from Excel/Sheets — columns: <strong>No. · Title · Description · Mins</strong></p>
         </div>
-        <Field label="Description"><textarea value={form.description} onChange={set('description')} placeholder="What this chapter covers…" rows={3} className={`${inputCls} resize-none`} /></Field>
-        <Field label="Study Time (mins)"><input type="number" value={form.estimated_study_time_mins} onChange={set('estimated_study_time_mins')} placeholder="60" className={inputCls} /></Field>
-        <div className="flex gap-2 pt-1"><Btn variant="ghost" onClick={onClose} className="flex-1">Cancel</Btn><Btn variant="primary" loading={saving} onClick={async () => { if (!form.title) return toast.error('Title required'); setSaving(true); try { await onSave(form); } catch (e) { toast.error(e.response?.data?.error || 'Failed'); setSaving(false); }}} className="flex-1">Add Chapter</Btn></div>
+
+        <div className="overflow-x-auto rounded-xl border border-gray-200">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200">
+                <th className="px-3 py-3 text-left text-[10px] uppercase font-black text-gray-400 tracking-wider w-16">#</th>
+                <th className="px-3 py-3 text-left text-[10px] uppercase font-black text-gray-400 tracking-wider">Title *</th>
+                <th className="px-3 py-3 text-left text-[10px] uppercase font-black text-gray-400 tracking-wider">Description</th>
+                <th className="px-3 py-3 text-left text-[10px] uppercase font-black text-gray-400 tracking-wider w-20">Mins</th>
+                <th className="px-3 py-3 text-left text-[10px] uppercase font-black text-gray-400 tracking-wider w-44">Material</th>
+                <th className="w-8" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {rows.map((row, idx) => (
+                <tr key={row._id} className="group hover:bg-gray-50/50 transition-colors">
+                  <td className="px-3 py-2.5">
+                    <input type="number" value={row.chapter_number} onChange={e => setRow(idx, 'chapter_number', e.target.value)}
+                      placeholder={String(idx + 1)}
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 font-mono focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all" />
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <input value={row.title} onChange={e => setRow(idx, 'title', e.target.value)}
+                      onPaste={e => handlePaste(e, idx)}
+                      placeholder="e.g. Physical World"
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all" />
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <input value={row.description} onChange={e => setRow(idx, 'description', e.target.value)}
+                      placeholder="Brief description…"
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 placeholder-gray-300 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all" />
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <input type="number" value={row.estimated_study_time_mins} onChange={e => setRow(idx, 'estimated_study_time_mins', e.target.value)}
+                      placeholder="60"
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 placeholder-gray-300 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all" />
+                  </td>
+                  <td className="px-3 py-2.5">
+                    {row.file ? (
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-gray-700 text-xs font-medium truncate">{row.file.name}</p>
+                          <select value={row.fileType} onChange={e => setRow(idx, 'fileType', e.target.value)}
+                            className="mt-1 w-full bg-white border border-gray-200 rounded-lg px-2 py-1 text-xs text-gray-500 focus:outline-none focus:border-indigo-400">
+                            {FILE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                          </select>
+                        </div>
+                        <button onClick={() => setRow(idx, 'file', null)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-400 transition-all shrink-0"><X size={12} /></button>
+                      </div>
+                    ) : (
+                      <label className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border border-dashed border-gray-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all group/up">
+                        <UploadCloud size={14} className="text-gray-300 group-hover/up:text-indigo-500 transition-colors shrink-0" />
+                        <span className="text-xs text-gray-400 group-hover/up:text-indigo-600 transition-colors">Upload file</span>
+                        <input type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={e => setRow(idx, 'file', e.target.files[0] || null)} />
+                      </label>
+                    )}
+                  </td>
+                  <td className="px-2 py-2.5">
+                    <button onClick={() => removeRow(idx)} className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-50 text-red-400 transition-all"><X size={13} /></button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <button onClick={addRow} className="flex items-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-700 transition-colors px-1">
+          <Plus size={14} /> Add Row
+        </button>
+
+        {uploadProgress && (
+          <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-violet-50 border border-violet-100">
+            <Loader2 size={14} className="text-violet-500 animate-spin shrink-0" />
+            <p className="text-sm text-violet-700">{uploadProgress}</p>
+          </div>
+        )}
+
+        <div className="flex gap-3 pt-2 border-t border-gray-100">
+          <Btn variant="ghost" onClick={onClose} disabled={saving} className="flex-1">Cancel</Btn>
+          <Btn variant="primary" loading={saving} onClick={save} className="flex-1">
+            <ListOrdered size={14} /> Save {validRows.length > 0 ? `${validRows.length} Chapter${validRows.length !== 1 ? 's' : ''}` : 'Chapters'}
+          </Btn>
+        </div>
       </div>
     </Modal>
   );
 }
 
-function UploadFileModal({ onClose, onSave, book_id, entity_type = 'book' }) {
+function UploadFileModal({ onClose, onSave, book_id, entity_type = 'book', defaultFileType = 'notes' }) {
+  const isNotes = defaultFileType === 'notes';
   const [file, setFile] = useState(null);
-  const [fileType, setFileType] = useState('textbook');
+  const [fileType, setFileType] = useState(defaultFileType);
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
   const save = async () => {
@@ -1150,20 +1366,47 @@ function UploadFileModal({ onClose, onSave, book_id, entity_type = 'book' }) {
     } catch (e) { toast.error(e.response?.data?.error || 'Failed'); setSaving(false); }
   };
   return (
-    <Modal title="Upload Material" onClose={onClose}>
+    <Modal title={isNotes ? 'Add Important Note' : 'Upload Material'} onClose={onClose}>
       <div className="space-y-3">
-        <label className="flex items-center gap-3 p-4 rounded-xl border-2 border-dashed border-white/[0.1] hover:border-violet-500/35 cursor-pointer bg-white/[0.02]">
-          <UploadCloud size={22} className={file ? 'text-violet-400' : 'text-white/20'} />
-          <div className="flex-1 min-w-0"><p className="text-white/55 text-sm truncate">{file ? file.name : 'Click to select file'}</p><p className="text-white/20 text-xs">{file ? `${(file.size/1024/1024).toFixed(1)} MB` : 'PDF, DOC, DOCX · Max 50 MB'}</p></div>
+        {isNotes && (
+          <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-amber-50 border border-amber-200">
+            <BookMarked size={13} className="text-amber-500 shrink-0" />
+            <p className="text-xs text-amber-700">Upload notes, key sheets, summaries, or PYQs for this book.</p>
+          </div>
+        )}
+        <label className={`flex items-center gap-3 p-4 rounded-xl border-2 border-dashed cursor-pointer transition-all ${file ? 'border-amber-300 bg-amber-50' : `border-gray-200 hover:border-${isNotes ? 'amber' : 'indigo'}-400 bg-gray-50`}`}>
+          <UploadCloud size={22} className={file ? 'text-amber-500' : isNotes ? 'text-amber-300' : 'text-gray-400'} />
+          <div className="flex-1 min-w-0">
+            <p className="text-gray-700 text-sm truncate">{file ? file.name : 'Click to select file'}</p>
+            <p className="text-gray-400 text-xs">{file ? `${(file.size/1024/1024).toFixed(1)} MB` : 'PDF, DOC, DOCX · Max 50 MB'}</p>
+          </div>
           <input type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={e => setFile(e.target.files[0])} />
         </label>
-        <Field label="Material Type"><select value={fileType} onChange={e => setFileType(e.target.value)} className={selectCls}><option value="textbook">Textbook</option><option value="reference">Reference Book</option><option value="notes">Notes / Summary</option><option value="pyq">Previous Year Questions</option><option value="solutions">Solutions Manual</option><option value="supplement">Supplement</option></select></Field>
-        <Field label="Description (optional)"><input value={description} onChange={e => setDescription(e.target.value)} placeholder="e.g. NCERT Solutions 2024–25" className={inputCls} /></Field>
-        <div className="flex items-start gap-2.5 p-3 rounded-xl bg-violet-500/5 border border-violet-500/15">
-          <Brain size={13} className="text-violet-400 shrink-0 mt-0.5" />
-          <p className="text-[11px] text-violet-300/60 leading-relaxed">After upload, enable <strong className="text-violet-300">AI Index</strong> so the AI tutor cites this material when answering students.</p>
+        <Field label="Type">
+          <select value={fileType} onChange={e => setFileType(e.target.value)} className={selectCls}>
+            <option value="notes">Notes / Summary</option>
+            <option value="pyq">Previous Year Questions</option>
+            <option value="solutions">Solutions Manual</option>
+            <option value="reference">Reference Book</option>
+            <option value="textbook">Textbook</option>
+            <option value="supplement">Supplement</option>
+          </select>
+        </Field>
+        <Field label="Label (optional)">
+          <input value={description} onChange={e => setDescription(e.target.value)}
+            placeholder={isNotes ? 'e.g. Chapter-wise Short Notes 2024' : 'e.g. NCERT Solutions 2024–25'}
+            className={inputCls} />
+        </Field>
+        <div className="flex items-start gap-2.5 p-3 rounded-xl bg-violet-50 border border-violet-200">
+          <Brain size={13} className="text-violet-500 shrink-0 mt-0.5" />
+          <p className="text-[11px] text-violet-700 leading-relaxed">Enable <strong>AI Index</strong> after upload so the AI tutor cites this material when answering students.</p>
         </div>
-        <div className="flex gap-2 pt-1"><Btn variant="ghost" onClick={onClose} className="flex-1">Cancel</Btn><Btn variant="primary" loading={saving} onClick={save} className="flex-1"><UploadCloud size={13} /> Upload</Btn></div>
+        <div className="flex gap-2 pt-1">
+          <Btn variant="ghost" onClick={onClose} className="flex-1">Cancel</Btn>
+          <Btn variant="primary" loading={saving} onClick={save} className={`flex-1 ${isNotes ? '!from-amber-500 !to-orange-500 !shadow-amber-200' : ''}`}>
+            {isNotes ? <><BookMarked size={13} /> Pin Note</> : <><UploadCloud size={13} /> Upload</>}
+          </Btn>
+        </div>
       </div>
     </Modal>
   );

@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import {
   Loader2, ArrowRight, Eye, EyeOff,
   GraduationCap, BookOpen, Building2, Briefcase, Building,
-  User, Mail, Phone, Lock, Calendar, CheckCircle2, XCircle,
+  User, Mail, Phone, Lock, Calendar, CheckCircle2, XCircle, UserCog,
 } from 'lucide-react';
 
 const PERSONAL_EMAIL_DOMAINS = ['gmail','yahoo','hotmail','outlook','rediffmail','ymail','icloud','live','msn','aol','protonmail'];
@@ -22,6 +22,7 @@ const USER_TYPES = [
   { value: 'institute', label: 'Institute', icon: Building2, desc: 'School, college or academy', color: 'purple' },
   { value: 'professional_learner', label: 'Professional Learner', icon: Briefcase, desc: 'Upskill your career', color: 'amber' },
   { value: 'organization', label: 'Organization', icon: Building, desc: 'Post jobs & find talent', color: 'rose' },
+  { value: 'hr_professional', label: 'HR Professional', icon: UserCog, desc: 'Recruit & connect talent', color: 'teal' },
 ];
 
 const COLOR_MAP = {
@@ -31,6 +32,7 @@ const COLOR_MAP = {
   purple: { bg: 'bg-purple-50', border: 'border-purple-500', text: 'text-purple-700', ring: 'ring-purple-500/20', dot: 'bg-purple-500' },
   amber: { bg: 'bg-amber-50', border: 'border-amber-500', text: 'text-amber-700', ring: 'ring-amber-500/20', dot: 'bg-amber-500' },
   rose: { bg: 'bg-rose-50', border: 'border-rose-500', text: 'text-rose-700', ring: 'ring-rose-500/20', dot: 'bg-rose-500' },
+  teal: { bg: 'bg-teal-50', border: 'border-teal-500', text: 'text-teal-700', ring: 'ring-teal-500/20', dot: 'bg-teal-500' },
 };
 
 function InputField({ icon: Icon, label, type = 'text', value, onChange, placeholder, required, autoComplete, children }) {
@@ -110,6 +112,7 @@ export default function SignUpPage() {
     date_of_birth: '',
     user_type: 'student',
     company_name: '',
+    hr_role: '',
     guardian_id: '',
     password: '',
     confirmPassword: '',
@@ -162,6 +165,13 @@ export default function SignUpPage() {
       }
     }
 
+    if (form.user_type === 'hr_professional') {
+      if (!form.company_name.trim()) {
+        toast.error('Company name is required for HR professional accounts');
+        return;
+      }
+    }
+
     if (!agreedToTerms) {
       toast.error('Please agree to the Terms of Service');
       return;
@@ -178,7 +188,8 @@ export default function SignUpPage() {
         date_of_birth: form.date_of_birth || undefined,
         phone: form.phone || undefined,
         guardian_id: form.user_type === 'student' ? form.guardian_id.trim().toUpperCase() : undefined,
-        company_name: form.user_type === 'organization' ? form.company_name.trim() : undefined,
+        company_name: ['organization', 'hr_professional'].includes(form.user_type) ? form.company_name.trim() : undefined,
+        hr_role: form.user_type === 'hr_professional' ? (form.hr_role.trim() || 'HR Professional') : undefined,
         children: (form.user_type === 'parent' && addChild) ? [{
           fullName: childForm.fullName.trim(),
           email: childForm.email.trim().toLowerCase(),
@@ -233,6 +244,41 @@ export default function SignUpPage() {
             placeholder="Official company name"
             required
           />
+        )}
+
+        {form.user_type === 'hr_professional' && (
+          <>
+            <InputField
+              icon={Building2}
+              label="Company / Organisation"
+              value={form.company_name}
+              onChange={e => update('company_name', e.target.value)}
+              placeholder="Company you represent"
+              required
+            />
+            <div>
+              <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">HR Role</label>
+              <div className="relative">
+                <UserCog size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <select
+                  value={form.hr_role}
+                  onChange={e => update('hr_role', e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-[14px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 focus:bg-white transition-all appearance-none"
+                >
+                  <option value="">Select your role</option>
+                  <option value="HR Manager">HR Manager</option>
+                  <option value="Talent Acquisition">Talent Acquisition</option>
+                  <option value="Recruiter">Recruiter</option>
+                  <option value="Technical Recruiter">Technical Recruiter</option>
+                  <option value="HRBP">HR Business Partner (HRBP)</option>
+                  <option value="Hiring Manager">Hiring Manager</option>
+                  <option value="People Lead">People Lead</option>
+                  <option value="HR Director">HR Director</option>
+                  <option value="HR Professional">Other HR Professional</option>
+                </select>
+              </div>
+            </div>
+          </>
         )}
 
         <InputField

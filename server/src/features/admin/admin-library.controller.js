@@ -81,6 +81,17 @@ class AdminLibraryController {
     try { await LibraryService.deleteChapter(req.params.id); res.json({ message: 'Deleted' }); }
     catch (e) { res.status(400).json({ error: e.message }); }
   }
+  async updateChapter(req, res) {
+    try { await LibraryService.updateChapter(req.params.id, req.body); res.json({ message: 'Updated' }); }
+    catch (e) { res.status(400).json({ error: e.message }); }
+  }
+  async bulkCreateChapters(req, res) {
+    try {
+      const { book_id, chapters } = req.body;
+      if (!book_id || !chapters?.length) return res.status(400).json({ error: 'book_id and chapters array required' });
+      res.status(201).json(await LibraryService.bulkCreateChapters(book_id, chapters));
+    } catch (e) { res.status(400).json({ error: e.message }); }
+  }
 
   // Topics
   async getTopics(req, res) {

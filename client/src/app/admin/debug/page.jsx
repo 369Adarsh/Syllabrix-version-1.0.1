@@ -14,31 +14,31 @@ import { io } from 'socket.io-client';
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function statusColor(code) {
-  if (!code) return 'text-white/30';
-  if (code >= 500) return 'text-red-400';
-  if (code >= 400) return 'text-orange-400';
-  if (code >= 300) return 'text-cyan-400';
-  return 'text-emerald-400';
+  if (!code) return 'text-gray-400';
+  if (code >= 500) return 'text-red-600';
+  if (code >= 400) return 'text-orange-600';
+  if (code >= 300) return 'text-cyan-600';
+  return 'text-emerald-600';
 }
 
 function statusBg(code) {
-  if (!code) return 'bg-white/5';
-  if (code >= 500) return 'bg-red-500/10 border-red-500/20';
-  if (code >= 400) return 'bg-orange-500/10 border-orange-500/20';
-  if (code >= 300) return 'bg-cyan-500/10 border-cyan-500/20';
-  return 'bg-emerald-500/10 border-emerald-500/20';
+  if (!code) return 'bg-gray-50 border-gray-200';
+  if (code >= 500) return 'bg-red-50 border-red-200';
+  if (code >= 400) return 'bg-orange-50 border-orange-200';
+  if (code >= 300) return 'bg-cyan-50 border-cyan-200';
+  return 'bg-emerald-50 border-emerald-200';
 }
 
 function methodColor(m) {
-  const map = { GET: 'text-blue-400', POST: 'text-violet-400', PUT: 'text-yellow-400', PATCH: 'text-amber-400', DELETE: 'text-red-400' };
-  return map[m] || 'text-white/50';
+  const map = { GET: 'text-blue-600', POST: 'text-violet-600', PUT: 'text-amber-600', PATCH: 'text-amber-500', DELETE: 'text-red-600' };
+  return map[m] || 'text-gray-500';
 }
 
 function durationColor(ms) {
-  if (ms >= 1000) return 'text-red-400';
-  if (ms >= 500)  return 'text-orange-400';
-  if (ms >= 150)  return 'text-yellow-400';
-  return 'text-emerald-400';
+  if (ms >= 1000) return 'text-red-600';
+  if (ms >= 500)  return 'text-orange-600';
+  if (ms >= 150)  return 'text-amber-600';
+  return 'text-emerald-600';
 }
 
 function relTime(ts) {
@@ -55,20 +55,21 @@ function relTime(ts) {
 function VitalCard({ icon: Icon, label, value, sub, color = 'violet', warn = false }) {
   const c = warn ? 'red' : color;
   const colors = {
-    violet:  'from-violet-500/20 to-purple-600/10 border-violet-500/20 text-violet-400',
-    emerald: 'from-emerald-500/20 to-green-600/10 border-emerald-500/20 text-emerald-400',
-    blue:    'from-blue-500/20 to-cyan-600/10 border-blue-500/20 text-blue-400',
-    amber:   'from-amber-500/20 to-yellow-600/10 border-amber-500/20 text-amber-400',
-    red:     'from-red-500/20 to-rose-600/10 border-red-500/20 text-red-400',
+    violet:  'border-indigo-200 bg-indigo-50 text-indigo-600',
+    emerald: 'border-emerald-200 bg-emerald-50 text-emerald-600',
+    blue:    'border-blue-200 bg-blue-50 text-blue-600',
+    amber:   'border-amber-200 bg-amber-50 text-amber-600',
+    red:     'border-red-200 bg-red-50 text-red-600',
   };
+  const [borderCls, bgCls, textCls] = colors[c].split(' ');
   return (
-    <div className={`rounded-xl border bg-gradient-to-br p-4 ${colors[c]}`}>
+    <div className={`rounded-xl border ${borderCls} ${bgCls} p-4 shadow-sm`}>
       <div className="flex items-center gap-2 mb-2">
-        <Icon size={14} className="opacity-70" />
-        <span className="text-[10px] font-black uppercase tracking-widest text-white/40">{label}</span>
+        <Icon size={14} className={`${textCls} opacity-70`} />
+        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">{label}</span>
       </div>
-      <p className="text-white font-bold text-xl leading-none">{value}</p>
-      {sub && <p className="text-white/30 text-[10px] mt-1">{sub}</p>}
+      <p className="text-gray-900 font-bold text-xl leading-none">{value}</p>
+      {sub && <p className="text-gray-400 text-[10px] mt-1">{sub}</p>}
     </div>
   );
 }
@@ -82,7 +83,7 @@ function ExpandableRow({ entry, defaultExpanded = false }) {
     <div className={`border rounded-lg overflow-hidden transition-all ${statusBg(entry.status)}`}>
       <button
         onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/[0.02] transition-colors"
+        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-black/[0.02] transition-colors"
       >
         {/* Method */}
         <span className={`text-[10px] font-black w-12 shrink-0 ${methodColor(entry.method)}`}>
@@ -100,18 +101,18 @@ function ExpandableRow({ entry, defaultExpanded = false }) {
         </span>
 
         {/* Path */}
-        <span className="text-white/70 text-[11px] font-mono flex-1 truncate">{entry.path}</span>
+        <span className="text-gray-700 text-[11px] font-mono flex-1 truncate">{entry.path}</span>
 
         {/* User */}
         {entry.username && (
-          <span className="text-[9px] text-white/30 shrink-0 hidden md:block">{entry.username}</span>
+          <span className="text-[9px] text-gray-400 shrink-0 hidden md:block">{entry.username}</span>
         )}
 
         {/* Time */}
-        <span className="text-[9px] text-white/25 shrink-0">{relTime(entry.ts)}</span>
+        <span className="text-[9px] text-gray-400 shrink-0">{relTime(entry.ts)}</span>
 
         {/* Expand */}
-        <ChevronDown size={12} className={`text-white/20 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown size={12} className={`text-gray-300 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       <AnimatePresence>
@@ -123,7 +124,7 @@ function ExpandableRow({ entry, defaultExpanded = false }) {
             transition={{ duration: 0.15 }}
             className="overflow-hidden"
           >
-            <div className="px-4 pb-3 pt-0 space-y-2 border-t border-white/[0.05]">
+            <div className="px-4 pb-3 pt-0 space-y-2 border-t border-gray-100">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
                 <Detail label="IP"       value={entry.ip} />
                 <Detail label="User ID"  value={entry.user_id || '—'} />
@@ -132,19 +133,19 @@ function ExpandableRow({ entry, defaultExpanded = false }) {
               </div>
 
               {hasError && (
-                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-2.5 mt-2">
-                  <p className="text-[9px] font-black text-red-400 uppercase tracking-wider mb-1">Error</p>
-                  <p className="text-red-300 text-xs font-mono leading-relaxed">{entry.error_msg}</p>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-2.5 mt-2">
+                  <p className="text-[9px] font-black text-red-600 uppercase tracking-wider mb-1">Error</p>
+                  <p className="text-red-700 text-xs font-mono leading-relaxed">{entry.error_msg}</p>
                   {entry.error_stack && (
-                    <pre className="text-red-400/60 text-[9px] font-mono mt-1.5 leading-relaxed whitespace-pre-wrap">{entry.error_stack}</pre>
+                    <pre className="text-red-500/60 text-[9px] font-mono mt-1.5 leading-relaxed whitespace-pre-wrap">{entry.error_stack}</pre>
                   )}
                 </div>
               )}
 
               {hasBody && (
-                <div className="bg-white/[0.02] border border-white/[0.06] rounded-lg p-2.5 mt-2">
-                  <p className="text-[9px] font-black text-white/30 uppercase tracking-wider mb-1">Request Body</p>
-                  <pre className="text-white/60 text-[10px] font-mono leading-relaxed whitespace-pre-wrap overflow-auto max-h-32">
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-2.5 mt-2">
+                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-wider mb-1">Request Body</p>
+                  <pre className="text-gray-600 text-[10px] font-mono leading-relaxed whitespace-pre-wrap overflow-auto max-h-32">
                     {JSON.stringify(entry.body, null, 2)}
                   </pre>
                 </div>
@@ -160,8 +161,8 @@ function ExpandableRow({ entry, defaultExpanded = false }) {
 function Detail({ label, value }) {
   return (
     <div>
-      <p className="text-[9px] text-white/25 font-black uppercase tracking-wider">{label}</p>
-      <p className="text-white/60 text-[10px] font-mono truncate">{value}</p>
+      <p className="text-[9px] text-gray-400 font-black uppercase tracking-wider">{label}</p>
+      <p className="text-gray-600 text-[10px] font-mono truncate">{value}</p>
     </div>
   );
 }
@@ -169,23 +170,23 @@ function Detail({ label, value }) {
 function SlowQueryRow({ q }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className={`border rounded-lg overflow-hidden ${q.duration_ms >= 500 ? 'bg-red-500/5 border-red-500/15' : 'bg-orange-500/5 border-orange-500/15'}`}>
+    <div className={`border rounded-lg overflow-hidden shadow-sm ${q.duration_ms >= 500 ? 'bg-red-50 border-red-200' : 'bg-orange-50 border-orange-200'}`}>
       <button
         onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/[0.02] transition-colors"
+        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-black/[0.02] transition-colors"
       >
-        <Database size={12} className={q.duration_ms >= 500 ? 'text-red-400 shrink-0' : 'text-orange-400 shrink-0'} />
+        <Database size={12} className={q.duration_ms >= 500 ? 'text-red-600 shrink-0' : 'text-orange-600 shrink-0'} />
         <span className={`text-[10px] font-black w-16 shrink-0 ${durationColor(q.duration_ms)}`}>{q.duration_ms}ms</span>
-        <span className="text-[9px] font-bold text-violet-400/80 w-16 shrink-0">[{q.pool_name}]</span>
-        <span className="text-white/60 text-[11px] font-mono flex-1 truncate">{q.sql}</span>
-        <span className="text-[9px] text-white/25 shrink-0">{relTime(q.ts)}</span>
-        <ChevronDown size={12} className={`text-white/20 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <span className="text-[9px] font-bold text-indigo-600/80 w-16 shrink-0">[{q.pool_name}]</span>
+        <span className="text-gray-600 text-[11px] font-mono flex-1 truncate">{q.sql}</span>
+        <span className="text-[9px] text-gray-400 shrink-0">{relTime(q.ts)}</span>
+        <ChevronDown size={12} className={`text-gray-300 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       <AnimatePresence>
         {open && (
           <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} transition={{ duration: 0.15 }} className="overflow-hidden">
-            <div className="px-4 pb-3 pt-1 border-t border-white/[0.05]">
-              <pre className="text-white/60 text-[10px] font-mono leading-relaxed whitespace-pre-wrap bg-white/[0.02] rounded-lg p-3">
+            <div className="px-4 pb-3 pt-1 border-t border-orange-100">
+              <pre className="text-gray-600 text-[10px] font-mono leading-relaxed whitespace-pre-wrap bg-white rounded-lg p-3 border border-gray-200">
                 {q.sql}
               </pre>
             </div>
@@ -352,14 +353,14 @@ export default function SyllaTracePage() {
       {/* ── Page Header ── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500/30 to-purple-600/20 border border-violet-500/30 flex items-center justify-center">
-            <Terminal size={18} className="text-violet-400" />
+          <div className="w-10 h-10 rounded-xl bg-indigo-100 border border-indigo-200 flex items-center justify-center">
+            <Terminal size={18} className="text-indigo-600" />
           </div>
           <div>
-            <h2 className="text-white font-bold text-lg leading-tight">SyllaTrace</h2>
-            <p className="text-white/30 text-[10px] uppercase font-black tracking-widest">IT Diagnostic Console</p>
+            <h2 className="text-gray-900 font-bold text-lg leading-tight">SyllaTrace</h2>
+            <p className="text-gray-400 text-[10px] uppercase font-black tracking-widest">IT Diagnostic Console</p>
           </div>
-          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest ${isLive ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-white/5 border-white/10 text-white/30'}`}>
+          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest ${isLive ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-gray-100 border-gray-200 text-gray-400'}`}>
             {isLive ? <Wifi size={9} /> : <WifiOff size={9} />}
             {isLive ? 'Socket Live' : 'Socket Offline'}
           </div>
@@ -379,14 +380,14 @@ export default function SyllaTracePage() {
               if (tab === 'slow_queries') fetchSlowQ();
               if (tab === 'route_stats')  fetchRouteStats();
             }}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.07] text-white/50 text-xs font-semibold hover:bg-white/[0.08] hover:text-white transition-all"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-500 text-xs font-semibold hover:text-indigo-600 hover:border-indigo-300 transition-all shadow-sm"
           >
             <RefreshCw size={13} />
             Refresh
           </button>
           <button
             onClick={handleClear}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-semibold hover:bg-red-500/20 transition-all"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-red-50 border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-100 transition-all shadow-sm"
           >
             <Trash2 size={13} />
             Clear Buffers
@@ -405,9 +406,9 @@ export default function SyllaTracePage() {
           <VitalCard icon={Database}  label="Slow Queries" value={health.buffer_stats?.slow_queries || 0} sub={`>${health.slow_threshold_ms}ms threshold`} color="amber" warn={(health.buffer_stats?.slow_queries || 0) > 5} />
         </div>
       ) : (
-        <div className="h-20 rounded-xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-center">
-          <Loader2 size={18} className="animate-spin text-violet-500 mr-2" />
-          <span className="text-white/30 text-sm">Loading system health…</span>
+        <div className="h-20 rounded-xl bg-white border border-gray-200 flex items-center justify-center shadow-sm">
+          <Loader2 size={18} className="animate-spin text-indigo-500 mr-2" />
+          <span className="text-gray-400 text-sm">Loading system health…</span>
         </div>
       )}
 
@@ -441,15 +442,15 @@ export default function SyllaTracePage() {
       </AnimatePresence>
 
       {/* ── Tabs ── */}
-      <div className="flex items-center gap-1 bg-white/[0.02] border border-white/[0.05] rounded-xl p-1">
+      <div className="flex items-center gap-1 bg-gray-100 border border-gray-200 rounded-xl p-1">
         {TABS.map(t => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[11px] font-bold transition-all flex-1 justify-center ${
               tab === t.key
-                ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30'
-                : 'text-white/30 hover:text-white/60 hover:bg-white/[0.04]'
+                ? 'bg-white text-indigo-700 border border-indigo-200 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-white/60'
             }`}
           >
             <t.icon size={13} />
@@ -475,8 +476,8 @@ export default function SyllaTracePage() {
                       onClick={() => setMethodFilter(m)}
                       className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide border transition-all ${
                         methodFilter === m
-                          ? 'bg-violet-500/20 text-violet-300 border-violet-500/30'
-                          : 'bg-white/[0.03] text-white/30 border-white/[0.05] hover:text-white/60'
+                          ? 'bg-indigo-100 text-indigo-700 border-indigo-300'
+                          : 'bg-white text-gray-500 border-gray-200 hover:text-gray-700'
                       }`}
                     >{m}</button>
                   ))}
@@ -489,8 +490,8 @@ export default function SyllaTracePage() {
                       onClick={() => setStatusFilter(s)}
                       className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide border transition-all ${
                         statusFilter.label === s.label
-                          ? 'bg-violet-500/20 text-violet-300 border-violet-500/30'
-                          : 'bg-white/[0.03] text-white/30 border-white/[0.05] hover:text-white/60'
+                          ? 'bg-indigo-100 text-indigo-700 border-indigo-300'
+                          : 'bg-white text-gray-500 border-gray-200 hover:text-gray-700'
                       }`}
                     >{s.label}</button>
                   ))}
@@ -501,13 +502,13 @@ export default function SyllaTracePage() {
                   placeholder="Filter route… e.g. /users"
                   value={routeSearch}
                   onChange={e => setRouteSearch(e.target.value)}
-                  className="bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-1.5 text-[11px] text-white/70 placeholder-white/20 focus:outline-none focus:border-violet-500/50 transition-all w-48"
+                  className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-[11px] text-gray-700 placeholder-gray-400 focus:outline-none focus:border-indigo-400 transition-all w-48"
                 />
                 <span className="text-white/20 text-[10px] ml-auto">{trace.length} entries</span>
               </div>
 
               {/* Table header */}
-              <div className="flex items-center gap-3 px-4 py-1.5 text-[9px] font-black uppercase tracking-widest text-white/20">
+              <div className="flex items-center gap-3 px-4 py-1.5 text-[9px] font-black uppercase tracking-widest text-gray-400">
                 <span className="w-12 shrink-0">Method</span>
                 <span className="w-10 shrink-0">Status</span>
                 <span className="w-16 shrink-0">Time</span>
@@ -627,12 +628,12 @@ export default function SyllaTracePage() {
                 ) : (
                   <div className="space-y-1.5">
                     {routeStats.slowest?.map((r, i) => (
-                      <div key={i} className="bg-white/[0.02] border border-white/[0.05] rounded-xl px-4 py-2.5 flex items-center gap-3">
-                        <span className="text-white/20 font-black text-[10px] w-5 shrink-0">#{i + 1}</span>
-                        <span className="text-white/60 text-[10px] font-mono flex-1 truncate">{r.route}</span>
+                      <div key={i} className="bg-white border border-gray-200 rounded-xl px-4 py-2.5 flex items-center gap-3 shadow-sm">
+                        <span className="text-gray-300 font-black text-[10px] w-5 shrink-0">#{i + 1}</span>
+                        <span className="text-gray-600 text-[10px] font-mono flex-1 truncate">{r.route}</span>
                         <div className="text-right shrink-0">
                           <p className={`text-[11px] font-black ${durationColor(r.avg_ms)}`}>{r.avg_ms}ms avg</p>
-                          <p className="text-white/20 text-[9px]">{r.count} calls · max {r.max_ms}ms</p>
+                          <p className="text-gray-400 text-[9px]">{r.count} calls · max {r.max_ms}ms</p>
                         </div>
                       </div>
                     ))}
@@ -655,12 +656,12 @@ export default function SyllaTracePage() {
                 ) : (
                   <div className="space-y-1.5">
                     {routeStats.most_errored?.map((r, i) => (
-                      <div key={i} className="bg-red-500/5 border border-red-500/10 rounded-xl px-4 py-2.5 flex items-center gap-3">
-                        <span className="text-red-400/40 font-black text-[10px] w-5 shrink-0">#{i + 1}</span>
-                        <span className="text-white/60 text-[10px] font-mono flex-1 truncate">{r.route}</span>
+                      <div key={i} className="bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 flex items-center gap-3 shadow-sm">
+                        <span className="text-red-300 font-black text-[10px] w-5 shrink-0">#{i + 1}</span>
+                        <span className="text-gray-600 text-[10px] font-mono flex-1 truncate">{r.route}</span>
                         <div className="text-right shrink-0">
-                          <p className="text-[11px] font-black text-red-400">{r.errors} errors</p>
-                          <p className="text-white/20 text-[9px]">{r.count} total calls</p>
+                          <p className="text-[11px] font-black text-red-600">{r.errors} errors</p>
+                          <p className="text-gray-400 text-[9px]">{r.count} total calls</p>
                         </div>
                       </div>
                     ))}

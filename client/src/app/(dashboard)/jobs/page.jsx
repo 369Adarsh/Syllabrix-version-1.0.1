@@ -20,8 +20,12 @@ export default function JobsPage() {
           <div><h1 className="font-bold text-lg text-gray-800">Jobs Board</h1><p className="text-[11px] text-gray-400">{jobs.length} open positions</p></div>
         </div>
         <div className="flex gap-2">
-          <Link href="/jobs/my-applications" className="px-3 py-2 rounded-xl text-xs font-semibold text-gray-500 hover:bg-gray-50 border border-gray-200 transition-all">My Applications</Link>
-          {(user?.user_type === 'institute' || user?.user_type === 'teacher') && (
+          {['institute', 'teacher', 'organization', 'hr_professional'].includes(user?.user_type) ? (
+            <Link href="/jobs/my-posts" className="px-3 py-2 rounded-xl text-xs font-semibold text-gray-500 hover:bg-gray-50 border border-gray-200 transition-all">My Posts</Link>
+          ) : (
+            <Link href="/jobs/my-applications" className="px-3 py-2 rounded-xl text-xs font-semibold text-gray-500 hover:bg-gray-50 border border-gray-200 transition-all">My Applications</Link>
+          )}
+          {(['institute', 'teacher', 'organization', 'hr_professional'].includes(user?.user_type)) && (
             <Link href="/jobs/create" className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md hover:from-emerald-700 transition-all">
               <Plus size={14} /> Post Job
             </Link>

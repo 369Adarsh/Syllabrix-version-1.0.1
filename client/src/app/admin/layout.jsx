@@ -29,7 +29,7 @@ function AdminLayoutInner({ children }) {
   const titleInfo = PAGE_TITLES[pathname] || { title: 'Admin', subtitle: '' };
 
   return (
-    <div className="min-h-screen bg-[#0A0A0F] font-sans">
+    <div className="min-h-screen bg-slate-50 font-sans">
       <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main content — offset by sidebar width on md+ */}
@@ -45,13 +45,12 @@ function AdminLayoutInner({ children }) {
       </div>
 
       <Toaster
-        theme="dark"
         position="top-right"
         toastOptions={{
           style: {
-            background: '#1a1a2e',
-            border: '1px solid rgba(255,255,255,0.08)',
-            color: '#fff',
+            background: '#fff',
+            border: '1px solid #e5e7eb',
+            color: '#111827',
           },
         }}
       />

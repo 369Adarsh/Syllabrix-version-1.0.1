@@ -23,7 +23,7 @@ const { socialPool: pool } = require('../../database/connection');
 //   YY   = last 2 digits of birth year     (2)
 // Total body = 10 chars → e.g. S-AAAS321008
 const generateSyllabrixId = async (user_type, username, phone, date_of_birth) => {
-  const prefixes = { student: 'S', teacher: 'T', institute: 'I', parent: 'G', mentor: 'M', professional_learner: 'P', organization: 'O' };
+  const prefixes = { student: 'S', teacher: 'T', institute: 'I', parent: 'G', mentor: 'M', professional_learner: 'P', organization: 'O', hr_professional: 'H' };
   const prefix = prefixes[user_type] || 'U';
 
   // Split into first and last name words
@@ -155,6 +155,15 @@ const register = async (userData) => {
         await pool.query('INSERT INTO parent_child_links (parent_user_id, child_user_id, status) VALUES (?, ?, ?)', [parent[0].user_id, userId, 'active']);
       }
     }
+  }
+
+  // Create HR Professional profile immediately at registration
+  if (user_type === 'hr_professional') {
+    await queries.createHrProfessionalProfile({
+      user_id: userId,
+      company_name: userData.company_name || '',
+      hr_role: userData.hr_role || 'HR Professional',
+    });
   }
 
   // Handle registration bundle (Parent creating children accounts)
@@ -504,6 +513,9 @@ const getCurrentUser = async (userId) => {
     case 'organization':
       profile = await queries.getOrganizationProfile(userId);
       break;
+    case 'hr_professional':
+      profile = await queries.getHrProfessionalProfile(userId);
+      break;
   }
 
   return { user, profile };
@@ -654,6 +666,19 @@ const completeProfile = async (userId, userType, profileData) => {
         address_state: profileData.address_state || profileData.state,
       });
       break;
+    case 'hr_professional':
+      await queries.createHrProfessionalProfile({
+        user_id: userId,
+        company_name: profileData.company_name || '',
+        hr_role: profileData.hr_role || 'HR Professional',
+        industry: profileData.industry,
+        experience_years: profileData.experience_years,
+        location: profileData.location || profileData.city,
+        linkedin_url: profileData.linkedin_url,
+        about: profileData.about || profileData.bio,
+        skills: profileData.skills,
+      });
+      break;
     default:
       throw ApiError.badRequest('Invalid user type.');
   }
@@ -791,6 +816,7 @@ const PROFILE_TABLE_MAP = {
   parent: 'parent_profiles',
   professional_learner: 'professional_learner_profiles',
   organization: 'organization_profiles',
+  hr_professional: 'hr_professional_profiles',
 };
 
 // Fields that live on the users table (not the type-specific profile table)

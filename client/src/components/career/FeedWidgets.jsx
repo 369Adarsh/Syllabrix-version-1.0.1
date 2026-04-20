@@ -1,94 +1,180 @@
 'use client';
-import React from 'react';
-import { 
-  Users, Globe, TrendingUp, Sparkles, 
-  ChevronRight, ArrowRight, Zap, Target,
-  Star, Briefcase, Award
-} from 'lucide-react';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { TrendingUp, ArrowRight, Briefcase, Activity, Loader2, ExternalLink } from 'lucide-react';
+import { careerAPI } from '@/lib/api/career.api';
 
-const CommunityCard = ({ name, members, icon: Icon, color }) => (
-  <div className="flex items-center gap-4 p-4 rounded-2xl bg-white hover:bg-gray-50 transition-all border border-transparent hover:border-gray-100 group shadow-sm cursor-pointer shadow-transparent hover:shadow-gray-100/50">
-    <div className={`w-10 h-10 rounded-xl ${color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-      <Icon size={18} />
-    </div>
-    <div className="flex-1 min-w-0">
-      <p className="text-[13px] font-black text-gray-900 truncate tracking-tight">{name}</p>
-      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{members} active members</p>
-    </div>
-    <button className="w-8 h-8 rounded-full border border-gray-100 flex items-center justify-center text-blue-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm active:scale-90">
-      <Plus size={14} />
-    </button>
-  </div>
-);
+const TRENDING_SKILLS = [
+  { name: 'LLM Prompting',      delta: '+240%', pct: 90, color: 'bg-blue-500'   },
+  { name: 'Cloud Architecture', delta: '+12%',  pct: 55, color: 'bg-indigo-500' },
+  { name: 'Strategic Foresight',delta: '+18%',  pct: 65, color: 'bg-violet-500' },
+];
 
-const Plus = ({ size }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-  </svg>
-);
-
-const TrendCard = ({ category, title, stat, color, bg }) => (
-  <div className={`p-4 rounded-2xl ${bg} ${color} flex flex-col justify-between h-24 border border-transparent hover:shadow-sm transition-all cursor-pointer`}>
-    <p className="text-[9px] font-black uppercase tracking-widest opacity-60 leading-none">{category}</p>
-    <p className="text-[12px] font-black leading-tight tracking-tight mt-1 truncate">{title}</p>
-    <p className="text-[10px] font-bold opacity-80 mt-2">{stat}</p>
-  </div>
-);
-
-const FeedWidgets = ({ data }) => {
+function TrendingSkillsCard() {
   return (
-    <div className="w-full space-y-10 animate-in fade-in slide-in-from-right-4 duration-500">
-      {/* Connectivity */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between px-2">
-          <h3 className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Connectivity</h3>
-          <button className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline transition-all">See All</button>
+    <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <TrendingUp size={14} className="text-blue-600" />
+          <h3 className="text-sm font-bold text-gray-900">Trending Skills</h3>
         </div>
-        <div className="space-y-3">
-          <CommunityCard name="UX Architects Lab" members="1,240" icon={Globe} color="bg-blue-50 text-blue-600" />
-          <CommunityCard name="AI & Product Guild" members="856" icon={Sparkles} color="bg-purple-50 text-purple-600" />
-        </div>
-      </section>
+        <TrendingUp size={13} className="text-blue-400" />
+      </div>
 
-      {/* Trending Insights */}
-      <section className="space-y-4">
-        <h3 className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-2">Trending Insights</h3>
-        <div className="space-y-4">
-          <div className="p-6 bg-blue-600 rounded-3xl text-white shadow-xl shadow-blue-100 flex flex-col justify-between h-32 relative overflow-hidden group hover:scale-[1.02] transition-all cursor-pointer">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
-            <p className="text-[9px] font-black uppercase tracking-widest text-blue-100 opacity-60">Skill Gap Report</p>
-            <h4 className="text-[16px] font-black leading-tight">Remote-first Leadership</h4>
-            <p className="text-[10px] font-bold text-blue-100">+12% rise this week</p>
+      <div className="space-y-3.5">
+        {TRENDING_SKILLS.map(skill => (
+          <div key={skill.name}>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs font-semibold text-gray-700">{skill.name}</span>
+              <span className="text-xs font-bold text-blue-600">{skill.delta}</span>
+            </div>
+            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className={`h-full ${skill.color} rounded-full transition-all duration-700`}
+                style={{ width: `${skill.pct}%` }}
+              />
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <TrendCard category="TECH" title="Rust for Web" stat="5.2k discussing" color="text-orange-700" bg="bg-orange-50/50" />
-            <TrendCard category="FINANCE" title="Equity Comp" stat="1.8k discussing" color="text-emerald-700" bg="bg-emerald-50/50" />
-          </div>
-        </div>
-      </section>
+        ))}
+      </div>
 
-      {/* Mentor Match */}
-      <section className="p-6 bg-white rounded-3xl border border-gray-100 md:rounded-[32px] shadow-sm space-y-4">
-        <div className="flex items-center justify-between mb-4">
-          <h4 className="text-[14px] font-black text-gray-900 tracking-tight">Mentor Match</h4>
-          <Star size={16} className="text-amber-500 fill-amber-500" />
-        </div>
-        <p className="text-[11px] text-gray-500 font-medium leading-relaxed">Based on your learning paths, we recommend connecting with:</p>
-        <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl border border-gray-100/50">
-          <div className="w-10 h-10 rounded-full bg-blue-100 overflow-hidden shrink-0 border border-white">
-            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah" alt="" />
-          </div>
-          <div className="flex-1 min-w-0">
-             <p className="text-[12px] font-black text-gray-900 truncate">Sarah Jenkins</p>
-             <p className="text-[9px] font-bold text-blue-600 uppercase tracking-widest">Principal Architect</p>
-          </div>
-        </div>
-        <button className="w-full py-2 bg-white text-gray-900 text-[11px] font-black rounded-xl border border-gray-100 hover:bg-gray-50 transition-all shadow-sm shadow-transparent hover:shadow-gray-100">
-          View Profile
-        </button>
-      </section>
+      <Link
+        href="/career/skills"
+        className="mt-4 flex items-center justify-center gap-1.5 w-full py-2 border border-gray-100 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 hover:text-blue-600 transition-all"
+      >
+        Explore All Skills <ArrowRight size={12} />
+      </Link>
     </div>
   );
-};
+}
 
-export default FeedWidgets;
+function TopJobMatchesCard() {
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    careerAPI.listJobs({ limit: 2, category: 'high' })
+      .then(res => setJobs((res.data?.data?.jobs || []).slice(0, 2)))
+      .catch(() => setJobs([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const FIT_COLORS = {
+    high: 'bg-emerald-50 text-emerald-700',
+    medium: 'bg-blue-50 text-blue-700',
+    stretch: 'bg-purple-50 text-purple-700',
+  };
+
+  return (
+    <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Briefcase size={14} className="text-blue-600" />
+          <h3 className="text-sm font-bold text-gray-900">Top Job Matches</h3>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-6">
+          <Loader2 size={18} className="text-blue-500 animate-spin" />
+        </div>
+      ) : jobs.length === 0 ? (
+        <p className="text-xs text-gray-400 text-center py-4">No matches yet. Sync your profile.</p>
+      ) : (
+        <div className="space-y-3">
+          {jobs.map(job => {
+            const logoOk = job.company_logo && !job.company_logo.includes('undefined');
+            const fit = FIT_COLORS[job.fit_category] || FIT_COLORS.medium;
+            return (
+              <div key={job.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 hover:border-blue-100 hover:bg-blue-50/30 transition-all group">
+                <div className="w-9 h-9 rounded-xl bg-white border border-gray-100 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+                  {logoOk ? (
+                    <img src={job.company_logo} alt={job.company_name} className="w-full h-full object-contain p-1" onError={e => e.target.style.display = 'none'} />
+                  ) : (
+                    <span className="text-sm font-black text-blue-600">{job.company_name?.charAt(0)}</span>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">{job.role_title}</p>
+                  <p className="text-[11px] text-gray-400 truncate">{job.company_name} · {job.location}</p>
+                </div>
+                <span className={`shrink-0 text-[10px] font-black px-2 py-0.5 rounded-full ${fit}`}>
+                  {job.fit_score}% Match
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <Link
+        href="/career/jobs"
+        className="mt-3 flex items-center justify-center gap-1.5 w-full py-2 border border-gray-100 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 hover:text-blue-600 transition-all"
+      >
+        View Personalised Jobs <ArrowRight size={12} />
+      </Link>
+    </div>
+  );
+}
+
+function MarketPulseCard() {
+  const [jobCount, setJobCount] = useState(null);
+
+  useEffect(() => {
+    careerAPI.getJobCount()
+      .then(res => setJobCount(res.data?.data?.total || 0))
+      .catch(() => setJobCount(null));
+  }, []);
+
+  const score = 8.4;
+  const bars = [3, 5, 8, 6, 9, 7, 10, 8, 6, 9, 7, 8];
+
+  return (
+    <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+      <div className="flex items-center gap-2 mb-3">
+        <Activity size={14} className="text-blue-600" />
+        <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Market Pulse</h3>
+      </div>
+
+      <div className="flex items-end justify-between mb-1">
+        <div>
+          <span className="text-3xl font-black text-gray-900">{score}</span>
+          <span className="ml-2 px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-full border border-emerald-100">High Activity</span>
+        </div>
+      </div>
+
+      <p className="text-[11px] text-gray-500 leading-relaxed mb-3">
+        Hiring in your sector is <span className="text-emerald-600 font-semibold">trending up</span>. Talent competition is currently moderate.
+        {jobCount !== null && <span> <strong className="text-blue-600">{jobCount}</strong> roles matched.</span>}
+      </p>
+
+      {/* Mini bar chart */}
+      <div className="flex items-end gap-0.5 h-12">
+        {bars.map((h, i) => (
+          <div
+            key={i}
+            className={`flex-1 rounded-sm transition-all ${i === bars.length - 1 ? 'bg-blue-600' : 'bg-blue-100'}`}
+            style={{ height: `${(h / 10) * 100}%` }}
+          />
+        ))}
+      </div>
+
+      <Link
+        href="/career"
+        className="mt-3 flex items-center justify-center gap-1.5 w-full py-2 border border-gray-100 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 hover:text-blue-600 transition-all"
+      >
+        View Full Dashboard <ExternalLink size={11} />
+      </Link>
+    </div>
+  );
+}
+
+export default function FeedWidgets() {
+  return (
+    <div className="space-y-4">
+      <TrendingSkillsCard />
+      <TopJobMatchesCard />
+      <MarketPulseCard />
+    </div>
+  );
+}

@@ -21,6 +21,7 @@ const {
   completeParentProfileValidation,
   completeProfessionalLearnerProfileValidation,
   completeOrganizationProfileValidation,
+  completeHrProfessionalProfileValidation,
   updateIdentityValidation,
 } = require('./auth.validation');
 
@@ -127,6 +128,14 @@ router.post('/complete-profile/organization',
   authenticate,
   sanitizeBody,
   completeOrganizationProfileValidation,
+  validate,
+  authController.completeProfile
+);
+
+router.post('/complete-profile/hr_professional',
+  authenticate,
+  sanitizeBody,
+  completeHrProfessionalProfileValidation,
   validate,
   authController.completeProfile
 );

@@ -364,6 +364,38 @@ const getOrganizationProfile = async (userId) => {
   return rows[0] || null;
 };
 
+const createHrProfessionalProfile = async (data) => {
+  const [result] = await pool.query(
+    `INSERT INTO hr_professional_profiles
+      (user_id, company_name, hr_role, industry, experience_years,
+       location, linkedin_url, about, skills)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+       company_name = VALUES(company_name),
+       hr_role = VALUES(hr_role),
+       industry = COALESCE(VALUES(industry), industry),
+       experience_years = COALESCE(VALUES(experience_years), experience_years),
+       location = COALESCE(VALUES(location), location),
+       linkedin_url = COALESCE(VALUES(linkedin_url), linkedin_url),
+       about = COALESCE(VALUES(about), about),
+       skills = COALESCE(VALUES(skills), skills)`,
+    [
+      data.user_id, data.company_name || '', data.hr_role || 'HR Professional',
+      data.industry || null, data.experience_years || null,
+      data.location || null, data.linkedin_url || null,
+      data.about || null, data.skills ? JSON.stringify(data.skills) : null,
+    ]
+  );
+  return result.insertId || result.affectedRows;
+};
+
+const getHrProfessionalProfile = async (userId) => {
+  const [rows] = await pool.query(
+    'SELECT * FROM hr_professional_profiles WHERE user_id = ? LIMIT 1', [userId]
+  );
+  return rows[0] || null;
+};
+
 const checkUsernameAvailable = async (username, excludeUserId) => {
   const [rows] = await pool.query(
     'SELECT id FROM users WHERE username = ? AND id != ? LIMIT 1',
@@ -436,7 +468,7 @@ module.exports = {
   checkUsernameAvailable, updateUserIdentity,
   createSession, deactivateSession, deactivateAllSessions,
   createStudentProfile, createTeacherProfile, createInstituteProfile,
-  createParentProfile, createProfessionalLearnerProfile, createOrganizationProfile,
+  createParentProfile, createProfessionalLearnerProfile, createOrganizationProfile, createHrProfessionalProfile,
   getStudentProfile, getTeacherProfile, getInstituteProfile,
-  getParentProfile, getProfessionalLearnerProfile, getOrganizationProfile,
+  getParentProfile, getProfessionalLearnerProfile, getOrganizationProfile, getHrProfessionalProfile,
 };

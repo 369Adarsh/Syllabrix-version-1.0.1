@@ -3,9 +3,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import StudentDashboard from './StudentDashboard';
 import ProfessionalDashboard from './ProfessionalDashboard';
 import ParentDashboard from './ParentDashboard';
+import HRDashboard from './HRDashboard';
 import { Loader2, ShieldAlert, Users } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { postsAPI } from '@/lib/api/posts.api';
 import CreatePostBox from '@/components/feed/CreatePostBox';
@@ -13,7 +13,6 @@ import PostCard from '@/components/feed/PostCard';
 
 export default function DashboardRouter() {
   const { user, loading } = useAuth();
-  const router = useRouter();
 
   // Feed state for redirect views
   const [posts, setPosts] = useState([]);
@@ -57,12 +56,15 @@ export default function DashboardRouter() {
 
   // ═══ PERSONA ROUTING ═══
   
+  if (user.user_type === 'hr_professional') {
+    return <HRDashboard />;
+  }
+
   if (user.user_type === 'professional_learner' || user.user_type === 'organization') {
-    router.replace('/career/feed');
     return (
-      <div className="flex items-center justify-center min-h-[40vh]">
-        <Loader2 size={28} className="text-blue-600 animate-spin" />
-      </div>
+      <Suspense fallback={<Loader2 className="animate-spin" />}>
+        <ProfessionalDashboard />
+      </Suspense>
     );
   }
 

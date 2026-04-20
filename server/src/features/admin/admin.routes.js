@@ -75,9 +75,11 @@ router.delete('/library/subjects/:id', requireAdminRole(['moderator']),         
 router.get('/library/books',           requireAdminRole(['moderator', 'analyst']), LibraryCtrl.getBooks);
 router.post('/library/books',          requireAdminRole(['moderator']),            uploadSingle, LibraryCtrl.createBook);
 router.delete('/library/books/:id',    requireAdminRole(['moderator']),            LibraryCtrl.deleteBook);
-router.get('/library/chapters',        requireAdminRole(['moderator', 'analyst']), LibraryCtrl.getChapters);
-router.post('/library/chapters',       requireAdminRole(['moderator']),            LibraryCtrl.createChapter);
-router.delete('/library/chapters/:id', requireAdminRole(['moderator']),            LibraryCtrl.deleteChapter);
+router.get('/library/chapters',             requireAdminRole(['moderator', 'analyst']), LibraryCtrl.getChapters);
+router.post('/library/chapters/bulk',       requireAdminRole(['moderator']),            LibraryCtrl.bulkCreateChapters);
+router.post('/library/chapters',            requireAdminRole(['moderator']),            LibraryCtrl.createChapter);
+router.patch('/library/chapters/:id',       requireAdminRole(['moderator']),            LibraryCtrl.updateChapter);
+router.delete('/library/chapters/:id',      requireAdminRole(['moderator']),            LibraryCtrl.deleteChapter);
 router.get('/library/topics',          requireAdminRole(['moderator', 'analyst']), LibraryCtrl.getTopics);
 router.post('/library/topics',         requireAdminRole(['moderator']),            LibraryCtrl.createTopic);
 router.delete('/library/topics/:id',   requireAdminRole(['moderator']),            LibraryCtrl.deleteTopic);

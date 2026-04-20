@@ -31,7 +31,7 @@ const registerValidation = [
 
   body('user_type')
     .notEmpty().withMessage('User type is required')
-    .isIn(['student', 'teacher', 'institute', 'parent', 'professional_learner', 'organization']).withMessage('Invalid user type'),
+    .isIn(['student', 'teacher', 'institute', 'parent', 'professional_learner', 'organization', 'hr_professional']).withMessage('Invalid user type'),
 
   body('date_of_birth')
     .optional({ nullable: true, checkFalsy: true })
@@ -47,8 +47,11 @@ const registerValidation = [
   // Guardian ID for students
   body('guardian_id').optional().trim().isLength({ max: 15 }),
 
-  // Company Name for organization
+  // Company Name for organization / hr_professional
   body('company_name').optional().trim().isLength({ max: 200 }),
+
+  // HR Role for hr_professional
+  body('hr_role').optional().trim().isLength({ max: 150 }),
 
   // Children bundle for unified registration
   body('children').optional().isArray(),
@@ -199,6 +202,26 @@ const completeProfessionalLearnerProfileValidation = [
   body('mandatory_courses').optional().isObject(),
 ];
 
+const completeHrProfessionalProfileValidation = [
+  body('full_name')
+    .trim()
+    .notEmpty().withMessage('Full name is required')
+    .isLength({ min: 2, max: 100 }),
+
+  body('company_name').optional().trim().isLength({ max: 200 }),
+  body('hr_role').optional().trim().isLength({ max: 150 }),
+  body('industry').optional().trim().isLength({ max: 100 }),
+  body('experience_years').optional().isInt({ min: 0, max: 60 }),
+  body('linkedin_url').optional({ checkFalsy: true }).trim().isURL().withMessage('Invalid LinkedIn URL'),
+  body('about').optional().trim().isLength({ max: 1000 }),
+  body('bio').optional().trim().isLength({ max: 1000 }),
+  body('skills').optional().isArray(),
+  body('candidate_preference').optional().isArray(),
+  body('location').optional().trim().isLength({ max: 200 }),
+  body('city').optional().trim().isLength({ max: 100 }),
+  body('state').optional().trim().isLength({ max: 100 }),
+];
+
 const updateIdentityValidation = [
   body('username')
     .optional()
@@ -222,5 +245,6 @@ module.exports = {
   completeParentProfileValidation,
   completeProfessionalLearnerProfileValidation,
   completeOrganizationProfileValidation,
+  completeHrProfessionalProfileValidation,
   updateIdentityValidation,
 };

@@ -6,14 +6,26 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { postsAPI } from '@/lib/api/posts.api';
-import { Heart, MessageCircle, Share2, Bookmark, Send, Loader2, MoreHorizontal, Trash2, Flag, Copy, EyeOff, Pencil } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Bookmark, Send, Loader2, MoreHorizontal, Trash2, Flag, Copy, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
+
+const REACTIONS = [
+  { key: 'like',      emoji: '👍', label: 'Like',      color: 'text-blue-600'   },
+  { key: 'love',      emoji: '❤️', label: 'Love',      color: 'text-red-500'    },
+  { key: 'insightful',emoji: '💡', label: 'Insightful',color: 'text-amber-500'  },
+  { key: 'celebrate', emoji: '🎉', label: 'Celebrate', color: 'text-emerald-500'},
+  { key: 'support',   emoji: '🤝', label: 'Support',   color: 'text-indigo-500' },
+  { key: 'curious',   emoji: '🤔', label: 'Curious',   color: 'text-orange-500' },
+  { key: 'fire',      emoji: '🔥', label: 'Fire',      color: 'text-rose-500'   },
+];
 
 export default function PostCard({ post: initialPost, onDelete }) {
   const { user } = useAuth();
   const [post, setPost] = useState(initialPost);
-  const [liked, setLiked] = useState(!!initialPost?.user_reaction);
+  const [reaction, setReaction] = useState(initialPost?.user_reaction || null);
   const [saved, setSaved] = useState(!!initialPost?.is_saved);
+  const [showReactions, setShowReactions] = useState(false);
+  const [reactionTimer, setReactionTimer] = useState(null);
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState('');
@@ -58,9 +70,31 @@ export default function PostCard({ post: initialPost, onDelete }) {
     }
   };
 
-  const handleLike = async () => {
-    try { await postsAPI.like(post.id, { reaction_type: 'amazing' }); setLiked(!liked); setPost(p => ({ ...p, likes_count: liked ? p.likes_count - 1 : p.likes_count + 1 })); } catch { toast.error('Could not like'); }
+  const handleReaction = async (key) => {
+    setShowReactions(false);
+    const removing = reaction === key;
+    const prev = reaction;
+    setReaction(removing ? null : key);
+    setPost(p => ({ ...p, likes_count: removing ? Math.max(0, p.likes_count - 1) : prev ? p.likes_count : p.likes_count + 1 }));
+    try {
+      await postsAPI.like(post.id, { reaction_type: key });
+    } catch {
+      setReaction(prev);
+      setPost(p => ({ ...p, likes_count: removing ? p.likes_count + 1 : Math.max(0, p.likes_count - 1) }));
+      toast.error('Could not react');
+    }
   };
+
+  const openReactions = () => {
+    const t = setTimeout(() => setShowReactions(true), 400);
+    setReactionTimer(t);
+  };
+  const closeReactions = () => {
+    if (reactionTimer) clearTimeout(reactionTimer);
+    setShowReactions(false);
+  };
+
+  const currentReaction = REACTIONS.find(r => r.key === reaction);
 
   const handleSave = async () => {
     try { await postsAPI.toggleSave(post.id); setSaved(!saved); toast.success(saved ? 'Unsaved' : 'Saved!'); } catch { toast.error('Could not save'); }
@@ -185,19 +219,70 @@ export default function PostCard({ post: initialPost, onDelete }) {
 
       {/* Stats */}
       <div className="flex items-center gap-4 text-[11px] text-gray-400 px-4 py-2">
-        {post.likes_count > 0 && <span className="flex items-center gap-1"><Heart size={11} className="text-red-400" /> {post.likes_count}</span>}
+        {post.likes_count > 0 && <span className="flex items-center gap-1"><span className="text-xs">{currentReaction?.emoji || '👍'}</span> {post.likes_count}</span>}
         {post.comments_count > 0 && <span>{post.comments_count} comment{post.comments_count !== 1 ? 's' : ''}</span>}
         {post.shares_count > 0 && <span>{post.shares_count} share{post.shares_count !== 1 ? 's' : ''}</span>}
       </div>
 
       {/* Actions — Calibrated for Touch */}
       <div className="flex items-center border-t border-gray-100 px-2 py-1 md:py-0">
-        <motion.button whileTap={{ scale: 0.92 }} onClick={handleLike} className={`flex-1 flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 py-2.5 rounded-xl transition-all mx-0.5 ${liked ? 'text-red-500 bg-red-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
-          <motion.span animate={liked ? { scale: [1, 1.4, 1] } : {}} transition={{ duration: 0.3 }}>
-            <Heart size={18} fill={liked ? 'currentColor' : 'none'} strokeWidth={2.5} />
-          </motion.span>
-          <span className="text-[10px] md:text-xs font-black uppercase tracking-widest">{liked ? 'Strategic' : 'Like'}</span>
-        </motion.button>
+
+        {/* Like button with emoji picker */}
+        <div className="flex-1 relative" onMouseLeave={closeReactions}>
+          <AnimatePresence>
+            {showReactions && (
+              <motion.div
+                initial={{ opacity: 0, y: 6, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 6, scale: 0.9 }}
+                transition={{ duration: 0.15 }}
+                className="absolute bottom-full left-0 mb-2 flex items-center gap-1 bg-white border border-gray-100 rounded-2xl shadow-xl px-2 py-1.5 z-50"
+                onMouseEnter={() => { if (reactionTimer) clearTimeout(reactionTimer); }}
+              >
+                {REACTIONS.map((r, i) => (
+                  <motion.button
+                    key={r.key}
+                    initial={{ opacity: 0, y: 8, scale: 0.5 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ delay: i * 0.04, type: 'spring', stiffness: 300 }}
+                    onClick={() => handleReaction(r.key)}
+                    title={r.label}
+                    className="flex flex-col items-center gap-0.5 group px-1"
+                  >
+                    <motion.span
+                      whileHover={{ scale: 1.4, y: -4 }}
+                      transition={{ type: 'spring', stiffness: 400 }}
+                      className="text-xl leading-none"
+                    >
+                      {r.emoji}
+                    </motion.span>
+                    <span className={`text-[9px] font-bold opacity-0 group-hover:opacity-100 transition-opacity ${r.color}`}>
+                      {r.label}
+                    </span>
+                  </motion.button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <motion.button
+            whileTap={{ scale: 0.92 }}
+            onClick={() => reaction ? handleReaction(reaction) : handleReaction('like')}
+            onMouseEnter={openReactions}
+            className={`w-full flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 py-2.5 rounded-xl transition-all mx-0.5 ${reaction ? 'bg-gray-50' : 'text-gray-500 hover:bg-gray-50'}`}
+          >
+            <motion.span animate={reaction ? { scale: [1, 1.4, 1] } : {}} transition={{ duration: 0.3 }} className={currentReaction ? '' : 'text-gray-500'}>
+              {currentReaction ? (
+                <span className="text-lg leading-none">{currentReaction.emoji}</span>
+              ) : (
+                <Heart size={18} strokeWidth={2.5} />
+              )}
+            </motion.span>
+            <span className={`text-[10px] md:text-xs font-black uppercase tracking-widest ${currentReaction ? currentReaction.color : ''}`}>
+              {currentReaction ? currentReaction.label : 'Like'}
+            </span>
+          </motion.button>
+        </div>
 
         <motion.button whileTap={{ scale: 0.92 }} onClick={loadComments} className={`flex-1 flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 py-2.5 rounded-xl transition-all mx-0.5 ${showComments ? 'text-blue-600 bg-blue-50/50' : 'text-gray-500 hover:bg-gray-50'}`}>
           <MessageCircle size={18} strokeWidth={2.5} />
@@ -206,7 +291,7 @@ export default function PostCard({ post: initialPost, onDelete }) {
 
         <motion.button whileTap={{ scale: 0.92 }} onClick={handleShare} className="flex-1 flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 py-2.5 rounded-xl text-gray-500 hover:bg-gray-50 transition-all mx-0.5">
           <Share2 size={18} strokeWidth={2.5} />
-          <span className="text-[10px] md:text-xs font-black uppercase tracking-widest">Deploy</span>
+          <span className="text-[10px] md:text-xs font-black uppercase tracking-widest">Share</span>
         </motion.button>
 
         <motion.button whileTap={{ scale: 0.85 }} onClick={handleSave} className={`flex items-center justify-center p-3 rounded-xl transition-all ${saved ? 'text-amber-500 bg-amber-50' : 'text-gray-400 hover:bg-gray-50'}`}>

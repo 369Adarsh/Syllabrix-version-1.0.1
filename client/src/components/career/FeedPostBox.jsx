@@ -1,82 +1,69 @@
 'use client';
-import React, { useState } from 'react';
-import { 
-  Image as ImageIcon, Video, Smile,
-  Send, Plus, X, Loader2
-} from 'lucide-react';
+import { useState } from 'react';
+import { Image as ImageIcon, BarChart2, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { postsAPI } from '@/lib/api/posts.api';
 
-const FeedPostBox = ({ onPostCreated }) => {
+export default function FeedPostBox({ onPostCreated }) {
   const { user } = useAuth();
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
+  const [focused, setFocused] = useState(false);
+
+  const avatar = user?.profile_photo_url
+    || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user?.full_name || 'U')}`;
 
   const handleSubmit = async () => {
     if (!content.trim()) return;
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(r => setTimeout(r, 1000));
-      if (onPostCreated) {
-        onPostCreated({
-          id: Date.now(),
-          user_id: user?.id,
-          username: user?.username,
-          full_name: user?.full_name || user?.username,
-          profile_photo_url: user?.profile_photo_url,
-          content,
-          created_at: new Date().toISOString(),
-          likes_count: 0,
-          comments_count: 0,
-          shares_count: 0
-        });
-      }
+      const res = await postsAPI.create({ content: content.trim() });
+      const newPost = res.data?.data || res.data;
+      if (onPostCreated && newPost) onPostCreated(newPost);
       setContent('');
-    } catch { /* Silent */ }
+      setFocused(false);
+    } catch { /* silent */ }
     finally { setLoading(false); }
   };
 
-  const ActionBtn = ({ icon: Icon, label, color }) => (
-    <button className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 rounded-xl transition-all group">
-      <Icon size={18} className={`${color} group-hover:scale-110 transition-transform`} />
-      <span className="text-[12px] font-bold text-gray-500 group-hover:text-gray-900 transition-colors uppercase tracking-widest">{label}</span>
-    </button>
-  );
-
   return (
-    <div className="bg-white rounded-3xl md:rounded-[32px] border border-gray-100 p-6 shadow-sm shadow-gray-100/50 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
-      <div className="flex gap-4">
-        <div className="w-12 h-12 rounded-full bg-blue-100 overflow-hidden shrink-0 border border-gray-100 shadow-sm shadow-transparent hover:shadow-blue-100/50 transition-all">
-          <img 
-            src={user?.profile_photo_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username || 'User'}`} 
-            alt="" 
-            className="w-full h-full object-cover"
-          />
-        </div>
-        <textarea 
+    <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+      <div className="flex items-start gap-3 p-4">
+        <img
+          src={avatar}
+          alt=""
+          className="w-10 h-10 rounded-full object-cover border border-gray-100 shrink-0"
+          onError={e => { e.target.src = 'https://api.dicebear.com/7.x/initials/svg?seed=U'; }}
+        />
+        <textarea
           value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="What's on your mind?"
-          className="flex-1 bg-gray-50 rounded-2xl p-4 text-[13px] text-gray-900 border border-transparent focus:border-blue-100 focus:bg-white focus:outline-none placeholder-gray-400 font-medium resize-none min-h-[100px] transition-all"
+          onChange={e => setContent(e.target.value)}
+          onFocus={() => setFocused(true)}
+          placeholder="Share a market insight or career update..."
+          rows={focused ? 3 : 1}
+          className="flex-1 bg-gray-50 rounded-xl px-4 py-2.5 text-sm text-gray-800 border border-transparent focus:border-blue-200 focus:bg-white focus:outline-none placeholder-gray-400 resize-none transition-all"
         />
       </div>
 
-      <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+      <div className="flex items-center justify-between px-4 py-2.5 border-t border-gray-50">
         <div className="flex items-center gap-1">
-          <ActionBtn icon={ImageIcon} label="Photo" color="text-blue-500" />
-          <ActionBtn icon={Video} label="Video" color="text-purple-500" />
-          <ActionBtn icon={Smile} label="Feeling" color="text-amber-500" />
+          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-500 hover:bg-gray-50 hover:text-blue-600 transition-all">
+            <ImageIcon size={14} className="text-blue-500" /> Media
+          </button>
+          <span className="w-px h-4 bg-gray-200" />
+          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-500 hover:bg-gray-50 hover:text-blue-600 transition-all">
+            <BarChart2 size={14} className="text-blue-500" /> Poll
+          </button>
         </div>
-        <button 
+        <button
           onClick={handleSubmit}
           disabled={!content.trim() || loading}
-          className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-[13px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-blue-100 transition-all active:scale-95 flex items-center gap-2"
+          className="flex items-center gap-1.5 px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-xs font-bold rounded-xl transition-all shadow-sm shadow-blue-200"
         >
-          {loading ? <Loader2 size={16} className="animate-spin" /> : 'Post'}
+          {loading ? <Loader2 size={13} className="animate-spin" /> : null}
+          Post Intel
         </button>
       </div>
     </div>
   );
-};
-
-export default FeedPostBox;
+}

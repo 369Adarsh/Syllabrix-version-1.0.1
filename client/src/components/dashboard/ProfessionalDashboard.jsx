@@ -12,10 +12,12 @@ import {
   Users, Loader2, Award, Zap, Globe,
   MapPin, Share2, Crown, ZapIcon, Download,
   PlayCircle, MoreHorizontal, X, ArrowUpRight,
-  ExternalLink, UploadCloud, File, Trash2
+  ExternalLink, UploadCloud, File, Trash2, UserCog, UserPlus, UserCheck, Building2
 } from 'lucide-react';
 import { uploadAPI } from '@/lib/api/upload.api';
 import { postsAPI } from '@/lib/api/posts.api';
+import { searchAPI } from '@/lib/api/search.api';
+import { followAPI } from '@/lib/api/follow.api';
 import CreatePostBox from '@/components/feed/CreatePostBox';
 import PostCard from '@/components/feed/PostCard';
 import ProfileHeaderWidget from '@/components/widgets/ProfileHeaderWidget';
@@ -202,9 +204,9 @@ function PlaybookView({ task, data, onBack }) {
 }
 
 function StrategyOverlay({ isOpen, onClose, data, onRecalibrate, isRecalibrating }) {
-  if (!isOpen) return null;
   const [view, setView] = useState('roadmap');
   const [selectedTask, setSelectedTask] = useState(null);
+  if (!isOpen) return null;
 
   const skillGap = data?.skillGaps?.[0]?.skill_name || 'Market Governance';
   const target = data?.profile?.target_role || 'Senior Lead Roles';
@@ -737,6 +739,112 @@ function OnboardingPrompt() {
   );
 }
 
+// ── HR Professionals discovery widget for professional learners ───────────────
+
+function HRConnectWidget() {
+  const { user } = useAuth();
+  const [hrPros, setHrPros] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [connected, setConnected] = useState({});
+
+  useEffect(() => {
+    searchAPI.search({ q: '', type: 'people', user_type: 'hr_professional', limit: 5 })
+      .then(r => {
+        const people = r.data?.data?.users || r.data?.data || r.data || [];
+        setHrPros(Array.isArray(people) ? people.filter(p => p.id !== user?.id) : []);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [user?.id]);
+
+  const handleConnect = async (id) => {
+    setConnected(prev => ({ ...prev, [id]: 'loading' }));
+    try {
+      await followAPI.toggle(id);
+      setConnected(prev => ({ ...prev, [id]: 'connected' }));
+    } catch {
+      setConnected(prev => ({ ...prev, [id]: 'idle' }));
+    }
+  };
+
+  if (!loading && hrPros.length === 0) return null;
+
+  return (
+    <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
+        <div className="flex items-center gap-2">
+          <UserCog size={14} className="text-teal-600" />
+          <h3 className="text-sm font-bold text-gray-900">HR Professionals Near You</h3>
+        </div>
+        <Link href="/explore" className="text-xs font-semibold text-blue-600 hover:underline flex items-center gap-0.5">
+          Find more <ChevronRight size={12} />
+        </Link>
+      </div>
+
+      {loading ? (
+        <div className="divide-y divide-gray-50">
+          {[1,2,3].map(i => (
+            <div key={i} className="flex items-center gap-3 px-4 py-3 animate-pulse">
+              <div className="w-9 h-9 rounded-full bg-gray-100 shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <div className="h-3 bg-gray-100 rounded w-2/3" />
+                <div className="h-2 bg-gray-100 rounded w-1/2" />
+              </div>
+              <div className="w-20 h-7 bg-gray-100 rounded-lg shrink-0" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="divide-y divide-gray-50">
+          {hrPros.slice(0, 4).map(p => {
+            const avatar = p.profile_photo_url
+              || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(p.username || 'U')}`;
+            const status = connected[p.id] || (p.is_following ? 'connected' : 'idle');
+            return (
+              <div key={p.id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
+                <Link href={`/profile/${p.id}`} className="shrink-0">
+                  <img src={avatar} alt="" className="w-9 h-9 rounded-full object-cover border border-gray-100"
+                    onError={e => { e.target.src = 'https://api.dicebear.com/7.x/initials/svg?seed=U'; }} />
+                </Link>
+                <div className="flex-1 min-w-0">
+                  <Link href={`/profile/${p.id}`} className="text-xs font-semibold text-gray-800 hover:text-blue-600 transition-colors truncate block">
+                    {p.full_name || p.username}
+                  </Link>
+                  <p className="text-[11px] text-gray-400 truncate">
+                    {p.profile?.hr_role || p.headline || 'HR Professional'}
+                    {(p.profile?.company_name || p.company) && (
+                      <span className="text-teal-600"> · {p.profile?.company_name || p.company}</span>
+                    )}
+                  </p>
+                </div>
+                <button
+                  onClick={() => status === 'idle' && handleConnect(p.id)}
+                  disabled={status !== 'idle'}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all shrink-0 ${
+                    status === 'connected'
+                      ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                      : 'bg-teal-50 text-teal-600 border border-teal-100 hover:bg-teal-100'
+                  } disabled:opacity-60`}>
+                  {status === 'loading' ? <Loader2 size={11} className="animate-spin" /> :
+                   status === 'connected' ? <><UserCheck size={11} /> Connected</> :
+                   <><UserPlus size={11} /> Connect</>}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="px-4 py-2.5 border-t border-gray-50 bg-gradient-to-r from-teal-50/50 to-emerald-50/50">
+        <p className="text-[11px] text-gray-500">
+          Connect with HR pros to get noticed for job opportunities.{' '}
+          <Link href="/jobs" className="text-teal-600 font-semibold hover:underline">Browse open jobs →</Link>
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ── Root export ───────────────────────────────────────────────────────────────
 
 export default function ProfessionalDashboard() {
@@ -1044,8 +1152,9 @@ export default function ProfessionalDashboard() {
                 <div className="xl:col-span-2">
                   <StrategicSuite data={data} loading={loading} />
                 </div>
-                <div>
+                <div className="space-y-4">
                   <ResumeCard data={data} onUploaded={loadDashboard} />
+                  <HRConnectWidget />
                 </div>
               </div>
 
