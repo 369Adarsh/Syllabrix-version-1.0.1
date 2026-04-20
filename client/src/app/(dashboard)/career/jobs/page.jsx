@@ -9,13 +9,43 @@ import {
   BarChart3, Globe, ArrowRight, Loader2, ChevronLeft
 } from 'lucide-react';
 
-// ── Fallback apply URL when AI didn't generate one ───────────────────────────
+// ── Known career page map (client-side safety net) ───────────────────────────
+const CAREER_PAGES = {
+  'google':        'https://careers.google.com/jobs/results/?q=',
+  'microsoft':     'https://careers.microsoft.com/us/en/search-results?keywords=',
+  'amazon':        'https://www.amazon.jobs/en/search?base_query=',
+  'infosys':       'https://career.infosys.com/joblist#SearchKey=',
+  'tcs':           'https://www.tcs.com/careers/tcs-ibegin?searchquery=',
+  'wipro':         'https://careers.wipro.com/careers-home/jobs?keyword=',
+  'accenture':     'https://www.accenture.com/in-en/careers/jobsearch?jk=',
+  'deloitte':      'https://apply.deloitte.com/careers/SearchJobs/',
+  'sap':           'https://jobs.sap.com/search/?q=',
+  'ibm':           'https://www.ibm.com/careers/search?keywords=',
+  'cognizant':     'https://careers.cognizant.com/global/en/search-results?keywords=',
+  'hcl':           'https://www.hcltech.com/careers/search-jobs?keyword=',
+  'capgemini':     'https://www.capgemini.com/in-en/careers/job-search/?search=',
+  'tech mahindra': 'https://careers.techmahindra.com/ListAllJobs?keyword=',
+  'oracle':        'https://careers.oracle.com/jobs/#en/sites/jobsearch/requisitions?keyword=',
+  'salesforce':    'https://careers.salesforce.com/en/jobs/?search=',
+};
+
 function buildApplyUrl(job) {
-  if (job.apply_url) return job.apply_url;
-  // Google Jobs deep link as last resort — pulls from company career pages directly
-  const q   = encodeURIComponent(`${job.role_title} ${job.company_name}`);
-  const loc = encodeURIComponent(job.location || 'India');
-  return `https://www.google.com/search?q=${q}+careers+${loc}&ibp=htl;jobs`;
+  const companyKey = (job.company_name || '').toLowerCase().trim();
+  const role = encodeURIComponent(job.role_title || '');
+
+  // 1. Known career page — always reliable
+  if (CAREER_PAGES[companyKey]) return CAREER_PAGES[companyKey] + role;
+
+  // 2. Server-provided URL that looks legitimate (not a generic search page)
+  if (job.apply_url &&
+      job.apply_url.startsWith('http') &&
+      !job.apply_url.includes('google.com/search')) {
+    return job.apply_url;
+  }
+
+  // 3. LinkedIn jobs search — works for any company
+  const q = encodeURIComponent(`${job.role_title || ''} ${job.company_name || ''}`);
+  return `https://www.linkedin.com/jobs/search/?keywords=${q}&location=India`;
 }
 
 function Skeleton({ className = '' }) {
@@ -275,7 +305,14 @@ function CompanySearch({ onResults }) {
       const res = await careerAPI.searchCompanyJobs(co, role);
       onResults(res.data?.data || [], co);
     } catch (err) {
-      setSearchError(err.response?.data?.message || 'Could not fetch jobs. Try again.');
+      const errData = err.response?.data;
+      if (errData?.setup_required) {
+        setSearchError('Real job search needs a free RapidAPI key. Ask your admin to add RAPIDAPI_KEY to the server .env (sign up free at rapidapi.com → search "JSearch").');
+      } else if (err.response?.status === 404) {
+        setSearchError(`No live job listings found for "${co}" right now. Try a broader search or check back later.`);
+      } else {
+        setSearchError(errData?.message || 'Could not fetch jobs. Try again.');
+      }
     } finally {
       setSearching(false);
     }

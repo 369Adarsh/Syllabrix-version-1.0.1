@@ -1,8 +1,45 @@
 const { pool } = require('../../database/connection');
+const axios   = require('axios');
 const successResponse = (data) => ({ success: true, data });
 const { generateJSON } = require('../../services/ai.service');
 
 const callGeminiJSON = (prompt) => generateJSON(prompt, { task: 'json', temperature: 0.7, maxTokens: 6000 });
+
+// ── JSearch (RapidAPI) — real jobs from LinkedIn/Indeed/Glassdoor ─────────────
+async function fetchRealJobs(query, location = 'India') {
+  const key = process.env.RAPIDAPI_KEY;
+  if (!key) return null;
+  try {
+    const res = await axios.get('https://jsearch.p.rapidapi.com/search', {
+      params: { query, page: '1', num_pages: '2', country: 'in', date_posted: 'month' },
+      headers: { 'x-rapidapi-key': key, 'x-rapidapi-host': 'jsearch.p.rapidapi.com' },
+      timeout: 10000,
+    });
+    return res.data?.data || [];
+  } catch (err) {
+    console.error('[JSearch] fetch failed:', err.message);
+    return null;
+  }
+}
+
+function formatSalary(job) {
+  if (!job.job_min_salary && !job.job_max_salary) return null;
+  const fmt = (n) => {
+    if (!n) return null;
+    const lpa = (n / 100000).toFixed(1);
+    return `₹${lpa}L`;
+  };
+  const min = fmt(job.job_min_salary);
+  const max = fmt(job.job_max_salary);
+  if (min && max) return `${min}–${max} PA`;
+  return min || max;
+}
+
+function normaliseJobType(t) {
+  if (!t) return 'full_time';
+  const m = { FULLTIME: 'full_time', PARTTIME: 'part_time', CONTRACTOR: 'contract', INTERN: 'internship' };
+  return m[t] || t.toLowerCase();
+}
 
 exports.autoRefreshIfNeeded = async (userId) => {
   const [[lastMatch]] = await pool.query(
@@ -209,6 +246,15 @@ exports.searchCompanyJobs = async (req, res) => {
     return res.status(400).json({ success: false, message: 'Company name is required.' });
   }
 
+  // ── No RapidAPI key → honest error ──────────────────────────────────────────
+  if (!process.env.RAPIDAPI_KEY) {
+    return res.status(503).json({
+      success: false,
+      message: 'Real job search requires a RapidAPI key. Add RAPIDAPI_KEY to your server .env (free at rapidapi.com → JSearch).',
+      setup_required: true,
+    });
+  }
+
   const [[cp]] = await pool.query('SELECT * FROM career_profiles WHERE user_id = ?', [userId]);
   const [[sp]] = await pool.query('SELECT * FROM career_skill_profiles WHERE user_id = ?', [userId]);
 
@@ -216,50 +262,70 @@ exports.searchCompanyJobs = async (req, res) => {
     ? sp.skills_detected.slice(0, 15).map(s => s.name)
     : [];
 
-  const roleHint = role.trim() ? `The user is specifically interested in "${role}" roles.` : '';
+  // ── Step 1: Fetch real jobs from JSearch ────────────────────────────────────
+  const query = role.trim()
+    ? `${role} at ${company} in India`
+    : `${company} jobs India`;
 
-  const companyDomain = company.toLowerCase().replace(/\s+/g, '') + '.com';
+  const rawJobs = await fetchRealJobs(query);
 
-  const prompt = `You are a career advisor for the Indian job market (2026).
-
-Generate 8 realistic current job openings at "${company}" that match this professional's background.
-
-CANDIDATE PROFILE:
-- Experience: ${cp?.experience_years || 0} years
-- Current role: ${cp?.current_role || 'Professional'}
-- Skills: ${skills.join(', ') || 'General professional skills'}
-- Industry: ${cp?.industry || 'Technology'}
-- Location: ${cp?.preferred_location || 'India'}
-${roleHint}
-
-INSTRUCTIONS:
-- All 8 jobs MUST be at "${company}" — no other companies.
-- Generate a realistic mix of roles matching the candidate's profile: 3 high-fit, 3 medium-fit, 2 stretch.
-- Use the company's REAL careers website for apply_url with the role as a search/query parameter.
-- company_logo_url: use https://logo.clearbit.com/${companyDomain}
-
-Return ONLY a valid JSON array, no markdown. Schema per object:
-{
-  "company_name": "${company}",
-  "company_logo_url": "https://logo.clearbit.com/${companyDomain}",
-  "role_title": "...",
-  "location": "...",
-  "salary_range": "₹X-Y LPA",
-  "job_type": "full_time",
-  "experience_required": "X-Y years",
-  "fit_score": 0-100,
-  "fit_category": "high" | "medium" | "stretch",
-  "match_reasons": ["..."],
-  "missing_skills": ["..."],
-  "apply_url": "https://..."
-}`;
-
-  const jobs = await callGeminiJSON(prompt);
-  if (!Array.isArray(jobs) || jobs.length === 0) {
-    return res.status(500).json({ success: false, message: 'Could not fetch jobs for this company. Try again.' });
+  if (!rawJobs || rawJobs.length === 0) {
+    return res.status(404).json({
+      success: false,
+      message: `No real job listings found for "${company}" right now. Try a different search or check back later.`,
+    });
   }
 
-  return res.json({ success: true, data: jobs, company });
+  // ── Step 2: Normalise JSearch → our schema ─────────────────────────────────
+  const companyDomain = company.toLowerCase().replace(/\s+/g, '') + '.com';
+  const normalised = rawJobs.slice(0, 10).map(j => ({
+    company_name:        j.employer_name || company,
+    company_logo:        j.employer_logo || `https://logo.clearbit.com/${companyDomain}`,
+    role_title:          j.job_title,
+    location:            [j.job_city, j.job_state, j.job_country].filter(Boolean).join(', ') || 'India',
+    salary_range:        formatSalary(j),
+    job_type:            normaliseJobType(j.job_employment_type),
+    experience_required: null,
+    apply_url:           j.job_apply_link || `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(j.job_title + ' ' + company)}&location=India`,
+    description_snippet: (j.job_description || '').slice(0, 300),
+    required_skills:     j.job_required_skills || [],
+    posted_at:           j.job_posted_at_datetime_utc || null,
+    source:              'real',
+  }));
+
+  // ── Step 3: AI scores fit against candidate profile ─────────────────────────
+  const fitPrompt = `You are a career advisor. Score each job's fit for this candidate.
+
+CANDIDATE:
+- Experience: ${cp?.experience_years || 0} years
+- Current role: ${cp?.current_role || 'Professional'}
+- Skills: ${skills.join(', ') || 'general skills'}
+- Industry: ${cp?.industry || 'Technology'}
+
+JOBS (${normalised.length} items):
+${normalised.map((j, i) => `${i}. "${j.role_title}" at ${j.company_name}${j.description_snippet ? ' — ' + j.description_snippet.slice(0, 150) : ''}`).join('\n')}
+
+Return ONLY a JSON array of ${normalised.length} objects in the SAME ORDER:
+[{ "fit_score": 0-100, "fit_category": "high"|"medium"|"stretch", "match_reasons": ["..."], "missing_skills": ["..."], "experience_required": "X-Y years" }]`;
+
+  let fitScores = [];
+  try {
+    fitScores = await callGeminiJSON(fitPrompt) || [];
+  } catch { /* non-fatal — use defaults */ }
+
+  const enriched = normalised.map((job, i) => {
+    const fit = fitScores[i] || {};
+    return {
+      ...job,
+      fit_score:           fit.fit_score           ?? 70,
+      fit_category:        fit.fit_category        ?? 'medium',
+      match_reasons:       fit.match_reasons        ?? [],
+      missing_skills:      fit.missing_skills       ?? [],
+      experience_required: fit.experience_required  ?? job.experience_required,
+    };
+  });
+
+  return res.json({ success: true, data: enriched, company });
 };
 
 exports.updateJobAction = async (req, res) => {

@@ -675,16 +675,21 @@ function ResumeCard({ data, onUploaded }) {
 
       {/* Current resume */}
       {resumeUrl ? (
-        <div className="mb-3 flex items-center gap-2.5 p-2.5 bg-gray-50 border border-gray-100 rounded-xl">
+        <div className="mb-3 flex items-center gap-2.5 p-2.5 bg-gray-50 border border-gray-100 rounded-xl overflow-hidden">
           <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0">
             <File size={13} />
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-black text-gray-900 truncate">{fileName}</p>
-            <p className="text-[9px] text-gray-400 font-medium uppercase tracking-widest">{ext} · Primary Resume</p>
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <p className="text-[11px] font-black text-gray-900 truncate leading-tight">{fileName}</p>
+            <p className="text-[9px] text-gray-400 font-medium uppercase tracking-widest mt-0.5">{ext} · Primary Resume</p>
           </div>
-          <a href={resumeUrl} target="_blank" rel="noreferrer"
-            className="text-[9px] font-black text-blue-600 hover:underline shrink-0">View</a>
+          <a
+            href={`https://docs.google.com/viewer?url=${encodeURIComponent(resumeUrl)}&embedded=false`}
+            target="_blank"
+            rel="noreferrer"
+            className="shrink-0 text-[9px] font-black text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2 py-1 rounded-lg transition-all">
+            View PDF
+          </a>
         </div>
       ) : (
         <p className="text-[10px] text-gray-400 font-medium mb-3">No resume uploaded yet. Upload one to boost your ATS score.</p>
