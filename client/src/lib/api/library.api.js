@@ -42,4 +42,8 @@ export const libraryAPI = {
   getSmartChapters: (params) => api.get('/library/smart-chapters', { params }),
 
   ask: (payload) => api.post('/library/ask', payload),
+
+  // POST /api/library/generate/chapter
+  // { board, grade, subject, chapterName, chapterNumber, topics[], syllabusVersion }
+  generateChapter: (payload) => api.post('/library/generate/chapter', payload),
 };

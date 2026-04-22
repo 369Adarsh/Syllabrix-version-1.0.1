@@ -126,4 +126,8 @@ router.get('/smart-chapters', controller.getSmartChapters);
 // POST /api/library/ask
 router.post('/ask', authenticate, controller.askAI);
 
+// POST /api/library/generate/chapter
+// Body: { board, grade, subject, chapterName, chapterNumber, topics[], syllabusVersion }
+router.post('/generate/chapter', authenticate, controller.generateChapter);
+
 module.exports = router;

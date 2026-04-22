@@ -2,6 +2,7 @@ const service = require('./library.service');
 const aiLibraryService = require('../../services/ai-library.service');
 const ncertExtractor = require('../../services/ncert-extractor.service');
 const { getSmartChapters: smartChaptersSvc } = require('../../services/smart-chapters.service');
+const { generateChapter: generateChapterSvc } = require('../../services/generate-chapter.service');
 const { sendSuccess } = require('../../utils/api-response');
 
 // ─── School Library ───────────────────────────────────────────────────────────
@@ -313,6 +314,27 @@ const askAI = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// ─── Generate Chapter ────────────────────────────────────────────────────────
+
+const generateChapter = async (req, res, next) => {
+  try {
+    const { board, grade, subject, chapterName, chapterNumber, topics, syllabusVersion } = req.body;
+    if (!subject || !chapterName) {
+      return res.status(400).json({ success: false, message: 'subject and chapterName are required' });
+    }
+    const data = await generateChapterSvc({
+      board:           board           || null,
+      grade:           grade           ? Number(grade) : null,
+      subject,
+      chapterName,
+      chapterNumber:   chapterNumber   ? Number(chapterNumber) : null,
+      topics:          Array.isArray(topics) ? topics : [],
+      syllabusVersion: syllabusVersion || 'latest',
+    });
+    sendSuccess(res, data, 'Chapter generated');
+  } catch (err) { next(err); }
+};
+
 module.exports = {
   getBoards, getBoardByCode, getSyllabusVersions, getClasses, getSubjects,
   getBooks, getChapters, getTopics,
@@ -330,4 +352,5 @@ module.exports = {
   // Smart Chapters
   getSmartChapters,
   askAI,
+  generateChapter,
 };
