@@ -1278,9 +1278,15 @@ function BulkChapterModal({ onClose, onSave, bookTitle }) {
               {rows.map((row, idx) => (
                 <tr key={row._id} className="group hover:bg-gray-50/50 transition-colors">
                   <td className="px-3 py-2.5">
-                    <input type="number" value={row.chapter_number} onChange={e => setRow(idx, 'chapter_number', e.target.value)}
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={row.chapter_number}
+                      onChange={e => { if (/^\d*$/.test(e.target.value)) setRow(idx, 'chapter_number', e.target.value); }}
                       placeholder={String(idx + 1)}
-                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 font-mono focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all" />
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 font-mono text-center focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+                    />
                   </td>
                   <td className="px-3 py-2.5">
                     <input value={row.title} onChange={e => setRow(idx, 'title', e.target.value)}
@@ -1294,9 +1300,15 @@ function BulkChapterModal({ onClose, onSave, bookTitle }) {
                       className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 placeholder-gray-300 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all" />
                   </td>
                   <td className="px-3 py-2.5">
-                    <input type="number" value={row.estimated_study_time_mins} onChange={e => setRow(idx, 'estimated_study_time_mins', e.target.value)}
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={row.estimated_study_time_mins}
+                      onChange={e => { if (/^\d*$/.test(e.target.value)) setRow(idx, 'estimated_study_time_mins', e.target.value); }}
                       placeholder="60"
-                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 placeholder-gray-300 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all" />
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 placeholder-gray-300 text-center focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+                    />
                   </td>
                   <td className="px-3 py-2.5">
                     {row.file ? (
