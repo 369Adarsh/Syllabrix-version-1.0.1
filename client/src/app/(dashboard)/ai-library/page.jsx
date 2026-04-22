@@ -920,15 +920,49 @@ function ReaderPanel({ selected, isMobile = false }) {
     setAiResponse(null);
     setChaptersLoading(true);
 
-    const params = { version: syllabusVersion };
-    if (selected.type === 'school')      { params.board = selected.board; params.class = selected.grade; params.subject = selected.subjectName; }
-    else if (selected.type === 'exam')   { params.exam = selected.examName; params.subject = selected.subjectName; }
-    else if (selected.type === 'university') { params.subject = selected.subjectName; }
+    // Real subject IDs are integers; fallbacks start with 'fbs-', 'fbe-', 'fb-'
+    const isFallbackId = (id) => !id || String(id).startsWith('fbs') || String(id).startsWith('fbe') || String(id).startsWith('fb-');
 
-    libraryAPI.getSmartChapters(params)
-      .then(r => { const data = r.data?.data || {}; setChapters(data.chapters || []); setBookTitle(data.bookTitle || ''); })
-      .catch(() => setChapters([]))
-      .finally(() => setChaptersLoading(false));
+    const loadChapters = async () => {
+      // ── 1. Try real DB chapters first (school subjects only) ──────────────────
+      if (selected.type === 'school' && !isFallbackId(selected.subjectId)) {
+        try {
+          const booksRes = await libraryAPI.getBooks(selected.subjectId);
+          const books = booksRes.data?.data || [];
+          if (books.length > 0) {
+            const book = books[0];
+            const chapRes = await libraryAPI.getChapters(book.id);
+            const dbChapters = chapRes.data?.data || [];
+            if (dbChapters.length > 0) {
+              setBookTitle(book.title || book.name || '');
+              setChapters(dbChapters.map((ch, i) => ({
+                num:    ch.chapter_number ?? (i + 1),
+                name:   ch.title,
+                dbId:   ch.id,
+                topics: (ch.key_concepts || []).map(k => ({ id: `kc-${k}`, name: k })),
+                description: ch.description,
+                estimated_study_time_mins: ch.estimated_study_time_mins,
+              })));
+              return; // DB had chapters — done
+            }
+          }
+        } catch { /* fall through to AI */ }
+      }
+
+      // ── 2. Fall back to AI/NCERT smart chapters ───────────────────────────────
+      const params = { version: syllabusVersion };
+      if (selected.type === 'school')          { params.board = selected.board; params.class = selected.grade; params.subject = selected.subjectName; }
+      else if (selected.type === 'exam')       { params.exam = selected.examName; params.subject = selected.subjectName; }
+      else if (selected.type === 'university') { params.subject = selected.subjectName; }
+      try {
+        const r = await libraryAPI.getSmartChapters(params);
+        const data = r.data?.data || {};
+        setChapters(data.chapters || []);
+        setBookTitle(data.bookTitle || '');
+      } catch { setChapters([]); }
+    };
+
+    loadChapters().finally(() => setChaptersLoading(false));
   }, [selected, syllabusVersion]);
 
   const handleAsk = useCallback(async (topicOverride, mode = 'explain') => {
