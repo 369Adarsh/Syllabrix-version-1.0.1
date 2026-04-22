@@ -899,34 +899,93 @@ function AIResponse({ response, context, isLoading }) {
   );
 }
 
-// ─── CHAPTER READER ───────────────────────────────────────────────────────────
+// ─── CHAPTER READER (4-tab complete subject guide) ───────────────────────────
 
-function ChapterReader({ content }) {
-  const [tab, setTab]           = useState('content');
-  const [practiceTab, setPracticeTab] = useState('mcq');
+function QCard({ number, question, marks, answerPoints, answerLine, toggleKey, revealed, toggle }) {
+  const isOpen = revealed[toggleKey];
+  const marksColor = marks >= 5 ? 'bg-rose-100 text-rose-700' : marks >= 3 ? 'bg-orange-100 text-orange-700' : marks >= 2 ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700';
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="p-4">
+        <div className="flex items-start gap-3">
+          <span className="w-7 h-7 rounded-xl bg-indigo-100 text-indigo-700 text-[11px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">
+            {number || 'Q'}
+          </span>
+          <div className="flex-1 min-w-0">
+            {marks > 0 && (
+              <span className={`inline-flex items-center gap-0.5 text-[10px] font-black px-2 py-0.5 rounded-full mb-1.5 ${marksColor}`}>
+                {marks} {marks === 1 ? 'Mark' : 'Marks'}
+              </span>
+            )}
+            <p className="text-[14px] text-gray-800 font-semibold leading-relaxed">{question}</p>
+          </div>
+        </div>
+        <button onClick={() => toggle(toggleKey)} className="mt-3 ml-10 flex items-center gap-1.5 text-[12px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors">
+          {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          {isOpen ? 'Hide Answer' : 'Show Answer'}
+        </button>
+      </div>
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+            <div className="bg-emerald-50 border-t border-emerald-100 px-4 py-3">
+              <div className="ml-10 space-y-1.5">
+                {answerLine && <p className="text-[13px] text-emerald-800 font-semibold">{answerLine}</p>}
+                {(answerPoints || []).map((pt, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <span className="w-4 h-4 rounded-full bg-emerald-400 text-white text-[9px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
+                    <p className="text-[13px] text-emerald-900 leading-relaxed font-medium">{pt}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function ChapterReader({ content, chapterName, hasPdf }) {
+  const [tab, setTab]         = useState('guide');
+  const [marksFilter, setMarksFilter] = useState('all');
   const [revealed, setRevealed] = useState({});
 
-  const toggleReveal = (key) => setRevealed(prev => ({ ...prev, [key]: !prev[key] }));
+  const toggle = (key) => setRevealed(prev => ({ ...prev, [key]: !prev[key] }));
 
-  const allIntextQs = (content?.sections || []).flatMap((s, si) =>
-    (s.intext_questions || []).map((q, qi) => ({ ...q, section: s.title, key: `${si}-${qi}` }))
-  );
+  const { subject_guide: guide, chapter_content: chapter, exercises, practice } = content;
 
   const TABS = [
-    { id: 'content',  label: 'Chapter Content', icon: BookCopy },
-    { id: 'intext',   label: 'In-Text Q&A',     icon: PenSquare },
-    { id: 'practice', label: 'Practice',         icon: Target },
+    { id: 'guide',     label: 'Study Guide',      short: 'Guide',   icon: Lightbulb },
+    { id: 'content',   label: 'Full Chapter',      short: 'Chapter', icon: BookCopy },
+    { id: 'exercises', label: 'Exercises Q&A',     short: 'Exercises', icon: PenSquare },
+    { id: 'practice',  label: 'Practice',          short: 'Practice', icon: Target },
   ];
+
+  const practiceByMark = {
+    '1': practice?.one_mark   || [],
+    '2': practice?.two_mark   || [],
+    '3': practice?.three_mark || [],
+    '5': practice?.five_mark  || [],
+  };
+  const allPractice = [
+    ...(practice?.one_mark   || []).map(q => ({ ...q, marks: 1 })),
+    ...(practice?.two_mark   || []).map(q => ({ ...q, marks: 2 })),
+    ...(practice?.three_mark || []).map(q => ({ ...q, marks: 3 })),
+    ...(practice?.five_mark  || []).map(q => ({ ...q, marks: 5 })),
+  ];
+  const filteredPractice = marksFilter === 'all' ? allPractice : allPractice.filter(q => String(q.marks) === marksFilter);
 
   return (
     <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-white overflow-hidden">
-      {/* Tab Bar */}
-      <div className="flex border-b border-gray-100 bg-gray-50/50">
-        {TABS.map(({ id, label, icon: Icon }) => (
+
+      {/* ── Tab Bar ───────────────────────────────────────────────────────── */}
+      <div className="flex border-b border-gray-100 bg-gray-50/60 overflow-x-auto">
+        {TABS.map(({ id, label, short, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setTab(id)}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-3.5 text-[12px] sm:text-[13px] font-bold transition-all ${
+            className={`flex-1 min-w-[80px] flex items-center justify-center gap-1.5 py-3.5 text-[12px] sm:text-[13px] font-bold transition-all whitespace-nowrap px-3 ${
               tab === id
                 ? 'bg-white text-indigo-600 border-b-2 border-indigo-500 shadow-sm'
                 : 'text-gray-500 hover:text-gray-700 hover:bg-white/60'
@@ -934,100 +993,182 @@ function ChapterReader({ content }) {
           >
             <Icon size={14} className="flex-shrink-0" />
             <span className="hidden sm:inline">{label}</span>
-            <span className="sm:hidden">{id === 'content' ? 'Chapter' : id === 'intext' ? 'Q&A' : 'Practice'}</span>
+            <span className="sm:hidden">{short}</span>
           </button>
         ))}
       </div>
 
-      <div className="p-5 sm:p-7 space-y-7 max-h-[70vh] overflow-y-auto">
+      <div className="p-5 sm:p-7 space-y-6 max-h-[75vh] overflow-y-auto">
 
-        {/* ── CONTENT TAB ───────────────────────────────────────────────── */}
-        {tab === 'content' && (
-          <div className="space-y-8">
+        {/* ══════════ TAB 1: STUDY GUIDE ═══════════════════════════════════ */}
+        {tab === 'guide' && guide && (
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl p-6 text-white shadow-lg shadow-indigo-500/20">
+              <p className="text-[11px] font-black uppercase tracking-widest text-indigo-200 mb-1">Complete Study Guide</p>
+              <h2 className="text-[20px] font-black leading-tight mb-3">{chapterName}</h2>
+              {hasPdf && (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold bg-white/20 px-3 py-1 rounded-full">
+                  <CheckCircle2 size={12} /> Based on uploaded textbook PDF
+                </span>
+              )}
+            </div>
+
             {/* Overview */}
-            {content.overview && (
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-5 border border-blue-100">
-                <p className="text-[14px] text-blue-900 leading-relaxed font-medium">{content.overview}</p>
+            {guide.overview && (
+              <div className="space-y-2">
+                <h3 className="text-[14px] font-black text-gray-700 flex items-center gap-2"><BookOpen size={16} className="text-blue-500" /> Chapter Overview</h3>
+                <div className="bg-blue-50 rounded-2xl p-5 border border-blue-100">
+                  <p className="text-[14px] text-blue-900 leading-relaxed">{guide.overview}</p>
+                </div>
               </div>
             )}
 
-            {/* Sections */}
-            {content.sections.map((sec, si) => (
-              <div key={si} className="space-y-4">
-                <h3 className="text-[16px] font-black text-gray-800 tracking-tight border-l-4 border-indigo-500 pl-3 leading-snug">
-                  {sec.title}
-                </h3>
-
-                {sec.content && (
-                  <div className="prose prose-sm max-w-none text-gray-700 leading-relaxed text-[14px]">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-                      {sec.content}
-                    </ReactMarkdown>
-                  </div>
-                )}
-
-                {/* Key Concepts chips */}
-                {sec.key_concepts?.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {sec.key_concepts.map((kc, i) => (
-                      <span key={i} className="px-2.5 py-1 bg-indigo-50 text-indigo-700 text-[11px] font-bold rounded-full border border-indigo-100">
-                        {kc}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                {/* Worked Example */}
-                {sec.worked_example && (
-                  <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-5 border border-emerald-100">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-6 h-6 rounded-lg bg-emerald-500 flex items-center justify-center flex-shrink-0">
-                        <FlaskConical size={13} className="text-white" />
-                      </div>
-                      <span className="text-[13px] font-black text-emerald-800 uppercase tracking-wider">Worked Example</span>
-                    </div>
-                    <p className="text-[13px] font-semibold text-emerald-900 mb-3 bg-white/70 rounded-xl p-3 border border-emerald-100">
-                      {sec.worked_example.problem}
-                    </p>
-                    {sec.worked_example.solution && (
-                      <div className="prose prose-sm max-w-none text-emerald-900 text-[13px] leading-relaxed">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{sec.worked_example.solution}</ReactMarkdown>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {/* Key Formulas */}
-            {content.key_formulas?.length > 0 && (
-              <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-2xl p-5 border border-violet-100">
-                <div className="flex items-center gap-2 mb-4">
-                  <Sigma size={16} className="text-violet-600 flex-shrink-0" />
-                  <span className="text-[14px] font-black text-violet-800">Key Formulas</span>
+            {guide.why_it_matters && (
+              <div className="bg-amber-50 rounded-2xl p-4 border border-amber-100 flex gap-3">
+                <Lightbulb size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-[12px] font-black text-amber-700 uppercase tracking-wider mb-1">Why It Matters</p>
+                  <p className="text-[14px] text-amber-900 leading-relaxed font-medium">{guide.why_it_matters}</p>
                 </div>
-                <div className="space-y-3">
-                  {content.key_formulas.map((f, i) => (
-                    <div key={i} className="flex flex-col sm:flex-row sm:items-start gap-2 bg-white/70 rounded-xl p-3 border border-violet-100">
-                      <code className="text-[14px] font-black text-violet-700 font-mono bg-violet-100 px-3 py-1 rounded-lg flex-shrink-0">
-                        {f.formula}
-                      </code>
-                      <span className="text-[13px] text-violet-900 font-medium leading-relaxed">{f.description}</span>
+              </div>
+            )}
+
+            {/* Topics at a Glance */}
+            {guide.topics_at_a_glance?.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-[14px] font-black text-gray-700 flex items-center gap-2"><List size={16} className="text-emerald-500" /> Topics at a Glance</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {guide.topics_at_a_glance.map((t, i) => (
+                    <div key={i} className="flex items-center gap-2.5 bg-emerald-50 rounded-xl p-3 border border-emerald-100">
+                      <span className="w-5 h-5 rounded-full bg-emerald-500 text-white text-[10px] font-black flex items-center justify-center flex-shrink-0">{i + 1}</span>
+                      <span className="text-[13px] text-emerald-900 font-semibold leading-snug">{t}</span>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Chapter Summary */}
-            {content.chapter_summary?.length > 0 && (
+            {/* Marks Distribution */}
+            {guide.marks_distribution && Object.keys(guide.marks_distribution).length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-[14px] font-black text-gray-700 flex items-center gap-2"><BarChart2 size={16} className="text-rose-500" /> Marks Distribution</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { key: 'one_mark',   label: '1 Mark',   color: 'from-blue-50 to-blue-100 border-blue-200 text-blue-800' },
+                    { key: 'two_mark',   label: '2 Marks',  color: 'from-amber-50 to-amber-100 border-amber-200 text-amber-800' },
+                    { key: 'three_mark', label: '3 Marks',  color: 'from-orange-50 to-orange-100 border-orange-200 text-orange-800' },
+                    { key: 'five_mark',  label: '5 Marks',  color: 'from-rose-50 to-rose-100 border-rose-200 text-rose-800' },
+                  ].map(({ key, label, color }) => guide.marks_distribution[key] ? (
+                    <div key={key} className={`bg-gradient-to-br ${color} rounded-2xl p-3 border`}>
+                      <p className="text-[11px] font-black uppercase tracking-widest mb-1.5">{label}</p>
+                      <p className="text-[12px] font-semibold leading-snug">{guide.marks_distribution[key]}</p>
+                    </div>
+                  ) : null)}
+                </div>
+              </div>
+            )}
+
+            {/* Study Strategy */}
+            {guide.study_strategy?.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-[14px] font-black text-gray-700 flex items-center gap-2"><Brain size={16} className="text-purple-500" /> Study Strategy</h3>
+                <div className="space-y-2">
+                  {guide.study_strategy.map((tip, i) => (
+                    <div key={i} className="flex items-start gap-2.5 bg-purple-50 rounded-xl p-3 border border-purple-100">
+                      <span className="text-purple-500 font-black text-[13px] flex-shrink-0">✦</span>
+                      <p className="text-[13px] text-purple-900 leading-relaxed font-medium">{tip}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Key Terms + Formulas */}
+            {guide.key_terms_and_formulas?.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-[14px] font-black text-gray-700 flex items-center gap-2"><Sigma size={16} className="text-violet-500" /> Key Formulas & Terms</h3>
+                <div className="bg-violet-50 rounded-2xl p-4 border border-violet-100 space-y-2">
+                  {guide.key_terms_and_formulas.map((item, i) => (
+                    <div key={i} className="flex items-start gap-2 text-[13px] text-violet-900">
+                      <span className="text-violet-400 font-black flex-shrink-0">→</span>
+                      <span className="font-medium leading-relaxed">{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ══════════ TAB 2: FULL CHAPTER CONTENT ══════════════════════════ */}
+        {tab === 'content' && chapter && (
+          <div className="space-y-8">
+            {chapter.overview && (
+              <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-2xl p-5 border border-slate-200">
+                <p className="text-[14px] text-slate-700 leading-relaxed font-medium italic">{chapter.overview}</p>
+              </div>
+            )}
+
+            {chapter.sections?.map((sec, si) => (
+              <div key={si} className="space-y-4 pb-6 border-b border-gray-100 last:border-0 last:pb-0">
+                <h3 className="text-[16px] font-black text-gray-900 border-l-4 border-indigo-500 pl-3 leading-snug">{sec.title}</h3>
+                {sec.content && (
+                  <div className="prose prose-sm max-w-none text-gray-700 text-[14px] leading-relaxed">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{sec.content}</ReactMarkdown>
+                  </div>
+                )}
+                {sec.key_terms?.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {sec.key_terms.map((kt, i) => (
+                      <span key={i} className="px-2.5 py-1 bg-indigo-50 text-indigo-700 text-[11px] font-bold rounded-full border border-indigo-100">{kt}</span>
+                    ))}
+                  </div>
+                )}
+                {sec.examples?.map((ex, ei) => (
+                  <div key={ei} className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-5 border border-emerald-100">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-6 h-6 rounded-lg bg-emerald-500 flex items-center justify-center flex-shrink-0">
+                        <FlaskConical size={13} className="text-white" />
+                      </div>
+                      <span className="text-[12px] font-black text-emerald-800 uppercase tracking-widest">Worked Example {sec.examples.length > 1 ? ei + 1 : ''}</span>
+                    </div>
+                    {ex.problem && <p className="text-[13px] font-semibold text-emerald-900 mb-3 bg-white/70 rounded-xl p-3 border border-emerald-100">{ex.problem}</p>}
+                    {ex.solution && (
+                      <div className="prose prose-sm max-w-none text-emerald-900 text-[13px] leading-relaxed">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{ex.solution}</ReactMarkdown>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ))}
+
+            {chapter.formulas?.length > 0 && (
+              <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-2xl p-5 border border-violet-100">
+                <div className="flex items-center gap-2 mb-4">
+                  <Sigma size={16} className="text-violet-600" />
+                  <span className="text-[14px] font-black text-violet-800">Important Formulas</span>
+                </div>
+                <div className="space-y-3">
+                  {chapter.formulas.map((f, i) => (
+                    <div key={i} className="flex flex-col sm:flex-row sm:items-start gap-2 bg-white/70 rounded-xl p-3 border border-violet-100">
+                      <code className="text-[14px] font-black text-violet-700 font-mono bg-violet-100 px-3 py-1 rounded-lg flex-shrink-0">{f.formula}</code>
+                      <span className="text-[13px] text-violet-900 font-medium leading-relaxed">{f.variables || f.description || ''}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {chapter.summary?.length > 0 && (
               <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-5 border border-amber-100">
                 <div className="flex items-center gap-2 mb-4">
-                  <BookText size={16} className="text-amber-700 flex-shrink-0" />
+                  <BookText size={16} className="text-amber-700" />
                   <span className="text-[14px] font-black text-amber-800">Chapter Summary</span>
                 </div>
                 <ul className="space-y-2.5">
-                  {content.chapter_summary.map((pt, i) => (
+                  {chapter.summary.map((pt, i) => (
                     <li key={i} className="flex items-start gap-2.5">
                       <span className="w-5 h-5 rounded-full bg-amber-400 text-white text-[10px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</span>
                       <span className="text-[13px] text-amber-900 leading-relaxed font-medium">{pt}</span>
@@ -1039,69 +1180,51 @@ function ChapterReader({ content }) {
           </div>
         )}
 
-        {/* ── IN-TEXT Q&A TAB ────────────────────────────────────────────── */}
-        {tab === 'intext' && (
+        {/* ══════════ TAB 3: CHAPTER EXERCISES ════════════════════════════ */}
+        {tab === 'exercises' && (
           <div className="space-y-4">
-            {allIntextQs.length === 0 && (
-              <p className="text-[13px] text-gray-400 text-center py-8">No in-text questions in this chapter.</p>
-            )}
-            {allIntextQs.map((q, i) => (
-              <div key={q.key} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="p-4">
-                  <div className="flex items-start gap-3">
-                    <span className="w-7 h-7 rounded-xl bg-indigo-100 text-indigo-700 text-[11px] font-black flex items-center justify-center flex-shrink-0 mt-0.5">
-                      Q{i + 1}
-                    </span>
-                    <div className="flex-1">
-                      <p className="text-[12px] text-indigo-500 font-semibold mb-1">{q.section}</p>
-                      <p className="text-[14px] text-gray-800 font-semibold leading-relaxed">{q.question}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => toggleReveal(`iq-${q.key}`)}
-                    className="mt-3 ml-10 flex items-center gap-1.5 text-[12px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors"
-                  >
-                    {revealed[`iq-${q.key}`] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    {revealed[`iq-${q.key}`] ? 'Hide Answer' : 'Show Answer'}
-                  </button>
-                </div>
-                <AnimatePresence>
-                  {revealed[`iq-${q.key}`] && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="bg-green-50 border-t border-green-100 px-4 py-3 ml-0">
-                        <div className="flex items-start gap-2.5 ml-10">
-                          <CheckCircle2 size={16} className="text-green-600 flex-shrink-0 mt-0.5" />
-                          <p className="text-[13px] text-green-800 leading-relaxed font-medium">{q.answer}</p>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+            {hasPdf && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-100 rounded-xl text-[12px] font-bold text-emerald-700">
+                <CheckCircle2 size={14} /> Questions extracted from the uploaded textbook PDF
               </div>
+            )}
+            {exercises?.length === 0 && (
+              <div className="py-10 text-center">
+                <p className="text-[14px] text-gray-400 font-medium">No exercises found in this chapter.</p>
+              </div>
+            )}
+            {(exercises || []).map((ex, i) => (
+              <QCard
+                key={i}
+                number={ex.number || String(i + 1)}
+                question={ex.question}
+                marks={ex.marks}
+                answerPoints={ex.answer_points}
+                toggleKey={`ex-${i}`}
+                revealed={revealed}
+                toggle={toggle}
+              />
             ))}
           </div>
         )}
 
-        {/* ── PRACTICE TAB ───────────────────────────────────────────────── */}
+        {/* ══════════ TAB 4: PRACTICE QUESTIONS ═══════════════════════════ */}
         {tab === 'practice' && (
           <div className="space-y-5">
-            {/* Practice sub-tabs */}
-            <div className="flex gap-2">
+            {/* Marks filter */}
+            <div className="flex gap-2 flex-wrap">
               {[
-                { id: 'mcq',   label: `MCQ (${content.practice.mcq.length})` },
-                { id: 'short', label: `Short (${content.practice.short_answer.length})` },
-                { id: 'long',  label: `Long (${content.practice.long_answer.length})` },
+                { id: 'all', label: `All (${allPractice.length})` },
+                { id: '1',   label: `1 Mark (${practiceByMark['1'].length})` },
+                { id: '2',   label: `2 Marks (${practiceByMark['2'].length})` },
+                { id: '3',   label: `3 Marks (${practiceByMark['3'].length})` },
+                { id: '5',   label: `5 Marks (${practiceByMark['5'].length})` },
               ].map(({ id, label }) => (
                 <button
                   key={id}
-                  onClick={() => setPracticeTab(id)}
-                  className={`flex-1 py-2 rounded-xl text-[12px] font-bold transition-all ${
-                    practiceTab === id
+                  onClick={() => setMarksFilter(id)}
+                  className={`px-4 py-2 rounded-xl text-[12px] font-bold transition-all ${
+                    marksFilter === id
                       ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
@@ -1111,129 +1234,26 @@ function ChapterReader({ content }) {
               ))}
             </div>
 
-            {/* MCQ */}
-            {practiceTab === 'mcq' && (
-              <div className="space-y-4">
-                {content.practice.mcq.map((q, i) => (
-                  <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-                    <div className="flex items-start gap-2 mb-3">
-                      <span className="w-6 h-6 rounded-lg bg-blue-100 text-blue-700 text-[11px] font-black flex items-center justify-center flex-shrink-0">{i + 1}</span>
-                      <div>
-                        {q.topic && <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">{q.topic}</p>}
-                        <p className="text-[14px] text-gray-800 font-semibold leading-relaxed">{q.question}</p>
-                      </div>
-                    </div>
-                    <div className="space-y-1.5 pl-8">
-                      {(q.options || []).map((opt, oi) => {
-                        const letter = String.fromCharCode(65 + oi);
-                        const isCorrect = revealed[`mcq-${i}`] && q.correct === letter;
-                        return (
-                          <div
-                            key={oi}
-                            className={`px-3 py-2 rounded-xl text-[13px] font-medium transition-all ${
-                              isCorrect
-                                ? 'bg-green-100 text-green-800 border border-green-200 font-bold'
-                                : 'bg-gray-50 text-gray-700 border border-gray-100'
-                            }`}
-                          >
-                            {opt}
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div className="pl-8 mt-3">
-                      {!revealed[`mcq-${i}`] ? (
-                        <button
-                          onClick={() => toggleReveal(`mcq-${i}`)}
-                          className="text-[12px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1.5"
-                        >
-                          <ChevronDown size={14} /> Show Answer
-                        </button>
-                      ) : (
-                        <div className="space-y-1">
-                          <p className="text-[12px] font-black text-green-700">✓ Correct: {q.correct}</p>
-                          {q.explanation && <p className="text-[12px] text-gray-600 leading-relaxed">{q.explanation}</p>}
-                          <button onClick={() => toggleReveal(`mcq-${i}`)} className="text-[11px] text-gray-400 hover:text-gray-600 flex items-center gap-1">
-                            <ChevronUp size={12} /> Hide
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                {content.practice.mcq.length === 0 && <p className="text-[13px] text-gray-400 text-center py-6">No MCQs generated.</p>}
-              </div>
+            {filteredPractice.length === 0 && (
+              <p className="text-[13px] text-gray-400 text-center py-8">No questions for this filter.</p>
             )}
-
-            {/* Short Answer */}
-            {practiceTab === 'short' && (
-              <div className="space-y-4">
-                {content.practice.short_answer.map((q, i) => (
-                  <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-                    <div className="flex items-start gap-2 mb-2">
-                      <span className="w-6 h-6 rounded-lg bg-orange-100 text-orange-700 text-[11px] font-black flex items-center justify-center flex-shrink-0">Q{i+1}</span>
-                      <div>
-                        {q.topic && <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">{q.topic}</p>}
-                        <p className="text-[14px] text-gray-800 font-semibold leading-relaxed">{q.question}</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => toggleReveal(`sa-${i}`)}
-                      className="ml-8 mt-1 flex items-center gap-1.5 text-[12px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors"
-                    >
-                      {revealed[`sa-${i}`] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                      {revealed[`sa-${i}`] ? 'Hide Answer' : 'Show Answer'}
-                    </button>
-                    <AnimatePresence>
-                      {revealed[`sa-${i}`] && (
-                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                          <div className="mt-3 ml-8 bg-green-50 rounded-xl p-3 border border-green-100">
-                            <p className="text-[13px] text-green-800 leading-relaxed font-medium">{q.answer}</p>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                ))}
-                {content.practice.short_answer.length === 0 && <p className="text-[13px] text-gray-400 text-center py-6">No short-answer questions generated.</p>}
+            {filteredPractice.map((q, i) => (
+              <div key={i}>
+                {q.topic && (
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1 mb-1.5">Topic: {q.topic}</p>
+                )}
+                <QCard
+                  number={String(i + 1)}
+                  question={q.question}
+                  marks={q.marks}
+                  answerPoints={q.answer_points?.length ? q.answer_points : undefined}
+                  answerLine={!q.answer_points?.length ? q.answer : undefined}
+                  toggleKey={`pr-${marksFilter}-${i}`}
+                  revealed={revealed}
+                  toggle={toggle}
+                />
               </div>
-            )}
-
-            {/* Long Answer */}
-            {practiceTab === 'long' && (
-              <div className="space-y-4">
-                {content.practice.long_answer.map((q, i) => (
-                  <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-                    <div className="flex items-start gap-2 mb-2">
-                      <span className="w-6 h-6 rounded-lg bg-rose-100 text-rose-700 text-[11px] font-black flex items-center justify-center flex-shrink-0">Q{i+1}</span>
-                      <div>
-                        {q.topic && <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">{q.topic}</p>}
-                        <p className="text-[14px] text-gray-800 font-semibold leading-relaxed">{q.question}</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => toggleReveal(`la-${i}`)}
-                      className="ml-8 mt-1 flex items-center gap-1.5 text-[12px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors"
-                    >
-                      {revealed[`la-${i}`] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                      {revealed[`la-${i}`] ? 'Hide Answer' : 'Show Answer'}
-                    </button>
-                    <AnimatePresence>
-                      {revealed[`la-${i}`] && (
-                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                          <div className="mt-3 ml-8 bg-green-50 rounded-xl p-3 border border-green-100">
-                            <div className="prose prose-sm max-w-none text-green-900 text-[13px] leading-relaxed">
-                              <ReactMarkdown remarkPlugins={[remarkGfm]}>{q.answer}</ReactMarkdown>
-                            </div>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                ))}
-                {content.practice.long_answer.length === 0 && <p className="text-[13px] text-gray-400 text-center py-6">No long-answer questions generated.</p>}
-              </div>
-            )}
+            ))}
           </div>
         )}
 
@@ -1348,9 +1368,10 @@ function ReaderPanel({ selected, isMobile = false }) {
     setChapterContentLoading(true);
     try {
       const payload = {
+        chapterId:      chapter.dbId   || null,
         subject:        selected.subjectName,
         chapterName:    chapter.name,
-        chapterNumber:  chapter.num || null,
+        chapterNumber:  chapter.num    || null,
         topics:         (chapter.topics || []).map(t => (typeof t === 'string' ? t : t.name)),
         syllabusVersion,
       };
@@ -1592,40 +1613,51 @@ function ReaderPanel({ selected, isMobile = false }) {
             exit={{ opacity: 0, y: -10 }}
             className="space-y-4"
           >
-            {/* Generate Button (shows when no content yet) */}
+            {/* Generate Button */}
             {!chapterContent && !chapterContentLoading && (
-              <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-3xl p-6 border border-indigo-100 flex flex-col sm:flex-row items-center gap-4">
-                <div className="flex-1">
-                  <p className="text-[15px] font-black text-indigo-900 leading-snug">
-                    📖 Generate Full Chapter
-                  </p>
-                  <p className="text-[13px] text-indigo-600 font-medium mt-1">
-                    Get the complete chapter — all topics, worked examples, in-text Q&A, and topic-wise practice questions, written in Syllabrix style.
-                  </p>
+              <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-6 shadow-xl shadow-indigo-500/20 text-white">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+                  <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0 shadow-lg">
+                    <BookCopy size={28} className="text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[17px] font-black leading-snug mb-1">Generate Complete Subject Guide</p>
+                    <p className="text-[13px] text-indigo-200 font-medium leading-relaxed">
+                      {selectedChapter?.dbId
+                        ? '📄 PDF detected — content will be extracted directly from the uploaded textbook.'
+                        : '🤖 No PDF uploaded — AI will generate accurate content from its knowledge.'}
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {['Study Guide', 'Full Chapter', 'Exercise Q&A', 'Practice Questions'].map(label => (
+                        <span key={label} className="text-[11px] font-bold bg-white/20 px-2.5 py-1 rounded-full">{label}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleGenerateChapter(selectedChapter)}
+                    className="flex-shrink-0 flex items-center gap-2 px-6 py-3 bg-white text-indigo-700 rounded-2xl font-black text-[14px] hover:bg-indigo-50 active:scale-95 transition-all shadow-lg"
+                  >
+                    <Sparkles size={16} />
+                    Generate Guide
+                  </button>
                 </div>
-                <button
-                  onClick={() => handleGenerateChapter(selectedChapter)}
-                  className="flex-shrink-0 flex items-center gap-2 px-6 py-3 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-2xl font-bold text-[14px] hover:shadow-lg hover:shadow-indigo-500/30 active:scale-95 transition-all"
-                >
-                  <Sparkles size={16} />
-                  Generate Chapter
-                </button>
               </div>
             )}
 
             {/* Loading */}
             {chapterContentLoading && (
-              <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-10 border border-white flex flex-col items-center gap-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg animate-pulse">
-                  <BookCopy size={28} className="text-white" />
+              <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-10 border border-white flex flex-col items-center gap-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg animate-pulse">
+                  <BookCopy size={30} className="text-white" />
                 </div>
-                <div className="text-center">
-                  <p className="text-[15px] font-black text-gray-800">Generating Chapter Content</p>
-                  <p className="text-[13px] text-gray-500 mt-1">Writing all sections, examples, and practice questions…</p>
+                <div className="text-center space-y-1">
+                  <p className="text-[16px] font-black text-gray-800">Building Your Complete Study Guide</p>
+                  <p className="text-[13px] text-gray-500 font-medium">Extracting content · Generating exercises · Creating practice questions</p>
+                  <p className="text-[12px] text-gray-400">This takes 20–40 seconds. Two AI calls running in parallel…</p>
                 </div>
                 <div className="flex gap-1.5">
-                  {[0, 1, 2, 3, 4].map(i => (
-                    <div key={i} className="w-2 h-2 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: `${i * 0.12}s` }} />
+                  {[0, 1, 2, 3, 4, 5].map(i => (
+                    <div key={i} className="w-2 h-2 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: `${i * 0.1}s` }} />
                   ))}
                 </div>
               </div>
@@ -1662,7 +1694,7 @@ function ReaderPanel({ selected, isMobile = false }) {
                     <Sparkles size={12} /> Regenerate
                   </button>
                 </div>
-                <ChapterReader content={chapterContent} />
+                <ChapterReader content={chapterContent} chapterName={selectedChapter?.name || ''} hasPdf={!!chapterContent?.has_pdf} />
               </div>
             )}
           </motion.div>

@@ -318,11 +318,12 @@ const askAI = async (req, res, next) => {
 
 const generateChapter = async (req, res, next) => {
   try {
-    const { board, grade, subject, chapterName, chapterNumber, topics, syllabusVersion } = req.body;
+    const { chapterId, board, grade, subject, chapterName, chapterNumber, topics, syllabusVersion } = req.body;
     if (!subject || !chapterName) {
       return res.status(400).json({ success: false, message: 'subject and chapterName are required' });
     }
     const data = await generateChapterSvc({
+      chapterId:       chapterId       || null,
       board:           board           || null,
       grade:           grade           ? Number(grade) : null,
       subject,
