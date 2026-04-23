@@ -1,30 +1,35 @@
 'use client';
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 import { notificationsAPI } from '@/lib/api/notifications.api';
-import { connectSocket, disconnectSocket, getSocket } from '@/lib/socket-client';
+import { connectSocket, disconnectSocket } from '@/lib/socket-client';
+import { getNotificationUrl } from '@/lib/notification-utils';
 
 const NotificationContext = createContext(null);
 
-const TYPE_ICONS = {
-  like:        '❤️',
-  comment:     '💬',
-  follow:      '👤',
-  message:     '✉️',
-  job_alert:   '💼',
-  mentorship:  '🎓',
-  achievement: '🏆',
-  live_class:  '📡',
-  system:      '🔔',
-  group_invite:'👥',
-  mention:     '@',
+const TYPE_META = {
+  like:         { icon: '❤️', color: 'bg-red-100'    },
+  comment:      { icon: '💬', color: 'bg-blue-100'   },
+  follow:       { icon: '👤', color: 'bg-indigo-100' },
+  message:      { icon: '✉️', color: 'bg-sky-100'    },
+  job_alert:    { icon: '💼', color: 'bg-amber-100'  },
+  mentorship:   { icon: '🎓', color: 'bg-emerald-100'},
+  achievement:  { icon: '🏆', color: 'bg-yellow-100' },
+  live_class:   { icon: '📡', color: 'bg-purple-100' },
+  system:       { icon: '🔔', color: 'bg-gray-100'   },
+  group_invite: { icon: '👥', color: 'bg-teal-100'   },
+  mention:      { icon: '@',  color: 'bg-pink-100'   },
 };
+
+export { TYPE_META };
 
 export function NotificationProvider({ children, token }) {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount]     = useState(0);
   const [loading, setLoading]             = useState(true);
   const mountedRef = useRef(true);
+  const router = useRouter();
 
   const fetchAll = useCallback(async () => {
     try {
@@ -62,7 +67,6 @@ export function NotificationProvider({ children, token }) {
     } catch {}
   }, [notifications]);
 
-  // Initial load
   useEffect(() => {
     mountedRef.current = true;
     fetchAll();
@@ -78,21 +82,48 @@ export function NotificationProvider({ children, token }) {
       if (!mountedRef.current) return;
       setNotifications(p => [notif, ...p]);
       setUnreadCount(p => p + 1);
-      // Show toast
-      const icon = TYPE_ICONS[notif.type] || '🔔';
-      toast(notif.message, {
-        icon,
-        duration: 4000,
-        style: { fontSize: '13px', maxWidth: '340px' },
-      });
+
+      const meta = TYPE_META[notif.type] || TYPE_META.system;
+      const url  = getNotificationUrl(notif);
+      const actorName = notif.actor_full_name || notif.actor_username || null;
+      const avatar = notif.actor_photo
+        || (actorName ? `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(actorName)}` : null);
+
+      toast.custom((t) => (
+        <div
+          onClick={() => {
+            toast.dismiss(t.id);
+            markRead(notif.id);
+            if (url) router.push(url);
+          }}
+          className={`flex items-center gap-3 bg-white border border-gray-200 rounded-2xl shadow-lg px-4 py-3 cursor-pointer hover:bg-gray-50 transition-all max-w-sm w-full ${t.visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'}`}
+          style={{ transition: 'opacity 0.2s, transform 0.2s' }}
+        >
+          <div className="relative flex-shrink-0">
+            {avatar ? (
+              <img src={avatar} alt="" className="w-11 h-11 rounded-full object-cover border border-gray-100" />
+            ) : (
+              <div className={`w-11 h-11 rounded-full ${meta.color} flex items-center justify-center text-xl`}>
+                {meta.icon}
+              </div>
+            )}
+            {avatar && (
+              <span className={`absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full ${meta.color} flex items-center justify-center text-[10px] ring-2 ring-white`}>
+                {meta.icon}
+              </span>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] text-gray-800 leading-snug line-clamp-2">{notif.message}</p>
+            <p className="text-[11px] text-blue-500 mt-0.5 font-medium">{url ? 'Tap to view →' : 'Just now'}</p>
+          </div>
+        </div>
+      ), { duration: 5000, position: 'top-right' });
     });
 
-    return () => {
-      sock.off('notification:new');
-    };
-  }, [token]);
+    return () => { sock.off('notification:new'); };
+  }, [token, router, markRead]);
 
-  // Cleanup socket on unmount
   useEffect(() => {
     return () => { if (!token) disconnectSocket(); };
   }, [token]);

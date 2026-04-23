@@ -14,7 +14,7 @@ const create = async (d) => {
 
 const getUserNotifications = async (userId, limit, offset) => {
   const [rows] = await pool.query(
-    `SELECT n.*, u.username as actor_username, u.profile_photo_url as actor_photo
+    `SELECT n.*, u.username as actor_username, u.full_name as actor_full_name, u.profile_photo_url as actor_photo
      FROM notifications n LEFT JOIN users u ON n.actor_id = u.id
      WHERE n.user_id = ? ORDER BY n.created_at DESC LIMIT ? OFFSET ?`,
     [userId, limit, offset]

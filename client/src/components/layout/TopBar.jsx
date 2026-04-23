@@ -5,10 +5,12 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNotifications } from '@/contexts/NotificationContext';
+import { useNotifications, TYPE_META } from '@/contexts/NotificationContext';
+import { getNotificationUrl } from '@/lib/notification-utils';
+import { timeAgo } from '@/lib/utils';
 import {
   Search, Home, Compass, MessageCircle, Bell, X, Settings, LogOut,
-  User, ChevronDown, Plus, Menu, ShieldCheck, Briefcase,
+  User, ChevronDown, Plus, Menu, ShieldCheck, Briefcase, Loader2,
 } from 'lucide-react';
 import { parentAPI } from '@/lib/api/parent.api';
 import { careerAPI } from '@/lib/api/career.api';
@@ -22,16 +24,18 @@ const NAV_ITEMS = [
 
 export default function TopBar({ onMenuClick = () => {} }) {
   const { user, logout } = useAuth();
-  const { unreadCount } = useNotifications();
+  const { unreadCount, notifications, loading: notifLoading, markRead, markAllRead } = useNotifications();
   const pathname = usePathname();
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [parentChildren, setParentChildren] = useState([]);
   const [showChildPicker, setShowChildPicker] = useState(false);
   const profileRef = useRef(null);
   const childPickerRef = useRef(null);
+  const notifRef = useRef(null);
 
   const isParent = user?.user_type === 'parent';
   const isProfessional = user?.user_type === 'professional_learner' || user?.user_type === 'organization';
@@ -67,6 +71,14 @@ export default function TopBar({ onMenuClick = () => {} }) {
     if (showProfile) document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [showProfile]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (notifRef.current && !notifRef.current.contains(e.target)) setShowNotifPanel(false);
+    };
+    if (showNotifPanel) document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showNotifPanel]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -228,14 +240,106 @@ export default function TopBar({ onMenuClick = () => {} }) {
 
             <div className="flex items-center gap-1">
               {/* Notification Bell */}
-              <Link href="/notifications" className="relative p-2.5 text-gray-500 hover:bg-gray-100 rounded-full transition-colors group">
-                <Bell size={20} className="group-hover:text-blue-600" />
-                {unreadCount > 0 && (
-                  <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-red-500 text-white text-[8px] font-black flex items-center justify-center ring-2 ring-white">
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
-                )}
-              </Link>
+              <div className="relative" ref={notifRef}>
+                <button
+                  onClick={() => setShowNotifPanel(v => !v)}
+                  className="relative p-2.5 text-gray-500 hover:bg-gray-100 rounded-full transition-colors group"
+                >
+                  <Bell size={20} className={showNotifPanel ? 'text-blue-600' : 'group-hover:text-blue-600'} />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-red-500 text-white text-[8px] font-black flex items-center justify-center ring-2 ring-white">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                <AnimatePresence>
+                  {showNotifPanel && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -4, scale: 0.97 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 top-[44px] w-[380px] max-w-[calc(100vw-16px)] bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.14)] border border-gray-200/80 z-50 overflow-hidden"
+                    >
+                      {/* Header */}
+                      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                        <h3 className="font-bold text-gray-900 text-[15px]">Notifications</h3>
+                        {unreadCount > 0 && (
+                          <button
+                            onClick={() => markAllRead()}
+                            className="text-xs font-semibold text-blue-600 hover:underline"
+                          >
+                            Mark all read
+                          </button>
+                        )}
+                      </div>
+
+                      {/* List */}
+                      <div className="max-h-[420px] overflow-y-auto">
+                        {notifLoading ? (
+                          <div className="flex justify-center py-10">
+                            <Loader2 size={20} className="animate-spin text-gray-400" />
+                          </div>
+                        ) : notifications.length === 0 ? (
+                          <div className="text-center py-12">
+                            <Bell size={24} className="text-gray-300 mx-auto mb-2" />
+                            <p className="text-sm text-gray-400">No notifications yet</p>
+                          </div>
+                        ) : (
+                          notifications.slice(0, 8).map(n => {
+                            const meta = TYPE_META[n.type] || TYPE_META.system;
+                            const actorName = n.actor_full_name || n.actor_username;
+                            const avatar = n.actor_photo
+                              || (actorName ? `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(actorName)}` : null);
+                            return (
+                              <button
+                                key={n.id}
+                                onClick={() => {
+                                  if (!n.is_read) markRead(n.id);
+                                  const url = getNotificationUrl(n);
+                                  if (url) router.push(url);
+                                  setShowNotifPanel(false);
+                                }}
+                                className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 ${!n.is_read ? 'bg-blue-50/40' : ''}`}
+                              >
+                                <div className="relative flex-shrink-0">
+                                  {avatar ? (
+                                    <img src={avatar} alt="" className="w-10 h-10 rounded-full object-cover border border-gray-100" onError={e => { e.target.src = `https://api.dicebear.com/7.x/initials/svg?seed=U`; }} />
+                                  ) : (
+                                    <div className={`w-10 h-10 rounded-full ${meta.color} flex items-center justify-center text-lg`}>{meta.icon}</div>
+                                  )}
+                                  {avatar && (
+                                    <span className={`absolute -bottom-0.5 -right-0.5 w-4.5 h-4.5 w-[18px] h-[18px] rounded-full ${meta.color} flex items-center justify-center text-[9px] ring-2 ring-white`}>
+                                      {meta.icon}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[13px] text-gray-800 leading-snug line-clamp-2">{n.message}</p>
+                                  <p className="text-[11px] text-gray-400 mt-0.5">{timeAgo(n.created_at)}</p>
+                                </div>
+                                {!n.is_read && <div className="w-2.5 h-2.5 rounded-full bg-blue-500 flex-shrink-0 mt-1.5" />}
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
+
+                      {/* Footer */}
+                      <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/50 text-center">
+                        <Link
+                          href="/notifications"
+                          onClick={() => setShowNotifPanel(false)}
+                          className="text-[13px] font-semibold text-blue-600 hover:underline"
+                        >
+                          See all notifications →
+                        </Link>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
 
               {/* Settings gear */}
               <Link href="/settings" className="p-2.5 text-gray-500 hover:bg-gray-100 rounded-full transition-colors group">
