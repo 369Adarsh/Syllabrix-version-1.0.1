@@ -6,7 +6,22 @@ const { createNotification } = require('../notifications/notifications.service')
 
 const create = async (userId, data) => {
   const jobId = await queries.createJob({ posted_by: userId, ...data });
-  return queries.getJobById(jobId);
+  const job = await queries.getJobById(jobId);
+  // Notify followers of the poster about the new job
+  const [followers] = await pool.query(
+    'SELECT follower_id FROM follows WHERE following_id = ? LIMIT 100', [userId]
+  );
+  if (followers.length > 0) {
+    const [[poster]] = await pool.query('SELECT username FROM users WHERE id = ?', [userId]);
+    for (const f of followers) {
+      createNotification({
+        user_id: f.follower_id, type: 'job_alert', actor_id: userId,
+        reference_id: jobId, reference_type: 'job',
+        message: `${poster?.username || 'Someone'} posted a new job: "${job.title}"`,
+      }).catch(() => {});
+    }
+  }
+  return job;
 };
 
 const list = async (filters, query) => {

@@ -2,6 +2,8 @@ const { ApiError } = require('../../utils/api-error');
 const queries = require('./groups.queries');
 const { emitToGroup } = require('../../socket/index');
 const { getPagination, getPaginationMeta } = require('../../utils/pagination');
+const { pool } = require('../../database/connection');
+const { createNotification } = require('../notifications/notifications.service');
 
 const create = async (userId, data) => {
   const groupId = await queries.createGroup({
@@ -54,6 +56,12 @@ const addMember = async (groupId, userId, targetUserId) => {
   }
 
   await queries.addMember(groupId, targetUserId, 'member');
+  const [[adder]] = await pool.query('SELECT username FROM users WHERE id = ?', [userId]);
+  createNotification({
+    user_id: targetUserId, type: 'group_invite', actor_id: userId,
+    reference_id: groupId, reference_type: 'group',
+    message: `${adder?.username || 'Someone'} added you to the group "${group.name}"`,
+  }).catch(() => {});
 };
 
 const removeMember = async (groupId, userId, targetUserId) => {

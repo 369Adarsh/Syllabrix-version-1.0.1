@@ -39,6 +39,11 @@ exports.getChapterProgress = async (req, res) => {
 exports.updateProgress = async (req, res) => {
   try {
     const { theory_completed, formulas_reviewed, questions_attempted, questions_correct, mastery_level } = req.body;
+    // Capture current mastery before update for comparison
+    const [[prev]] = await pool.query(
+      'SELECT mastery_level FROM jee_user_progress WHERE user_id=? AND chapter_id=?',
+      [req.user.id, req.params.id]
+    );
     await pool.query(
       `INSERT INTO jee_user_progress (user_id, chapter_id, theory_completed, formulas_reviewed, questions_attempted, questions_correct, mastery_level, last_studied_at)
        VALUES (?,?,?,?,?,?,?,NOW())
@@ -55,6 +60,22 @@ exports.updateProgress = async (req, res) => {
        theory_completed, formulas_reviewed, questions_attempted, questions_correct, mastery_level,
        questions_attempted, questions_correct, questions_attempted]
     );
+    // Notify on mastery level upgrade
+    const LEVELS = ['not_started', 'beginner', 'intermediate', 'advanced'];
+    const prevLevel = prev?.mastery_level || 'not_started';
+    if (mastery_level && LEVELS.indexOf(mastery_level) > LEVELS.indexOf(prevLevel)) {
+      const [[chapter]] = await pool.query(
+        'SELECT c.name, s.name AS subject FROM jee_chapters c JOIN jee_subjects s ON c.subject_id = s.id WHERE c.id = ?',
+        [req.params.id]
+      );
+      const medals = { beginner: '📗', intermediate: '📘', advanced: '🏆' };
+      const { createNotification } = require('../notifications/notifications.service');
+      createNotification({
+        user_id: req.user.id, type: 'achievement', actor_id: null,
+        reference_id: req.params.id, reference_type: null,
+        message: `${medals[mastery_level] || '⭐'} ${chapter?.subject}: "${chapter?.name}" reached ${mastery_level} mastery!`,
+      }).catch(() => {});
+    }
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });

@@ -2,6 +2,7 @@ const { ApiError } = require('../../utils/api-error');
 const queries = require('./live-classes.queries');
 const { emitToUser } = require('../../socket/index');
 const { getPagination, getPaginationMeta } = require('../../utils/pagination');
+const { createNotification } = require('../notifications/notifications.service');
 
 const crypto = require('crypto');
 
@@ -44,6 +45,15 @@ const startClass = async (id, hostId) => {
   if (cls.host_id !== hostId) throw ApiError.forbidden('Only the host can start.');
   if (cls.status !== 'scheduled') throw ApiError.badRequest('Class is not in scheduled state.');
   await queries.updateClass(id, { status: 'live', started_at: new Date().toISOString().slice(0,19).replace('T',' ') });
+  // Notify all attendees that class is live
+  const attendees = await queries.getAttendees(id);
+  for (const a of attendees) {
+    createNotification({
+      user_id: a.user_id, type: 'live_class', actor_id: hostId,
+      reference_id: id, reference_type: 'live_class',
+      message: `"${cls.title}" is now LIVE! Join now →`,
+    }).catch(() => {});
+  }
   return queries.getClassById(id);
 };
 

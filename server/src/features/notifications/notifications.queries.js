@@ -1,10 +1,13 @@
 const { pool } = require('../../database/connection');
 
+const VALID_REF_TYPES = new Set(['post','comment','user','group','job','live_class','achievement','mentorship']);
+
 const create = async (d) => {
+  const refType = VALID_REF_TYPES.has(d.reference_type) ? d.reference_type : null;
   const [r] = await pool.query(
     `INSERT INTO notifications (user_id, type, actor_id, reference_id, reference_type, message)
      VALUES (?,?,?,?,?,?)`,
-    [d.user_id, d.type, d.actor_id||null, d.reference_id||null, d.reference_type||null, d.message]
+    [d.user_id, d.type, d.actor_id||null, d.reference_id||null, refType, d.message]
   );
   return r.insertId;
 };

@@ -171,6 +171,16 @@ exports.submitAttempt = async (req, res) => {
         ).catch(() => {});
       }
     }
+    // Notify user of their result
+    const pct = parseFloat(percentage).toFixed(1);
+    const medal = pct >= 90 ? '🥇' : pct >= 75 ? '🥈' : pct >= 50 ? '🥉' : '📝';
+    const { createNotification } = require('../notifications/notifications.service');
+    createNotification({
+      user_id: req.user.id, type: 'achievement', actor_id: null,
+      reference_id: req.params.id, reference_type: null,
+      message: `${medal} Mock test "${mock.title}" completed — Score: ${totalScore}/${mock.total_marks} (${pct}%)`,
+    }).catch(() => {});
+
     res.json({ success: true, data: { total_score: totalScore, max_score: mock.total_marks, percentage, correct_count: correct, wrong_count: wrong, unanswered_count: unanswered, subject_scores: subjectScores, predicted_percentile: predictedPercentile } });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
