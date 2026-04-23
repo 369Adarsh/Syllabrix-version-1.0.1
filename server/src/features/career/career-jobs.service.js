@@ -262,23 +262,28 @@ exports.searchCompanyJobs = async (req, res) => {
     ? sp.skills_detected.slice(0, 15).map(s => s.name)
     : [];
 
-  // ── Step 1: Fetch real jobs from JSearch ────────────────────────────────────
-  const query = role.trim()
-    ? `${role} at ${company} in India`
-    : `${company} jobs India`;
+  // ── Step 1: Build a profile-aware JSearch query ────────────────────────────
+  const userRole    = cp?.current_role || '';
+  const topSkills   = skills.slice(0, 3).join(' ');
+  const searchRole  = role.trim() || userRole;
+
+  // Query is: "<role/skills> at <company> India" so JSearch returns relevant roles
+  const query = searchRole
+    ? `${searchRole} ${topSkills} at ${company.trim()} India`
+    : `${company.trim()} jobs India`;
 
   const rawJobs = await fetchRealJobs(query);
 
   if (!rawJobs || rawJobs.length === 0) {
     return res.status(404).json({
       success: false,
-      message: `No real job listings found for "${company}" right now. Try a different search or check back later.`,
+      message: `No job listings found for "${company}" matching your profile right now. Try a different search or check back later.`,
     });
   }
 
   // ── Step 2: Normalise JSearch → our schema ─────────────────────────────────
   const companyDomain = company.toLowerCase().replace(/\s+/g, '') + '.com';
-  const normalised = rawJobs.slice(0, 10).map(j => ({
+  const normalised = rawJobs.slice(0, 15).map(j => ({
     company_name:        j.employer_name || company,
     company_logo:        j.employer_logo || `https://logo.clearbit.com/${companyDomain}`,
     role_title:          j.job_title,
@@ -287,23 +292,26 @@ exports.searchCompanyJobs = async (req, res) => {
     job_type:            normaliseJobType(j.job_employment_type),
     experience_required: null,
     apply_url:           j.job_apply_link || `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(j.job_title + ' ' + company)}&location=India`,
-    description_snippet: (j.job_description || '').slice(0, 300),
+    description_snippet: (j.job_description || '').slice(0, 400),
     required_skills:     j.job_required_skills || [],
     posted_at:           j.job_posted_at_datetime_utc || null,
     source:              'real',
   }));
 
-  // ── Step 3: AI scores fit against candidate profile ─────────────────────────
+  // ── Step 3: AI scores fit and filters by profile relevance ─────────────────
   const fitPrompt = `You are a career advisor. Score each job's fit for this candidate.
 
 CANDIDATE:
 - Experience: ${cp?.experience_years || 0} years
-- Current role: ${cp?.current_role || 'Professional'}
+- Current role: ${userRole || 'Professional'}
 - Skills: ${skills.join(', ') || 'general skills'}
 - Industry: ${cp?.industry || 'Technology'}
+- Target role searched: ${searchRole || company}
 
 JOBS (${normalised.length} items):
-${normalised.map((j, i) => `${i}. "${j.role_title}" at ${j.company_name}${j.description_snippet ? ' — ' + j.description_snippet.slice(0, 150) : ''}`).join('\n')}
+${normalised.map((j, i) => `${i}. "${j.role_title}" at ${j.company_name}${j.description_snippet ? ' — ' + j.description_snippet.slice(0, 200) : ''}`).join('\n')}
+
+Score each job STRICTLY against the candidate's background. A job with no relevance to their skills must score below 30.
 
 Return ONLY a JSON array of ${normalised.length} objects in the SAME ORDER:
 [{ "fit_score": 0-100, "fit_category": "high"|"medium"|"stretch", "match_reasons": ["..."], "missing_skills": ["..."], "experience_required": "X-Y years" }]`;
@@ -317,7 +325,7 @@ Return ONLY a JSON array of ${normalised.length} objects in the SAME ORDER:
     const fit = fitScores[i] || {};
     return {
       ...job,
-      fit_score:           fit.fit_score           ?? 70,
+      fit_score:           fit.fit_score           ?? 50,
       fit_category:        fit.fit_category        ?? 'medium',
       match_reasons:       fit.match_reasons        ?? [],
       missing_skills:      fit.missing_skills       ?? [],
@@ -325,7 +333,12 @@ Return ONLY a JSON array of ${normalised.length} objects in the SAME ORDER:
     };
   });
 
-  return res.json({ success: true, data: enriched, company });
+  // Sort by fit score, filter out irrelevant jobs (score < 30) unless fewer than 3 remain
+  const sorted = enriched.sort((a, b) => b.fit_score - a.fit_score);
+  const relevant = sorted.filter(j => j.fit_score >= 30);
+  const result   = relevant.length >= 3 ? relevant : sorted.slice(0, 5);
+
+  return res.json({ success: true, data: result, company, profile_matched: true });
 };
 
 exports.updateJobAction = async (req, res) => {
