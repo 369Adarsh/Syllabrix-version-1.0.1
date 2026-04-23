@@ -39,7 +39,10 @@ function DashboardLayoutInner({ children }) {
 }
 
 function DashboardLayoutWithNotifications({ children }) {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('syllabrix_token') : null;
+  const [token, setToken] = useState(null);
+  useEffect(() => {
+    setToken(localStorage.getItem('syllabrix_token'));
+  }, []);
   return (
     <NotificationProvider token={token}>
       <DashboardLayoutInner>{children}</DashboardLayoutInner>
