@@ -712,11 +712,7 @@ const forgotPassword = async (email) => {
   const resetToken = generateResetToken(user.id);
   const resetUrl = `${CLIENT_URL}/reset-password?token=${resetToken}`;
 
-  try {
-    await sendPasswordResetEmail({ to: email, username: user.username, resetUrl });
-  } catch (e) {
-    console.error('[EMAIL] Failed to send password reset email:', e.message, e);
-  }
+  await sendPasswordResetEmail({ to: email, username: user.username, resetUrl });
 
   return { message: 'If an account exists with this email, a reset link has been sent.' };
 };

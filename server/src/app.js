@@ -21,6 +21,9 @@ const routes = require('./routes/index');
 
 const app = express();
 
+// Trust Render/Vercel reverse proxy so rate limiters use the real client IP
+app.set('trust proxy', 1);
+
 // ======================== CORS — absolute first middleware ========================
 // Manually set headers as a safety net in case Railway's edge proxy strips them.
 // This runs before cors(), helmet(), rate-limiter — everything.
