@@ -2,22 +2,44 @@ const { ApiError } = require('../../utils/api-error');
 const queries = require('./comments.queries');
 const postsQueries = require('../posts/posts.queries');
 const { getPagination, getPaginationMeta } = require('../../utils/pagination');
+const { pool } = require('../../database/connection');
+const { createNotification } = require('../notifications/notifications.service');
 
 const create = async (userId, postId, data) => {
   const post = await postsQueries.getPostById(postId);
   if (!post) throw ApiError.notFound('Post not found.');
 
-  // TODO: Phase 3 — Positivity check with Google Perspective API
-  // For now, allow all comments
-
   const commentId = await queries.createComment({
-    user_id: userId,
-    post_id: postId,
-    parent_comment_id: data.parent_comment_id,
-    content: data.content,
+    user_id: userId, post_id: postId,
+    parent_comment_id: data.parent_comment_id, content: data.content,
   });
 
   await postsQueries.incrementPostCount(postId, 'comments_count');
+
+  const [[actor]] = await pool.query('SELECT username FROM users WHERE id = ?', [userId]);
+  const actorName = actor?.username || 'Someone';
+
+  // Notify post owner
+  if (post.user_id !== userId) {
+    createNotification({
+      user_id: post.user_id, type: 'comment', actor_id: userId,
+      reference_id: postId, reference_type: 'post',
+      message: `${actorName} commented on your post`,
+    }).catch(() => {});
+  }
+
+  // Notify parent comment author on reply
+  if (data.parent_comment_id) {
+    const [[parent]] = await pool.query('SELECT user_id FROM comments WHERE id = ?', [data.parent_comment_id]);
+    if (parent && parent.user_id !== userId && parent.user_id !== post.user_id) {
+      createNotification({
+        user_id: parent.user_id, type: 'comment', actor_id: userId,
+        reference_id: postId, reference_type: 'post',
+        message: `${actorName} replied to your comment`,
+      }).catch(() => {});
+    }
+  }
+
   return queries.getCommentById(commentId);
 };
 

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
-import { notificationsAPI } from '@/lib/api/notifications.api';
+import { useNotifications } from '@/contexts/NotificationContext';
 import {
   Search, Home, Compass, MessageCircle, Bell, X, Settings, LogOut,
   User, ChevronDown, Plus, Menu, ShieldCheck, Briefcase,
@@ -22,12 +22,12 @@ const NAV_ITEMS = [
 
 export default function TopBar({ onMenuClick = () => {} }) {
   const { user, logout } = useAuth();
+  const { unreadCount } = useNotifications();
   const pathname = usePathname();
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [parentChildren, setParentChildren] = useState([]);
   const [showChildPicker, setShowChildPicker] = useState(false);
   const profileRef = useRef(null);
@@ -37,11 +37,6 @@ export default function TopBar({ onMenuClick = () => {} }) {
   const isProfessional = user?.user_type === 'professional_learner' || user?.user_type === 'organization';
   const [careerProfile, setCareerProfile] = useState(null);
 
-  useEffect(() => {
-    notificationsAPI.getUnreadCount()
-      .then(r => setUnreadCount(r.data?.data?.count || r.data?.count || 0))
-      .catch(() => {});
-  }, []);
 
   useEffect(() => {
     if (!isProfessional) return;

@@ -2,6 +2,7 @@ const { ApiError } = require('../../utils/api-error');
 const queries = require('./follow.queries');
 const { pool } = require('../../database/connection');
 const { getPagination, getPaginationMeta } = require('../../utils/pagination');
+const { createNotification } = require('../notifications/notifications.service');
 
 const toggleFollow = async (followerId, followingId) => {
   if (followerId === followingId) {
@@ -23,6 +24,12 @@ const toggleFollow = async (followerId, followingId) => {
     return { action: 'unfollowed', is_following: false };
   } else {
     await queries.follow(followerId, followingId);
+    const [[actor]] = await pool.query('SELECT username FROM users WHERE id = ?', [followerId]);
+    createNotification({
+      user_id: followingId, type: 'follow', actor_id: followerId,
+      reference_id: followerId, reference_type: 'user',
+      message: `${actor?.username || 'Someone'} started following you`,
+    }).catch(() => {});
     return { action: 'followed', is_following: true };
   }
 };

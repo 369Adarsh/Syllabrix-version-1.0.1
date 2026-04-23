@@ -1,6 +1,8 @@
 const { ApiError } = require('../../utils/api-error');
 const queries = require('./jobs.queries');
 const { getPagination, getPaginationMeta } = require('../../utils/pagination');
+const { pool } = require('../../database/connection');
+const { createNotification } = require('../notifications/notifications.service');
 
 const create = async (userId, data) => {
   const jobId = await queries.createJob({ posted_by: userId, ...data });
@@ -41,6 +43,12 @@ const apply = async (jobId, userId, coverMessage, resumeUrl) => {
   if (existing) throw ApiError.conflict('You have already applied.');
   if (job.posted_by === userId) throw ApiError.badRequest('You cannot apply to your own job.');
   await queries.applyToJob(jobId, userId, coverMessage, resumeUrl);
+  const [[applicant]] = await pool.query('SELECT username FROM users WHERE id = ?', [userId]);
+  createNotification({
+    user_id: job.posted_by, type: 'job_alert', actor_id: userId,
+    reference_id: jobId, reference_type: 'job',
+    message: `${applicant?.username || 'Someone'} applied for your job "${job.title}"`,
+  }).catch(() => {});
   return { message: 'Application submitted!' };
 };
 
@@ -57,6 +65,20 @@ const updateApplicationStatus = async (jobId, applicationId, userId, status) => 
   if (!job) throw ApiError.notFound('Job not found.');
   if (job.posted_by !== userId) throw ApiError.forbidden('Only the job poster can update status.');
   await queries.updateApplicationStatus(applicationId, status);
+  const [[app]] = await pool.query('SELECT applicant_id FROM job_applications WHERE id = ?', [applicationId]);
+  if (app) {
+    const msgs = {
+      shortlisted: `You've been shortlisted for "${job.title}"!`,
+      accepted:    `Congratulations! You've been accepted for "${job.title}"`,
+      rejected:    `Your application for "${job.title}" was not selected`,
+      viewed:      `Your application for "${job.title}" was viewed`,
+    };
+    createNotification({
+      user_id: app.applicant_id, type: 'job_alert', actor_id: userId,
+      reference_id: jobId, reference_type: 'job',
+      message: msgs[status] || `Your application status for "${job.title}" was updated`,
+    }).catch(() => {});
+  }
 };
 
 const getMyPosts = async (userId) => queries.getMyPostedJobs(userId);
