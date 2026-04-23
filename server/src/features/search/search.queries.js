@@ -1,7 +1,7 @@
 const { pool } = require('../../database/connection');
 
 const searchUsers = async (query, userType, limit, offset) => {
-  let where = 'u.is_active = 1 AND u.is_profile_complete = 1';
+  let where = 'u.is_active = 1';
   const vals = [];
   if (query) {
     where += ' AND (u.username LIKE ? OR u.bio LIKE ? OR u.city LIKE ?)';
