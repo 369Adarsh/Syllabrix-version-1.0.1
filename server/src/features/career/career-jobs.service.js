@@ -193,6 +193,13 @@ CRITICAL RULES for apply_url — read carefully:
     );
   }
 
+  const { createNotification } = require('../notifications/notifications.service');
+  createNotification({
+    user_id: userId, type: 'job_alert', actor_id: null,
+    reference_id: null, reference_type: null,
+    message: `🎯 Job Radar updated — ${jobs.length} new matches found based on your profile!`,
+  }).catch(() => {});
+
   return res.json(successResponse({ generated: jobs.length, message: `${jobs.length} job matches generated` }));
 };
 

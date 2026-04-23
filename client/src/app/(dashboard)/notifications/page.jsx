@@ -6,6 +6,7 @@ import Avatar from '@/components/ui/Avatar';
 import { Bell, Loader2, CheckCheck, Trash2 } from 'lucide-react';
 import { timeAgo } from '@/lib/utils';
 import toast from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
 const TYPE_META = {
   like:         { icon: '❤️', color: 'bg-red-100 text-red-600' },
@@ -21,8 +22,27 @@ const TYPE_META = {
   mention:      { icon: '@',  color: 'bg-pink-100 text-pink-600' },
 };
 
+function getNotificationUrl(n) {
+  const { type, reference_type, reference_id, actor_id } = n;
+  if (type === 'follow') return actor_id ? `/profile/${actor_id}` : null;
+  if (type === 'like' || type === 'comment') {
+    if (reference_type === 'post' && reference_id) return `/feed`;
+    return '/feed';
+  }
+  if (type === 'job_alert') {
+    if (reference_type === 'job' && reference_id) return `/jobs/${reference_id}`;
+    return '/career/jobs';
+  }
+  if (type === 'mentorship') return '/mentorship';
+  if (type === 'live_class' && reference_id) return `/live-classes/${reference_id}`;
+  if (type === 'group_invite' && reference_id) return `/groups/${reference_id}`;
+  if (type === 'achievement') return '/career/jobs';
+  return null;
+}
+
 export default function NotificationsPage() {
   const { notifications, unreadCount, loading, markRead, markAllRead, dismiss } = useNotifications();
+  const router = useRouter();
 
   const handleMarkAllRead = async () => {
     await markAllRead();
@@ -31,6 +51,8 @@ export default function NotificationsPage() {
 
   const handleClick = (n) => {
     if (!n.is_read) markRead(n.id);
+    const url = getNotificationUrl(n);
+    if (url) router.push(url);
   };
 
   return (
