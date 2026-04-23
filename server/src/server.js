@@ -38,6 +38,16 @@ const startServer = async () => {
     console.log('');
     console.log('  Ready to accept intelligence requests.');
     console.log('========================================');
+
+    // Keep Render free tier alive — ping self every 14 min to prevent sleep
+    if (config.NODE_ENV === 'production') {
+      const SELF_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
+      setInterval(() => {
+        http.get(`${SELF_URL}/api/health`, (res) => {
+          res.resume();
+        }).on('error', () => {});
+      }, 14 * 60 * 1000);
+    }
   });
 };
 
