@@ -13,6 +13,7 @@ import {
 import toast from 'react-hot-toast';
 import { careerAPI } from '@/lib/api/career.api';
 import ProfessionalProfile from '@/components/profile/ProfessionalProfile';
+import ProfileView from '@/components/profile/ProfileView';
 
 // ═══════════════════════════════════════════════════════════════════
 // CONSTANTS & CONFIG
@@ -1288,78 +1289,8 @@ export default function MyProfilePage() {
       {/* Legacy/Default View for other roles */}
       {!(type === 'professional_learner' || type === 'organization') && (
         <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
-          {/* ── 1. COVER BANNER ─────────────────────────────────────────── */}
-          <div className="relative h-40 md:h-56 w-full rounded-2xl overflow-hidden border border-gray-200 shadow-sm group">
-          {user.cover_photo_url
-            ? <img src={user.cover_photo_url} alt="Cover" className="w-full h-full object-cover" />
-            : <div className={`w-full h-full bg-gradient-to-r ${cfg.cover}`} />}
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
-          <button type="button" onClick={() => !coverLoading && coverRef.current?.click()}
-            className="absolute top-3 right-4 flex items-center gap-1.5 px-3 py-1.5 bg-black/40 text-white text-[12px] font-semibold rounded-lg opacity-0 group-hover:opacity-100 transition-all hover:bg-black/60 backdrop-blur-sm">
-            {coverLoading ? <Loader2 size={12} className="animate-spin" /> : <Camera size={12} />}
-            {coverLoading ? 'Uploading…' : 'Change Cover'}
-          </button>
-          <input ref={coverRef} type="file" accept="image/*" className="hidden" onChange={handleCover} />
-        </div>
-
-        {/* ── 2. PROFILE IDENTITY CARD ─────────────────────────────────── */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm relative pt-4 pb-6 mb-4 -mt-6 overflow-visible">
-
-          {/* Edit Profile button — absolute top-right */}
-          <div className="absolute top-4 right-4">
-            <a href="#basic-info"
-              className="flex items-center gap-1.5 px-4 py-2 border-2 border-[#2563EB] text-[#2563EB] text-[13px] font-bold rounded-xl hover:bg-blue-50 transition-all">
-              <Pencil size={13} /> Edit Profile
-            </a>
-          </div>
-
-          {/* Centered avatar — overlaps cover */}
-          <div className="flex flex-col items-center pt-0">
-            <div className="relative -mt-12 mb-3 group/photo">
-              <div className="w-24 h-24 md:w-28 md:h-28 rounded-full border-4 border-white shadow-lg overflow-hidden bg-gray-100">
-                {user.profile_photo_url
-                  ? <img src={user.profile_photo_url} alt={user.full_name} className="w-full h-full object-cover" />
-                  : <div className={`w-full h-full flex items-center justify-center bg-gradient-to-br ${cfg.cover} text-white text-3xl font-extrabold`}>{initials}</div>}
-              </div>
-              <button type="button" onClick={() => !photoLoading && photoRef.current?.click()}
-                className="absolute inset-0 rounded-full bg-black/0 group-hover/photo:bg-black/30 transition-colors flex items-center justify-center">
-                <Camera size={16} className="text-white opacity-0 group-hover/photo:opacity-100 transition-opacity" />
-                {photoLoading && <Loader2 size={16} className="text-white animate-spin absolute" />}
-              </button>
-              <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
-            </div>
-
-            {/* Name */}
-            <h1 className="text-[22px] font-extrabold text-gray-900 leading-tight text-center px-8 sm:px-14">
-              {user.full_name || user.username}
-            </h1>
-
-            {/* Syllabrix ID + type chip row */}
-            <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
-              {user.syllabrix_id && (
-                <div className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-blue-50 border border-blue-200 rounded-full">
-                  <Lock size={9} className="text-blue-400" />
-                  <span className="text-[10px] font-bold text-blue-700 tracking-widest">{user.syllabrix_id}</span>
-                </div>
-              )}
-              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${cfg.chip}`}>
-                <TypeIcon size={9} />{cfg.label}
-              </span>
-            </div>
-
-            {/* Bio / tagline */}
-            <p className="text-[13px] text-gray-500 italic mt-2 text-center px-8 max-w-lg">
-              {user.bio || p.about || 'Add a tagline…'}
-            </p>
-
-            {/* Location */}
-            {location && (
-              <div className="flex items-center gap-1 mt-1.5 text-[12px] text-gray-500">
-                <MapPin size={12} className="text-gray-400 shrink-0" />{location}
-              </div>
-            )}
-          </div>
-        </div>
+          {/* ── 1+2. PROFILE VIEW (shared component) ── */}
+        <ProfileView userId={user?.id?.toString()} />
 
         {/* ── 3. PERSONA INTELLIGENCE HEADER ────────────── */}
         <PersonaIntelligenceHeader user={user} />
