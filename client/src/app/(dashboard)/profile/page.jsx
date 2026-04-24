@@ -8,7 +8,7 @@ import {
   Loader2, CheckCircle, ExternalLink, Copy, Check,
   User, Briefcase, BookOpen, Target, Award, Building2,
   MapPin, FileText, Upload, Shield, AtSign, Link as LinkIcon,
-  GraduationCap, Users, Star
+  GraduationCap, Users, Star, Flame, Zap
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { careerAPI } from '@/lib/api/career.api';
@@ -33,6 +33,14 @@ const INST_TYPES   = ['school','college','university','coaching','online_academy
 const ORG_INDUSTRIES = ['Technology / Software','Manufacturing / Industrial','Banking / Financial Services','Healthcare / Pharma','Retail / E-commerce','Logistics / Supply Chain','Education','Consulting / Professional Services','Government / Public Sector','Other'];
 const ORG_SIZES    = ['1-50 (Startup)','51-200 (Small)','201-500 (Mid-market)','501-2000 (Enterprise)','2001-10000 (Large Enterprise)','10000+ (Global Enterprise)'];
 const EDU_LEVELS   = ['High School','Graduation','Post Graduation','Doctorate','Other'];
+const SPORTS_LIST  = ['Cricket','Football','Basketball','Badminton','Tennis','Table Tennis','Chess','Swimming','Athletics / Running','Volleyball','Kabaddi','Kho-Kho','Gymnastics','Cycling','Yoga','Hockey','Boxing','Wrestling','Other'];
+const TECH_COURSES = ['Coding Basics','Digital Literacy','Data Analysis Basics','AI & Machine Learning Intro','Web Design Basics','Cybersecurity Basics','Python Programming','Excel & Spreadsheets'];
+const FUNC_COURSES = ['Communication Skills','Time Management','Critical Thinking','Leadership Basics','Financial Literacy','Entrepreneurship Basics','Emotional Intelligence','Public Speaking'];
+const LEARNING_INTERESTS = ['Coding','Design','Data Science','AI / Machine Learning','Finance','Public Speaking','Music','Fitness','Photography','Writing / Content'];
+const HR_ROLES     = ['HR Manager','Talent Acquisition','Recruiter','Technical Recruiter','HR Business Partner (HRBP)','Hiring Manager','People Lead','HR Director','HR Professional'];
+const MEDIUMS      = ['English','Hindi','Gujarati','Tamil','Telugu','Kannada','Malayalam','Marathi','Bengali','Other'];
+const EXAM_TYPES   = ['UPSC Civil Services','SSC CGL','SSC CHSL','IBPS PO','IBPS Clerk','RRB NTPC','State PSC','NDA / CDS','CLAT','CAT / MBA','GATE','Other'];
+const SPEC_COURSES = ['Classical Dance','Western Dance','Hindustani Music','Carnatic Music','Guitar / Keyboard','Coding / Programming','Yoga','Fitness Training','Tarot / Astrology','Fine Arts','Martial Arts','Swimming Academy','Other'];
 
 const TYPE_CONFIG = {
   student:             { cover: 'from-blue-500 to-indigo-600',   chip: 'bg-blue-50 text-blue-700 border-blue-200',   label: 'Student',      icon: GraduationCap },
@@ -117,6 +125,28 @@ const TagsView = ({ tags }) => (
       : tags.map(t => <span key={t} className="px-2.5 py-0.5 bg-gray-100 rounded-full text-[12px] text-gray-600 font-medium">{t}</span>)}
   </div>
 );
+
+// Multi-select pill toggle (like CheckGroup in onboarding)
+const MultiSelect = ({ label, options, selected, onChange, max }) => {
+  const toggle = (v) => {
+    if (selected.includes(v)) { onChange(selected.filter(x => x !== v)); }
+    else if (!max || selected.length < max) { onChange([...selected, v]); }
+    else { toast.error(`Max ${max} selections allowed`); }
+  };
+  return (
+    <Fld label={label}>
+      <div className="flex flex-wrap gap-2">
+        {options.map(o => (
+          <button key={o} type="button" onClick={() => toggle(o)}
+            className={`px-3 py-1.5 rounded-full text-[12px] font-medium border transition-all ${selected.includes(o) ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'}`}>
+            {o}
+          </button>
+        ))}
+      </div>
+      {max && <p className="text-[10px] text-gray-400 mt-1">Select up to {max}</p>}
+    </Fld>
+  );
+};
 
 // ═══════════════════════════════════════════════════════════════════
 // SECTION CARD — collapsible, with pencil for edit toggle
@@ -618,20 +648,43 @@ function IdentitySection({ user, onSaved }) {
 function StudentSections({ user, saveSection }) {
   const p = user?.profile || {};
 
-  // Basic Info
   const bi = useSection(() => ({ phone: user?.phone||'', gender: user?.gender||'', city: user?.city||'', state: user?.state||'' }));
-  // Academic
-  const ac = useSection(() => ({ school_name: p.school_name||'', class_name: p.class_name||'', board: p.board||'', college_name: p.college_name||'', subject_stream: p.subject_stream||'' }));
-  // Career & Goals
+  const ac = useSection(() => ({
+    school_name: p.school_name||'', class_name: p.class_name||'', board: p.board||'',
+    medium: p.medium||'', college_name: p.college_name||'', subject_stream: p.subject_stream||'',
+    exam_type: p.exam_type||'', exam_target_year: p.exam_target_year||'',
+    specialization_courses: parseJson(p.specialization_courses, []),
+  }));
+  const pd = useSection(() => ({
+    hobby: parseJson(p.hobby, []),
+    favorite_subject: p.favorite_subject||'', difficult_subject: p.difficult_subject||'',
+    loved_professions: parseJson(p.loved_professions, []),
+  }));
+  const sp = useSection(() => ({
+    sports: parseJson(p.sports, []),
+    sports_level: p.sports_level||'',
+    guardian_user_id: p.guardian_user_id||'',
+  }));
+  const co = useSection(() => ({
+    tc: parseMandatoryCourses(p.mandatory_courses).technical,
+    fc: parseMandatoryCourses(p.mandatory_courses).functional,
+  }));
   const cg = useSection(() => ({ ambition: p.ambition||p.career_interest||'', future_vision: p.future_vision||'' }));
-  // About
   const ab = useSection(() => ({ bio: user?.bio||'' }));
 
   const save = async (section, data) => {
     section.setSaving(true);
     try { await saveSection(data); section.cancel(); }
-    catch (e) { /* error already toasted in saveSection */ }
+    catch (e) {}
     finally { section.setSaving(false); }
+  };
+  const saveCourses = async () => {
+    co.setSaving(true);
+    try {
+      await saveSection({ mandatory_courses: JSON.stringify({ technical: co.edit.tc, functional: co.edit.fc }) });
+      co.cancel();
+    } catch (e) {}
+    finally { co.setSaving(false); }
   };
 
   return (<>
@@ -663,18 +716,68 @@ function StudentSections({ user, saveSection }) {
           <VF label="School / College" value={p.school_name || p.college_name} />
           <VF label="Class / Year" value={p.class_name} />
           <VF label="Board" value={p.board} />
+          <VF label="Medium" value={p.medium} />
           <VF label="Stream" value={p.subject_stream} />
           {p.education_level && <VF label="Education Type" value={p.education_level} />}
+          {p.exam_type && <VF label="Exam Preparing For" value={p.exam_type} />}
+          {p.exam_target_year && <VF label="Target Year" value={p.exam_target_year} />}
+          {parseJson(p.specialization_courses, []).length > 0 && (
+            <div className="col-span-2"><p className={LBL}>Specialization Courses</p><TagsView tags={parseJson(p.specialization_courses, [])} /></div>
+          )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <TI label="School Name" value={ac.edit.school_name} onChange={v => ac.setEdit(e => ({...e, school_name: v}))} placeholder="Your school" />
-          <TI label="College / Institute" value={ac.edit.college_name} onChange={v => ac.setEdit(e => ({...e, college_name: v}))} placeholder="Your college" />
-          <SI label="Class / Grade" value={ac.edit.class_name} onChange={v => ac.setEdit(e => ({...e, class_name: v}))} options={CLASSES} />
-          <SI label="Board" value={ac.edit.board} onChange={v => ac.setEdit(e => ({...e, board: v}))} options={BOARDS} />
-          <div className="col-span-2">
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <TI label="School Name" value={ac.edit.school_name} onChange={v => ac.setEdit(e => ({...e, school_name: v}))} placeholder="Your school" />
+            <TI label="College / Institute" value={ac.edit.college_name} onChange={v => ac.setEdit(e => ({...e, college_name: v}))} placeholder="Your college" />
+            <SI label="Class / Grade" value={ac.edit.class_name} onChange={v => ac.setEdit(e => ({...e, class_name: v}))} options={CLASSES} />
+            <SI label="Board" value={ac.edit.board} onChange={v => ac.setEdit(e => ({...e, board: v}))} options={BOARDS} />
+            <SI label="Medium of Instruction" value={ac.edit.medium} onChange={v => ac.setEdit(e => ({...e, medium: v}))} options={MEDIUMS} />
             <SI label="Subject Stream" value={ac.edit.subject_stream} onChange={v => ac.setEdit(e => ({...e, subject_stream: v}))} options={STREAMS} />
+            <SI label="Exam Preparing For" value={ac.edit.exam_type} onChange={v => ac.setEdit(e => ({...e, exam_type: v}))} options={EXAM_TYPES} />
+            <SI label="Target Year" value={ac.edit.exam_target_year} onChange={v => ac.setEdit(e => ({...e, exam_target_year: v}))} options={['2025','2026','2027','2028','2029']} />
           </div>
+          <MultiSelect label="Specialization Courses" options={SPEC_COURSES} selected={ac.edit.specialization_courses} onChange={v => ac.setEdit(e => ({...e, specialization_courses: v}))} />
+        </div>
+      )}
+    </SectionCard>
+
+    <SectionCard title="Personal Details" icon={Target}>
+      <EditRow editing={pd.isEditing} onEdit={pd.start} onCancel={pd.cancel} onSave={() => save(pd, pd.edit)} saving={pd.saving} />
+      {!pd.isEditing ? (
+        <div className="space-y-4">
+          <div><p className={LBL}>Hobbies</p><TagsView tags={parseJson(p.hobby, [])} /></div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+            <VF label="Favourite Subject" value={p.favorite_subject} />
+            <VF label="Difficult Subject" value={p.difficult_subject} />
+          </div>
+          <div><p className={LBL}>Professions I Love</p><TagsView tags={parseJson(p.loved_professions, [])} /></div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <TagsEdit label="Hobbies" tags={pd.edit.hobby} onChange={v => pd.setEdit(e => ({...e, hobby: v}))} placeholder="Add a hobby and press Enter…" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <TI label="Favourite Subject" value={pd.edit.favorite_subject} onChange={v => pd.setEdit(e => ({...e, favorite_subject: v}))} placeholder="e.g. Mathematics" />
+            <TI label="Difficult Subject" value={pd.edit.difficult_subject} onChange={v => pd.setEdit(e => ({...e, difficult_subject: v}))} placeholder="e.g. Chemistry" />
+          </div>
+          <TagsEdit label="Professions I Love (up to 5)" tags={pd.edit.loved_professions} onChange={v => v.length <= 5 && pd.setEdit(e => ({...e, loved_professions: v}))} placeholder="e.g. Scientist, Cricketer…" />
+        </div>
+      )}
+    </SectionCard>
+
+    <SectionCard title="Sports" icon={Award}>
+      <EditRow editing={sp.isEditing} onEdit={sp.start} onCancel={sp.cancel} onSave={() => save(sp, sp.edit)} saving={sp.saving} />
+      {!sp.isEditing ? (
+        <div className="space-y-4">
+          <div><p className={LBL}>Sports I Play / Follow</p><TagsView tags={parseJson(p.sports, [])} /></div>
+          <VF label="Skill Level" value={p.sports_level} />
+          {p.guardian_user_id && <VF label="Parent's Syllabrix ID" value={p.guardian_user_id} />}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <MultiSelect label="Sports I Play / Follow" options={SPORTS_LIST} selected={sp.edit.sports} onChange={v => sp.setEdit(e => ({...e, sports: v}))} />
+          <SI label="Skill Level" value={sp.edit.sports_level} onChange={v => sp.setEdit(e => ({...e, sports_level: v}))} options={['Beginner','Intermediate','Advanced','Competitive']} />
+          <TI label="Parent's Syllabrix ID (if under 13)" value={sp.edit.guardian_user_id} onChange={v => sp.setEdit(e => ({...e, guardian_user_id: v}))} placeholder="e.g. G-RAJ1234" />
         </div>
       )}
     </SectionCard>
@@ -690,6 +793,27 @@ function StudentSections({ user, saveSection }) {
         <div className="space-y-3">
           <TA label="Ambition / Career Interest" value={cg.edit.ambition} onChange={v => cg.setEdit(e => ({...e, ambition: v}))} placeholder="What career are you aiming for?" rows={2} />
           <TA label="I See My Future As…" value={cg.edit.future_vision} onChange={v => cg.setEdit(e => ({...e, future_vision: v}))} placeholder="Describe your dream" rows={2} />
+        </div>
+      )}
+    </SectionCard>
+
+    <SectionCard title="Free Courses" icon={BookOpen}>
+      <EditRow editing={co.isEditing} onEdit={co.start} onCancel={co.cancel} onSave={saveCourses} saving={co.saving} />
+      {!co.isEditing ? (
+        <div className="space-y-4">
+          <div>
+            <p className={LBL}>Technical Courses</p>
+            <TagsView tags={parseMandatoryCourses(p.mandatory_courses).technical} />
+          </div>
+          <div>
+            <p className={LBL}>Functional Courses</p>
+            <TagsView tags={parseMandatoryCourses(p.mandatory_courses).functional} />
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <MultiSelect label="Technical Courses (pick 2)" options={TECH_COURSES} selected={co.edit.tc} onChange={v => co.setEdit(e => ({...e, tc: v}))} max={2} />
+          <MultiSelect label="Functional Courses (pick 2)" options={FUNC_COURSES} selected={co.edit.fc} onChange={v => co.setEdit(e => ({...e, fc: v}))} max={2} />
         </div>
       )}
     </SectionCard>
@@ -712,19 +836,43 @@ function TeacherSections({ user, saveSection }) {
   const bi = useSection(() => ({ phone: user?.phone||'', gender: user?.gender||'', city: user?.city||'', state: user?.state||'' }));
   const pr = useSection(() => ({
     subject_primary: p.subject_primary||'', experience_years: p.experience_years||'',
-    institute_name: p.institute_name||'',
-    qualifications: parseJson(p.qualifications, []), teacher_type: p.teacher_type||'freelancer'
+    institute_name: p.institute_name||'', teacher_type: p.teacher_type||'freelancer',
+    qualifications: parseJson(p.qualifications, []),
+    subjects_additional: parseJson(p.subjects_additional, []),
+    board_experience: parseJson(p.board_experience, []),
+    past_institutes: parseJson(p.past_institutes, []),
   }));
   const td = useSection(() => ({
     has_own_business: p.has_own_business||false, business_name: p.business_name||''
+  }));
+  const in_ = useSection(() => ({
+    hobby: parseJson(p.hobby, []),
+    learning_interests: parseJson(p.learning_interests, []),
+  }));
+  const co = useSection(() => ({
+    tc: parseMandatoryCourses(p.mandatory_courses).technical,
+    fc: parseMandatoryCourses(p.mandatory_courses).functional,
+  }));
+  const le = useSection(() => ({
+    self_as_learner: p.self_as_learner||'',
+    platform_as_student: p.platform_as_student||'',
+    platform_as_teacher: p.platform_as_teacher||'',
   }));
   const ab = useSection(() => ({ bio: user?.bio||'' }));
 
   const save = async (section, data) => {
     section.setSaving(true);
     try { await saveSection(data); section.cancel(); }
-    catch (e) { /* error already toasted in saveSection */ }
+    catch (e) {}
     finally { section.setSaving(false); }
+  };
+  const saveCourses = async () => {
+    co.setSaving(true);
+    try {
+      await saveSection({ mandatory_courses: JSON.stringify({ technical: co.edit.tc, functional: co.edit.fc }) });
+      co.cancel();
+    } catch (e) {}
+    finally { co.setSaving(false); }
   };
 
   return (<>
@@ -750,12 +898,17 @@ function TeacherSections({ user, saveSection }) {
     <SectionCard title="Professional Info" icon={Briefcase}>
       <EditRow editing={pr.isEditing} onEdit={pr.start} onCancel={pr.cancel} onSave={() => save(pr, pr.edit)} saving={pr.saving} />
       {!pr.isEditing ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-          <VF label="Subject Specialization" value={p.subject_primary} />
-          <VF label="Experience" value={p.experience_years ? `${p.experience_years} years` : ''} />
-          <VF label="Current Institution" value={p.institute_name} />
-          <VF label="Type" value={p.teacher_type?.replace('_', ' ')} />
-          <div className="col-span-2"><p className={LBL}>Qualifications</p><TagsView tags={parseJson(p.qualifications, [])} /></div>
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+            <VF label="Subject Specialization" value={p.subject_primary} />
+            <VF label="Experience" value={p.experience_years ? `${p.experience_years} years` : ''} />
+            <VF label="Current Institution" value={p.institute_name} />
+            <VF label="Type" value={p.teacher_type?.replace(/_/g, ' ')} />
+          </div>
+          <div><p className={LBL}>Additional Subjects</p><TagsView tags={parseJson(p.subjects_additional, [])} /></div>
+          <div><p className={LBL}>Board Experience</p><TagsView tags={parseJson(p.board_experience, [])} /></div>
+          <div><p className={LBL}>Qualifications</p><TagsView tags={parseJson(p.qualifications, [])} /></div>
+          <div><p className={LBL}>Past Institutes</p><TagsView tags={parseJson(p.past_institutes, [])} /></div>
         </div>
       ) : (
         <div className="space-y-3">
@@ -774,7 +927,10 @@ function TeacherSections({ user, saveSection }) {
               ))}
             </div>
           </Fld>
+          <TagsEdit label="Additional Subjects" tags={pr.edit.subjects_additional} onChange={v => pr.setEdit(e => ({...e, subjects_additional: v}))} placeholder="Add subject…" />
+          <MultiSelect label="Board Experience" options={[...BOARDS,'All Boards']} selected={pr.edit.board_experience} onChange={v => pr.setEdit(e => ({...e, board_experience: v}))} />
           <TagsEdit label="Qualifications" tags={pr.edit.qualifications} onChange={v => pr.setEdit(e => ({...e, qualifications: v}))} placeholder="e.g. M.Sc, B.Ed…" />
+          <TagsEdit label="Past Institutes" tags={pr.edit.past_institutes} onChange={v => pr.setEdit(e => ({...e, past_institutes: v}))} placeholder="Add past school / college…" />
         </div>
       )}
     </SectionCard>
@@ -803,6 +959,53 @@ function TeacherSections({ user, saveSection }) {
       )}
     </SectionCard>
 
+    <SectionCard title="Interests & Development" icon={Star}>
+      <EditRow editing={in_.isEditing} onEdit={in_.start} onCancel={in_.cancel} onSave={() => save(in_, in_.edit)} saving={in_.saving} />
+      {!in_.isEditing ? (
+        <div className="space-y-4">
+          <div><p className={LBL}>Hobbies</p><TagsView tags={parseJson(p.hobby, [])} /></div>
+          <div><p className={LBL}>Skills I Want to Learn</p><TagsView tags={parseJson(p.learning_interests, [])} /></div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <TagsEdit label="Hobbies" tags={in_.edit.hobby} onChange={v => in_.setEdit(e => ({...e, hobby: v}))} placeholder="Add a hobby and press Enter…" />
+          <MultiSelect label="Skills I Want to Learn" options={LEARNING_INTERESTS} selected={in_.edit.learning_interests} onChange={v => in_.setEdit(e => ({...e, learning_interests: v}))} />
+        </div>
+      )}
+    </SectionCard>
+
+    <SectionCard title="Free Courses" icon={BookOpen}>
+      <EditRow editing={co.isEditing} onEdit={co.start} onCancel={co.cancel} onSave={saveCourses} saving={co.saving} />
+      {!co.isEditing ? (
+        <div className="space-y-4">
+          <div><p className={LBL}>Technical Courses</p><TagsView tags={parseMandatoryCourses(p.mandatory_courses).technical} /></div>
+          <div><p className={LBL}>Functional Courses</p><TagsView tags={parseMandatoryCourses(p.mandatory_courses).functional} /></div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <MultiSelect label="Technical Courses (pick 2)" options={TECH_COURSES} selected={co.edit.tc} onChange={v => co.setEdit(e => ({...e, tc: v}))} max={2} />
+          <MultiSelect label="Functional Courses (pick 2)" options={FUNC_COURSES} selected={co.edit.fc} onChange={v => co.setEdit(e => ({...e, fc: v}))} max={2} />
+        </div>
+      )}
+    </SectionCard>
+
+    <SectionCard title="As a Learner" icon={GraduationCap}>
+      <EditRow editing={le.isEditing} onEdit={le.start} onCancel={le.cancel} onSave={() => save(le, le.edit)} saving={le.saving} />
+      {!le.isEditing ? (
+        <div className="space-y-4">
+          <VF label="How I Think of Myself as a Student" value={p.self_as_learner} />
+          <VF label="How I Use Syllabrix as a Student" value={p.platform_as_student} />
+          <VF label="How I Use Syllabrix as a Teacher" value={p.platform_as_teacher} />
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <TA label="How I Think of Myself as a Student" value={le.edit.self_as_learner} onChange={v => le.setEdit(e => ({...e, self_as_learner: v}))} placeholder="e.g. I love exploring new topics outside my subject…" rows={3} />
+          <TA label="How I Use Syllabrix as a Student" value={le.edit.platform_as_student} onChange={v => le.setEdit(e => ({...e, platform_as_student: v}))} placeholder="e.g. Take courses, earn certificates…" rows={2} />
+          <TA label="How I Use Syllabrix as a Teacher" value={le.edit.platform_as_teacher} onChange={v => le.setEdit(e => ({...e, platform_as_teacher: v}))} placeholder="e.g. Conduct live classes, create content…" rows={2} />
+        </div>
+      )}
+    </SectionCard>
+
     <SectionCard title="About" icon={BookOpen}>
       <EditRow editing={ab.isEditing} onEdit={ab.start} onCancel={ab.cancel} onSave={() => save(ab, ab.edit)} saving={ab.saving} />
       {!ab.isEditing
@@ -822,20 +1025,38 @@ function ProfessionalSections({ user, saveSection }) {
   const wi = useSection(() => ({
     current_company: p.current_company||'', designation: p.designation||'',
     experience_years: p.experience_years||'', industry: p.industry||'',
-    education_level: p.education_level||''
+    education_level: p.education_level||'',
+    looking_for_job: p.looking_for_job ?? null,
+    previous_companies: parseJson(p.previous_companies, []),
   }));
   const sk = useSection(() => ({ skills: parseJson(p.skills, []) }));
   const le = useSection(() => ({
     learning_goals: parseJson(p.learning_goals, []),
     linkedin_url: p.linkedin_url||'', how_use_platform: p.how_use_platform||''
   }));
+  const pc = useSection(() => ({
+    hobby: parseJson(p.hobby, []),
+    tc: parseMandatoryCourses(p.mandatory_courses).technical,
+    fc: parseMandatoryCourses(p.mandatory_courses).functional,
+  }));
   const ab = useSection(() => ({ bio: user?.bio||'' }));
 
   const save = async (section, data) => {
     section.setSaving(true);
     try { await saveSection(data); section.cancel(); }
-    catch (e) { /* error already toasted in saveSection */ }
+    catch (e) {}
     finally { section.setSaving(false); }
+  };
+  const savePersonalCourses = async () => {
+    pc.setSaving(true);
+    try {
+      await saveSection({
+        hobby: pc.edit.hobby,
+        mandatory_courses: JSON.stringify({ technical: pc.edit.tc, functional: pc.edit.fc }),
+      });
+      pc.cancel();
+    } catch (e) {}
+    finally { pc.setSaving(false); }
   };
 
   return (<>
@@ -861,20 +1082,37 @@ function ProfessionalSections({ user, saveSection }) {
     <SectionCard title="Work Info" icon={Briefcase}>
       <EditRow editing={wi.isEditing} onEdit={wi.start} onCancel={wi.cancel} onSave={() => save(wi, wi.edit)} saving={wi.saving} />
       {!wi.isEditing ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-          <VF label="Current Company" value={p.current_company} />
-          <VF label="Designation" value={p.designation} />
-          <VF label="Experience" value={p.experience_years ? `${p.experience_years} yrs` : ''} />
-          <VF label="Industry" value={p.industry} />
-          <VF label="Education Level" value={p.education_level} />
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+            <VF label="Current Company" value={p.current_company} />
+            <VF label="Designation" value={p.designation} />
+            <VF label="Experience" value={p.experience_years ? `${p.experience_years} yrs` : ''} />
+            <VF label="Industry" value={p.industry} />
+            <VF label="Education Level" value={p.education_level} />
+            <VF label="Looking for a Job" value={p.looking_for_job === true ? 'Yes' : p.looking_for_job === false ? 'No' : ''} />
+          </div>
+          <div><p className={LBL}>Previous Companies</p><TagsView tags={parseJson(p.previous_companies, [])} /></div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <TI label="Current Company" value={wi.edit.current_company} onChange={v => wi.setEdit(e => ({...e, current_company: v}))} placeholder="Where do you work?" />
-          <TI label="Designation / Role" value={wi.edit.designation} onChange={v => wi.setEdit(e => ({...e, designation: v}))} placeholder="e.g. Product Manager" />
-          <TI label="Years of Experience" value={String(wi.edit.experience_years||'')} onChange={v => wi.setEdit(e => ({...e, experience_years: v}))} type="number" />
-          <SI label="Industry" value={wi.edit.industry} onChange={v => wi.setEdit(e => ({...e, industry: v}))} options={INDUSTRIES} />
-          <SI label="Highest Education" value={wi.edit.education_level} onChange={v => wi.setEdit(e => ({...e, education_level: v}))} options={EDU_LEVELS} />
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <TI label="Current Company" value={wi.edit.current_company} onChange={v => wi.setEdit(e => ({...e, current_company: v}))} placeholder="Where do you work?" />
+            <TI label="Designation / Role" value={wi.edit.designation} onChange={v => wi.setEdit(e => ({...e, designation: v}))} placeholder="e.g. Product Manager" />
+            <TI label="Years of Experience" value={String(wi.edit.experience_years||'')} onChange={v => wi.setEdit(e => ({...e, experience_years: v}))} type="number" />
+            <SI label="Industry" value={wi.edit.industry} onChange={v => wi.setEdit(e => ({...e, industry: v}))} options={INDUSTRIES} />
+            <SI label="Highest Education" value={wi.edit.education_level} onChange={v => wi.setEdit(e => ({...e, education_level: v}))} options={EDU_LEVELS} />
+          </div>
+          <Fld label="Are you looking for a new job?">
+            <div className="flex gap-3">
+              {[['Yes, actively looking', true], ['No, just upskilling', false]].map(([label, val]) => (
+                <button key={String(val)} type="button" onClick={() => wi.setEdit(e => ({...e, looking_for_job: val}))}
+                  className={`flex-1 py-2 rounded-xl text-[12px] font-semibold border-2 transition-all ${wi.edit.looking_for_job === val ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </Fld>
+          <TagsEdit label="Previous Companies / Organisations" tags={wi.edit.previous_companies} onChange={v => wi.setEdit(e => ({...e, previous_companies: v}))} placeholder="Add past employer…" />
         </div>
       )}
     </SectionCard>
@@ -899,6 +1137,23 @@ function ProfessionalSections({ user, saveSection }) {
           <TagsEdit label="Learning Goals" tags={le.edit.learning_goals} onChange={v => le.setEdit(e => ({...e, learning_goals: v}))} placeholder="Add a goal…" />
           <TI label="LinkedIn URL" value={le.edit.linkedin_url} onChange={v => le.setEdit(e => ({...e, linkedin_url: v}))} placeholder="https://linkedin.com/in/…" />
           <TA label="How I Use This Platform" value={le.edit.how_use_platform} onChange={v => le.setEdit(e => ({...e, how_use_platform: v}))} placeholder="What are you here to learn or achieve?" rows={2} />
+        </div>
+      )}
+    </SectionCard>
+
+    <SectionCard title="Hobbies & Free Courses" icon={BookOpen}>
+      <EditRow editing={pc.isEditing} onEdit={pc.start} onCancel={pc.cancel} onSave={savePersonalCourses} saving={pc.saving} />
+      {!pc.isEditing ? (
+        <div className="space-y-4">
+          <div><p className={LBL}>Hobbies</p><TagsView tags={parseJson(p.hobby, [])} /></div>
+          <div><p className={LBL}>Technical Courses</p><TagsView tags={parseMandatoryCourses(p.mandatory_courses).technical} /></div>
+          <div><p className={LBL}>Functional Courses</p><TagsView tags={parseMandatoryCourses(p.mandatory_courses).functional} /></div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <TagsEdit label="Hobbies" tags={pc.edit.hobby} onChange={v => pc.setEdit(e => ({...e, hobby: v}))} placeholder="Add a hobby and press Enter…" />
+          <MultiSelect label="Technical Courses (pick 2)" options={TECH_COURSES} selected={pc.edit.tc} onChange={v => pc.setEdit(e => ({...e, tc: v}))} max={2} />
+          <MultiSelect label="Functional Courses (pick 2)" options={FUNC_COURSES} selected={pc.edit.fc} onChange={v => pc.setEdit(e => ({...e, fc: v}))} max={2} />
         </div>
       )}
     </SectionCard>
@@ -1094,6 +1349,95 @@ function OrganizationSections({ user, saveSection }) {
           <TA label="How We Use This Platform" value={ab.edit.how_use_platform} onChange={v => ab.setEdit(e => ({...e, how_use_platform: v}))} placeholder="e.g. Talent hiring, L&D programs…" rows={2} />
         </div>
       )}
+    </SectionCard>
+  </>);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// HR PROFESSIONAL SECTIONS
+// ═══════════════════════════════════════════════════════════════════
+function HrSections({ user, saveSection }) {
+  const p = user?.profile || {};
+
+  const bi = useSection(() => ({ phone: user?.phone||'', gender: user?.gender||'', city: user?.city||'', state: user?.state||'' }));
+  const pr = useSection(() => ({
+    company_name: p.company_name||'', hr_role: p.hr_role||'',
+    industry: p.industry||'', experience_years: p.experience_years||'',
+    linkedin_url: p.linkedin_url||'',
+  }));
+  const sk = useSection(() => ({ skills: parseJson(p.skills, []) }));
+  const ab = useSection(() => ({ bio: user?.bio || p.about || '' }));
+
+  const save = async (section, data) => {
+    section.setSaving(true);
+    try { await saveSection(data); section.cancel(); }
+    catch (e) {}
+    finally { section.setSaving(false); }
+  };
+  const saveAbout = async () => {
+    ab.setSaving(true);
+    try { await saveSection({ bio: ab.edit.bio, about: ab.edit.bio }); ab.cancel(); }
+    catch (e) {}
+    finally { ab.setSaving(false); }
+  };
+
+  return (<>
+    <SectionCard title="Basic Info" icon={User} defaultOpen>
+      <EditRow editing={bi.isEditing} onEdit={bi.start} onCancel={bi.cancel} onSave={() => save(bi, bi.edit)} saving={bi.saving} />
+      {!bi.isEditing ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+          <VF label="Phone" value={user?.phone} />
+          <VF label="Gender" value={user?.gender} />
+          <VF label="City" value={user?.city} />
+          <VF label="State" value={user?.state} />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <TI label="Phone" value={bi.edit.phone} onChange={v => bi.setEdit(e => ({...e, phone: v}))} placeholder="+91 XXXXX XXXXX" />
+          <SI label="Gender" value={bi.edit.gender} onChange={v => bi.setEdit(e => ({...e, gender: v}))} options={GENDERS} />
+          <TI label="City" value={bi.edit.city} onChange={v => bi.setEdit(e => ({...e, city: v}))} placeholder="City" />
+          <SI label="State" value={bi.edit.state} onChange={v => bi.setEdit(e => ({...e, state: v}))} options={STATES} />
+        </div>
+      )}
+    </SectionCard>
+
+    <SectionCard title="Professional Details" icon={Briefcase}>
+      <EditRow editing={pr.isEditing} onEdit={pr.start} onCancel={pr.cancel} onSave={() => save(pr, pr.edit)} saving={pr.saving} />
+      {!pr.isEditing ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+          <VF label="Company / Organisation" value={p.company_name} />
+          <VF label="HR Role" value={p.hr_role} />
+          <VF label="Industry" value={p.industry} />
+          <VF label="Experience" value={p.experience_years ? `${p.experience_years} yrs` : ''} />
+          <VF label="LinkedIn" value={p.linkedin_url} placeholder="Not provided" />
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="col-span-2">
+              <TI label="Company / Organisation" value={pr.edit.company_name} onChange={v => pr.setEdit(e => ({...e, company_name: v}))} placeholder="Company you currently represent" />
+            </div>
+            <SI label="HR Role" value={pr.edit.hr_role} onChange={v => pr.setEdit(e => ({...e, hr_role: v}))} options={HR_ROLES} />
+            <SI label="Industry" value={pr.edit.industry} onChange={v => pr.setEdit(e => ({...e, industry: v}))} options={INDUSTRIES} />
+            <TI label="Years of HR Experience" value={String(pr.edit.experience_years||'')} onChange={v => pr.setEdit(e => ({...e, experience_years: v}))} type="number" placeholder="e.g. 5" />
+            <TI label="LinkedIn Profile URL" value={pr.edit.linkedin_url} onChange={v => pr.setEdit(e => ({...e, linkedin_url: v}))} placeholder="https://linkedin.com/in/…" />
+          </div>
+        </div>
+      )}
+    </SectionCard>
+
+    <SectionCard title="Skills & Expertise" icon={Star}>
+      <EditRow editing={sk.isEditing} onEdit={sk.start} onCancel={sk.cancel} onSave={() => save(sk, sk.edit)} saving={sk.saving} />
+      {!sk.isEditing
+        ? <TagsView tags={parseJson(p.skills, [])} />
+        : <TagsEdit label="HR Skills & Expertise" tags={sk.edit.skills} onChange={v => sk.setEdit(e => ({...e, skills: v}))} placeholder="e.g. Talent Acquisition, HRIS, Compensation…" />}
+    </SectionCard>
+
+    <SectionCard title="About" icon={BookOpen}>
+      <EditRow editing={ab.isEditing} onEdit={ab.start} onCancel={ab.cancel} onSave={saveAbout} saving={ab.saving} />
+      {!ab.isEditing
+        ? <p className="text-[14px] text-gray-700 leading-relaxed">{user?.bio || p.about || <span className="text-gray-400 italic">Add a bio — your experience, specialisation, what kind of talent you're looking for</span>}</p>
+        : <TA label="About You" value={ab.edit.bio} onChange={v => ab.setEdit(e => ({...e, bio: v}))} placeholder="Your experience, specialisation, what kind of talent you're looking for…" rows={4} />}
     </SectionCard>
   </>);
 }
@@ -1309,6 +1653,7 @@ export default function MyProfilePage() {
             {type === 'professional_learner' && <ProfessionalSections user={user} saveSection={saveSection} />}
             {type === 'institute'            && <InstituteSections    user={user} saveSection={saveSection} />}
             {type === 'organization'         && <OrganizationSections user={user} saveSection={saveSection} />}
+            {type === 'hr_professional'      && <HrSections           user={user} saveSection={saveSection} />}
             {type === 'parent'               && <ParentSections       user={user} saveSection={saveSection} />}
           </div>
 
@@ -1360,4 +1705,11 @@ function parseJson(value, fallback) {
   if (Array.isArray(value)) return value;
   if (typeof value === 'string') { try { return JSON.parse(value); } catch { return fallback; } }
   return fallback;
+}
+
+function parseMandatoryCourses(value) {
+  if (!value) return { technical: [], functional: [] };
+  if (typeof value === 'object' && !Array.isArray(value)) return { technical: value.technical || [], functional: value.functional || [] };
+  if (typeof value === 'string') { try { const p = JSON.parse(value); return { technical: p.technical || [], functional: p.functional || [] }; } catch { return { technical: [], functional: [] }; } }
+  return { technical: [], functional: [] };
 }
