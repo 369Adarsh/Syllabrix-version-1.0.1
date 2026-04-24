@@ -39,14 +39,44 @@ const startServer = async () => {
     console.log('  Ready to accept intelligence requests.');
     console.log('========================================');
 
-    // Keep Render free tier alive — ping self every 14 min to prevent sleep
+    // ── Keep Render free-tier alive ─────────────────────────────────────────
+    // Render sleeps after 15 min of inactivity. We self-ping every 13 min.
+    // CRITICAL: RENDER_EXTERNAL_URL is https:// — http.get silently fails on it,
+    // which is why the old code did nothing. Always pick the right module.
     if (config.NODE_ENV === 'production') {
       const SELF_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
-      setInterval(() => {
-        http.get(`${SELF_URL}/api/health`, (res) => {
-          res.resume();
-        }).on('error', () => {});
-      }, 14 * 60 * 1000);
+      const requester = SELF_URL.startsWith('https') ? require('https') : http;
+      let failStreak = 0;
+      let retryTimer = null;
+
+      const pingHealth = () => {
+        clearTimeout(retryTimer);
+        const req = requester.get(
+          `${SELF_URL}/api/health`,
+          { timeout: 10000 },
+          (res) => {
+            res.resume();
+            failStreak = 0;
+            console.log(`[keep-alive] ✓ ${new Date().toISOString()}`);
+          }
+        );
+        req.on('timeout', () => req.destroy());
+        req.on('error', (err) => {
+          failStreak++;
+          console.warn(`[keep-alive] ✗ streak=${failStreak} — ${err.message}`);
+          // Retry after 2 min on failure (up to 3 times before next scheduled ping)
+          if (failStreak <= 3) {
+            retryTimer = setTimeout(pingHealth, 2 * 60 * 1000);
+          }
+        });
+      };
+
+      // Warmup: first ping 30 s after startup so DB pool is ready
+      setTimeout(pingHealth, 30 * 1000);
+      // Heartbeat: every 13 min (2-min safety margin before Render's 15-min cutoff)
+      setInterval(pingHealth, 13 * 60 * 1000);
+
+      console.log(`  💓 Keep-alive → ${SELF_URL}/api/health every 13 min`);
     }
   });
 };

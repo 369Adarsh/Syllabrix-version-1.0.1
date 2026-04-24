@@ -38,11 +38,38 @@ function DashboardLayoutInner({ children }) {
   );
 }
 
+// Client-side keep-alive: backup for the server's own self-ping.
+// Runs only in production while a user has the app open.
+// Skips hidden tabs so it doesn't fire on background/inactive sessions.
+const SERVER_ORIGIN = process.env.NEXT_PUBLIC_SOCKET_URL;
+const IS_PROD = process.env.NEXT_PUBLIC_ENV === 'production';
+const PING_INTERVAL_MS = 10 * 60 * 1000; // 10 min — tighter than server's 13 min
+
+function useServerKeepAlive() {
+  useEffect(() => {
+    if (!IS_PROD || !SERVER_ORIGIN) return;
+
+    const ping = () => {
+      if (document.hidden) return;
+      fetch(`${SERVER_ORIGIN}/api/health`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(8000),
+      }).catch(() => {});
+    };
+
+    const id = setInterval(ping, PING_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, []);
+}
+
 function DashboardLayoutWithNotifications({ children }) {
   const [token, setToken] = useState(null);
   useEffect(() => {
     setToken(localStorage.getItem('syllabrix_token'));
   }, []);
+
+  useServerKeepAlive();
+
   return (
     <NotificationProvider token={token}>
       <DashboardLayoutInner>{children}</DashboardLayoutInner>
