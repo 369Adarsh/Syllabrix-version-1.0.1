@@ -7,8 +7,9 @@ import Sidebar from '@/components/layout/Sidebar';
 import TopBar from '@/components/layout/TopBar';
 import BottomNav from '@/components/layout/BottomNav';
 import { NotificationProvider } from '@/contexts/NotificationContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 
-const FULL_BLEED_PAGES = ['/ai-library', '/live-classes/room'];
+const FULL_BLEED_PAGES = ['/live-classes/room'];
 
 function DashboardLayoutInner({ children }) {
   const pathname = usePathname();
@@ -72,7 +73,9 @@ function DashboardLayoutWithNotifications({ children }) {
 
   return (
     <NotificationProvider token={token}>
-      <DashboardLayoutInner>{children}</DashboardLayoutInner>
+      <ThemeProvider>
+        <DashboardLayoutInner>{children}</DashboardLayoutInner>
+      </ThemeProvider>
     </NotificationProvider>
   );
 }

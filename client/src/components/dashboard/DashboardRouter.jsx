@@ -1,6 +1,6 @@
 'use client';
 import { useAuth } from '@/contexts/AuthContext';
-import StudentDashboard from './StudentDashboard';
+import StudentDailyDashboard from './StudentDailyDashboard';
 import ProfessionalDashboard from './ProfessionalDashboard';
 import ParentDashboard from './ParentDashboard';
 import HRDashboard from './HRDashboard';
@@ -140,10 +140,10 @@ export default function DashboardRouter() {
     );
   }
 
-  // Default: Student/General Learner
+  // Default: Student — mode-adaptive daily dashboard
   return (
     <Suspense fallback={<Loader2 className="animate-spin" />}>
-      <StudentDashboard />
+      <StudentDailyDashboard />
     </Suspense>
   );
 }

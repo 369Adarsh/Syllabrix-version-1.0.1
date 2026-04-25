@@ -18,6 +18,7 @@ import {
   Bot, BadgeCheck, CalendarDays, UserCircle2, Plus, Search
 } from 'lucide-react';
 import { getStudentNavRestrictions } from '@/utils/ageGroup';
+import { getPlatformMode, PLATFORM_MODES } from '@/utils/platformMode';
 import { parentAPI } from '@/lib/api/parent.api';
 
 // ─── Shared primitives ────────────────────────────────────────────────────────
@@ -63,106 +64,248 @@ const Section = ({ label }) => (
   </p>
 );
 
-// ─── Student sidebar (spec-compliant with age gating) ─────────────────────────
+// ─── Student sidebar — mode-driven ────────────────────────────────────────────
 
 function StudentSidebarContent({ onClose }) {
   const { user, logout } = useAuth();
   const hasPhoto = user?.profile_photo_url && !user.profile_photo_url.includes('PASTE_');
-  const r = getStudentNavRestrictions(user?.age_group);
-  const props = { onClick: onClose };
+  const mode = getPlatformMode(user);
+  const modeConfig = PLATFORM_MODES[mode] || PLATFORM_MODES.default;
+  const p = {
+    onClick: onClose,
+    activeClass: modeConfig.sidebarActive,
+    activeIconClass: modeConfig.sidebarActiveIcon,
+  };
 
+  const MobileLogo = () => (
+    <div className="md:hidden h-14 flex items-center justify-between px-4 border-b border-gray-100 flex-shrink-0">
+      <Link href="/home" onClick={onClose} className="flex items-center gap-2">
+        <Image src="/images/logo/syllabrix-logo.png" alt="Syllabrix" width={110} height={30} className="h-7 w-auto object-contain" priority />
+      </Link>
+      <button onClick={onClose} className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
+        <X size={20} className="text-gray-500" />
+      </button>
+    </div>
+  );
+
+  const UserCard = () => user ? (
+    <div className="flex-shrink-0 border-t border-gray-100 bg-white px-2 py-2">
+      <Link href="/profile" onClick={onClose} className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-gray-50 transition-colors">
+        <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0" style={{ background: modeConfig.gradient }}>
+          {hasPhoto
+            ? <Image src={user.profile_photo_url} alt="" width={32} height={32} className="w-full h-full object-cover" />
+            : <span className="text-white font-bold text-xs">{user.username?.charAt(0)?.toUpperCase()}</span>}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[12px] font-semibold text-gray-800 truncate">{user.profile?.full_name || user.username}</p>
+          <p className="text-[10px] font-medium truncate" style={{ color: modeConfig.primaryColor }}>
+            {modeConfig.emoji} {modeConfig.label}
+          </p>
+        </div>
+      </Link>
+      <button
+        onClick={async () => { await logout(); window.location.href = '/sign-in'; }}
+        className="flex items-center gap-2.5 px-3 py-1.5 w-full rounded-lg text-[12px] text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors"
+      >
+        <LogOut size={13} /> Logout
+      </button>
+    </div>
+  ) : null;
+
+  // ── Young Explorer (LKG–Class 5) ──
+  if (mode === 'young_explorer') {
+    return (
+      <div className="flex flex-col h-full bg-white">
+        <MobileLogo />
+        <div className="flex-1 overflow-y-auto py-2" style={{ scrollbarWidth: 'none' }}>
+          <Section label="Home" />
+          <NavItem href="/home"         icon={Home}        label="My Dashboard"  {...p} />
+
+          <Section label="Learn & Play" />
+          <NavItem href="/learn-play"   icon={Gamepad2}    label="Learn & Play"  {...p} />
+          <NavItem href="/stories"      icon={BookOpen}    label="Story Library" {...p} />
+          <NavItem href="/ai-buddy"     icon={Sparkles}    label="AI Buddy"      {...p} />
+          <NavItem href="/mindmap"      icon={Brain}       label="Mind Maps"     {...p} />
+
+          <Section label="Fun Zone" />
+          <NavItem href="/arcade"       icon={Gamepad2}    label="Arcade"        {...p} />
+          <NavItem href="/leaderboard"  icon={Trophy}      label="Leaderboard"   {...p} />
+
+          <div className="mt-4 border-t border-gray-100 pt-2">
+            <NavItem href="/settings"   icon={Settings}    label="Settings"      {...p} />
+          </div>
+        </div>
+        <UserCard />
+      </div>
+    );
+  }
+
+  // ── Curious Mind (Class 6–8) ──
+  if (mode === 'curious_mind') {
+    return (
+      <div className="flex flex-col h-full bg-white">
+        <MobileLogo />
+        <div className="flex-1 overflow-y-auto py-2" style={{ scrollbarWidth: 'none' }}>
+          <Section label="Home" />
+          <NavItem href="/home"            icon={Home}         label="Dashboard"      {...p} />
+          <NavItem href="/groups"          icon={Users}        label="Connections"    {...p} />
+
+          <Section label="Learn" />
+          <NavItem href="/ai-buddy"        icon={Sparkles}     label="AI Buddy"       {...p} />
+          <NavItem href="/prep"            icon={GraduationCap} label="PrepSmart"     {...p} />
+          <NavItem href="/mindmap"         icon={Brain}        label="Mind Maps"      {...p} />
+          <NavItem href="/newsroom"        icon={Newspaper}    label="Newsroom"       {...p} />
+
+          <Section label="Discover" />
+          <NavItem href="/career-explorer" icon={Map}          label="Career Explorer" {...p} />
+          <NavItem href="/experience-lab"  icon={FlaskConical} label="Experience Lab"  {...p} />
+
+          <Section label="Play" />
+          <NavItem href="/arcade"          icon={Gamepad2}     label="Arcade"         {...p} />
+          <NavItem href="/leaderboard"     icon={Trophy}       label="Leaderboard"    {...p} />
+
+          <div className="mt-4 border-t border-gray-100 pt-2">
+            <NavItem href="/settings"      icon={Settings}     label="Settings"       {...p} />
+          </div>
+        </div>
+        <UserCard />
+      </div>
+    );
+  }
+
+  // ── Board Warrior (Class 9–10) ──
+  if (mode === 'board_warrior') {
+    return (
+      <div className="flex flex-col h-full bg-white">
+        <MobileLogo />
+        <div className="flex-1 overflow-y-auto py-2" style={{ scrollbarWidth: 'none' }}>
+          <Section label="Home" />
+          <NavItem href="/home"            icon={Home}          label="Dashboard"      {...p} />
+
+          <Section label="Prepare" />
+          <NavItem href="/prep"            icon={GraduationCap} label="PrepSmart"      {...p} />
+          <NavItem href="/jee-command"     icon={Zap}           label="Exam Hub"       {...p} />
+          <NavItem href="/mindmap"         icon={Brain}         label="Mind Maps"      {...p} />
+          <NavItem href="/prep/my-stats"   icon={BarChart2}     label="My Stats"       {...p} />
+
+          <Section label="Study" />
+          <NavItem href="/ai-buddy"        icon={Sparkles}      label="AI Buddy"       {...p} />
+          <NavItem href="/newsroom"        icon={Newspaper}     label="Newsroom"       {...p} />
+          <NavItem href="/virtual-lab"     icon={Beaker}        label="Virtual Lab"    {...p} />
+
+          <Section label="Connect" />
+          <NavItem href="/groups"          icon={Users}         label="Connections"    {...p} />
+          <NavItem href="/leaderboard"     icon={Trophy}        label="Leaderboard"    {...p} />
+
+          <div className="mt-4 border-t border-gray-100 pt-2">
+            <NavItem href="/settings"      icon={Settings}      label="Settings"       {...p} />
+          </div>
+        </div>
+        <UserCard />
+      </div>
+    );
+  }
+
+  // ── Exam Command (Class 11–12 / JEE / NEET) ──
+  if (mode === 'exam_command') {
+    return (
+      <div className="flex flex-col h-full bg-white">
+        <MobileLogo />
+        <div className="flex-1 overflow-y-auto py-2" style={{ scrollbarWidth: 'none' }}>
+          <Section label="Home" />
+          <NavItem href="/home"            icon={Home}          label="Dashboard"      {...p} />
+
+          <Section label="Prepare" />
+          <NavItem href="/jee-command"     icon={Zap}           label="Exam Command"   {...p} />
+          <NavItem href="/prep"            icon={GraduationCap} label="PrepSmart"      {...p} />
+          <NavItem href="/mindmap"         icon={Brain}         label="Mind Maps"      {...p} />
+          <NavItem href="/prep/my-stats"   icon={BarChart2}     label="My Stats"       {...p} />
+
+          <Section label="Study" />
+          <NavItem href="/ai-buddy"        icon={Sparkles}      label="AI Buddy"       {...p} />
+          <NavItem href="/newsroom"        icon={Newspaper}     label="Newsroom"       {...p} />
+          <NavItem href="/mock-interview"  icon={Mic}           label="Mock Interview" {...p} />
+          <NavItem href="/code-lab"        icon={Code}          label="Code Lab"       {...p} />
+
+          <Section label="Connect" />
+          <NavItem href="/groups"          icon={Users}         label="Connections"    {...p} />
+          <NavItem href="/mentorship"      icon={Star}          label="Mentorship"     {...p} />
+          <NavItem href="/leaderboard"     icon={Trophy}        label="Leaderboard"    {...p} />
+
+          <div className="mt-4 border-t border-gray-100 pt-2">
+            <NavItem href="/settings"      icon={Settings}      label="Settings"       {...p} />
+          </div>
+        </div>
+        <UserCard />
+      </div>
+    );
+  }
+
+  // ── UPSC Aspirant ──
+  if (mode === 'upsc_aspirant') {
+    return (
+      <div className="flex flex-col h-full bg-white">
+        <MobileLogo />
+        <div className="flex-1 overflow-y-auto py-2" style={{ scrollbarWidth: 'none' }}>
+          <Section label="Daily" />
+          <NavItem href="/home"              icon={Home}          label="Daily Briefing" {...p} />
+          <NavItem href="/prep/current-affairs" icon={Newspaper}  label="Current Affairs" {...p} />
+
+          <Section label="Prepare" />
+          <NavItem href="/prep"              icon={GraduationCap} label="PrepSmart"       {...p} />
+          <NavItem href="/prep/daily-quiz"   icon={Brain}         label="Quiz Bank"       {...p} />
+          <NavItem href="/mindmap"           icon={Brain}         label="Mind Maps"       {...p} />
+          <NavItem href="/prep/my-stats"     icon={BarChart2}     label="My Stats"        {...p} />
+
+          <Section label="AI Tools" />
+          <NavItem href="/ai-buddy"          icon={Sparkles}      label="AI Mentor"       {...p} />
+
+          <Section label="Connect" />
+          <NavItem href="/groups"            icon={Users}         label="Aspirant Community" {...p} />
+          <NavItem href="/newsroom"          icon={Newspaper}     label="Newsroom"        {...p} />
+          <NavItem href="/leaderboard"       icon={Trophy}        label="Leaderboard"     {...p} />
+
+          <div className="mt-4 border-t border-gray-100 pt-2">
+            <NavItem href="/settings"        icon={Settings}      label="Settings"        {...p} />
+          </div>
+        </div>
+        <UserCard />
+      </div>
+    );
+  }
+
+  // ── Skill Builder / Default (18+ general learner) ──
   return (
     <div className="flex flex-col h-full bg-white">
-      {/* Logo — mobile drawer only (desktop TopBar shows the logo) */}
-      <div className="md:hidden h-14 flex items-center justify-between px-4 border-b border-gray-100 flex-shrink-0">
-        <Link href="/home" onClick={onClose} className="flex items-center gap-2">
-          <Image
-            src="/images/logo/syllabrix-logo.png"
-            alt="Syllabrix"
-            width={110} height={30}
-            className="h-7 w-auto object-contain"
-            priority
-          />
-        </Link>
-        <button onClick={onClose} className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors">
-          <X size={20} className="text-gray-500" />
-        </button>
-      </div>
-
-      {/* Scrollable nav */}
+      <MobileLogo />
       <div className="flex-1 overflow-y-auto py-2" style={{ scrollbarWidth: 'none' }}>
+        <Section label="Home" />
+        <NavItem href="/home"            icon={Home}          label="Dashboard"      {...p} />
+        <NavItem href="/groups"          icon={Users}         label="Connections"    {...p} />
 
-        {/* MAIN */}
-        <Section label="Main" />
-        <NavItem href="/home"          icon={Home}         label="Home feed"     {...props} />
-        {!r.hideGroups    && <NavItem href="/groups"        icon={Users}        label="Connections"    {...props} />}
-
-        {/* LEARN */}
         <Section label="Learn" />
-        <NavItem href="/ai-buddy"      icon={Sparkles}     label="AI Buddy"      {...props} />
-        <NavItem href="/prep"          icon={GraduationCap} label="PrepSmart"    {...props} />
-        <NavItem href="/jee-command"   icon={Zap}          label="Exam Command"  {...props} />
-        <NavItem href="/mindmap"       icon={Brain}        label="Mind Maps"     {...props} />
-        <NavItem href="/newsroom"      icon={Newspaper}    label="Newsroom"      {...props} />
+        <NavItem href="/ai-buddy"        icon={Sparkles}      label="AI Buddy"       {...p} />
+        <NavItem href="/prep"            icon={GraduationCap} label="PrepSmart"      {...p} />
+        <NavItem href="/jee-command"     icon={Zap}           label="Exam Command"   {...p} />
+        <NavItem href="/mindmap"         icon={Brain}         label="Mind Maps"      {...p} />
+        <NavItem href="/newsroom"        icon={Newspaper}     label="Newsroom"       {...p} />
 
-        {/* EXPLORE CAREERS */}
-        <Section label="Explore Careers" />
-        <NavItem href="/experience-lab"  icon={FlaskConical} label="Experience Lab"  {...props} />
-        <NavItem href="/career-explorer" icon={Map}          label="Career Explorer" {...props} />
-        {r.showMentorship && <NavItem href="/mentorship" icon={Users} label="Mentorship Hub" {...props} />}
+        <Section label="Explore" />
+        <NavItem href="/experience-lab"  icon={FlaskConical}  label="Experience Lab" {...p} />
+        <NavItem href="/career-explorer" icon={Map}           label="Career Explorer" {...p} />
+        <NavItem href="/mentorship"      icon={Star}          label="Mentorship"     {...p} />
 
-        {/* PLAY */}
         <Section label="Play" />
-        <NavItem href="/arcade"        icon={Gamepad2}     label="Arcade"        {...props} />
-        <NavItem href="/clips"         icon={Play}         label="Clips"         {...props} />
+        <NavItem href="/arcade"          icon={Gamepad2}      label="Arcade"         {...p} />
+        <NavItem href="/virtual-lab"     icon={Beaker}        label="Virtual Lab"    {...p} />
+        <NavItem href="/code-lab"        icon={Code}          label="Code Lab"       {...p} />
+        <NavItem href="/leaderboard"     icon={Trophy}        label="Leaderboard"    {...p} />
 
-        {/* MORE */}
-        <Section label="More" />
-        <NavItem href="/virtual-lab"   icon={Beaker}       label="Virtual Lab"   {...props} />
-        {!r.hideMockInterview && <NavItem href="/mock-interview" icon={Mic}   label="Mock Interview" {...props} />}
-        {!r.hideDebateArena   && <NavItem href="/debate-arena"  icon={Swords} label="Debate Arena"  {...props} />}
-        {!r.hideCodeLab       && <NavItem href="/code-lab"      icon={Code}   label="Code Lab"      {...props} />}
-        <NavItem href="/leaderboard"   icon={Trophy}       label="Leaderboard"   {...props} />
-
-        {/* Settings pinned before bottom card */}
         <div className="mt-4 border-t border-gray-100 pt-2">
-          <NavItem href="/settings"    icon={Settings}     label="Settings"      {...props} />
+          <NavItem href="/settings"      icon={Settings}      label="Settings"       {...p} />
         </div>
       </div>
-
-      {/* User card */}
-      {user && (
-        <div className="flex-shrink-0 border-t border-gray-100 bg-white px-2 py-2">
-          <Link
-            href="/profile"
-            onClick={onClose}
-            className="flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#378ADD] to-[#534AB7] flex items-center justify-center overflow-hidden flex-shrink-0">
-              {hasPhoto ? (
-                <Image src={user.profile_photo_url} alt="" width={32} height={32} className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-white font-bold text-xs">{user.username?.charAt(0)?.toUpperCase()}</span>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[12px] font-semibold text-gray-800 truncate">
-                {user.profile?.full_name || user.username}
-              </p>
-              <p className="text-[10px] text-gray-400 truncate">
-                {user.profile?.class_name ? `Class ${user.profile.class_name}` : user.age_group || 'Student'}
-                {user.profile?.board ? ` · ${user.profile.board}` : ''}
-              </p>
-            </div>
-          </Link>
-          <button
-            onClick={async () => { await logout(); window.location.href = '/sign-in'; }}
-            className="flex items-center gap-2.5 px-3 py-1.5 w-full rounded-lg text-[12px] text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors"
-          >
-            <LogOut size={13} /> Logout
-          </button>
-        </div>
-      )}
+      <UserCard />
     </div>
   );
 }
