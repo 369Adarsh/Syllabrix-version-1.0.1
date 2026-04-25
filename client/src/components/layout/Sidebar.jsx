@@ -13,7 +13,7 @@ import {
   Beaker, Mic, Swords, Code, Trophy,
   Settings, X, LogOut,
   Building2, Heart, Network, BookOpen, Star, Award,
-  Library, Table2,
+  Table2,
   Shield, Rss, BarChart2, Clock, FileText, ClipboardList, PlusCircle,
   Zap, Briefcase, ScanSearch, Target, TrendingUp,
   Bot, BadgeCheck, CalendarDays, UserCircle2, Plus, Search
@@ -101,7 +101,6 @@ function StudentSidebarContent({ onClose }) {
         {/* LEARN */}
         <Section label="Learn" />
         <NavItem href="/ai-buddy"      icon={Sparkles}     label="AI Buddy"      {...props} />
-        <NavItem href="/ai-library"    icon={Library}      label="AI Library"    {...props} />
         <NavItem href="/ai-study-table" icon={Table2}      label="AI Study Table" {...props} />
         <NavItem href="/prep"          icon={GraduationCap} label="PrepSmart"    {...props} />
         <NavItem href="/jee-command"   icon={Zap}          label="Exam Command"  {...props} />
