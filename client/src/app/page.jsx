@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -6,7 +7,7 @@ import {
   BookOpen, Award, Heart, CheckCircle, Gamepad2, MessageCircle,
   TrendingUp, Target, UserCheck, Building2, Trophy, Dumbbell, Video,
   BarChart3, Briefcase, Rocket, BookMarked, Clock, Globe, Zap, Star,
-  Layers, PenTool, Wifi, ChevronRight, Medal, Flame, Play
+  Layers, PenTool, Wifi, ChevronRight, Medal, Flame, Play, Menu, X
 } from 'lucide-react';
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
@@ -110,32 +111,79 @@ const WHO_FOR = [
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-white overflow-x-hidden">
 
       {/* ══════════════ NAVBAR ══════════════ */}
       <nav className="fixed top-0 w-full z-50">
         <div className="mx-3 sm:mx-4 mt-3">
-          <div className="max-w-7xl mx-auto bg-white/80 backdrop-blur-xl rounded-2xl px-4 sm:px-6 py-3 flex items-center justify-between shadow-lg shadow-black/[0.04] border border-gray-100/50">
-            <Link href="/" className="flex items-center gap-2">
-              <Image src="/images/logo/syllabrix-logo.png" alt="Syllabrix" width={160} height={45} className="h-9 w-auto object-contain" priority />
-            </Link>
-            <div className="hidden md:flex items-center gap-7 text-sm font-medium text-gray-600">
-              <a href="#features" className="hover:text-blue-700 transition-colors">Features</a>
-              <a href="#jee" className="hover:text-blue-700 transition-colors">JEE Prep</a>
-              <a href="#mentors" className="hover:text-blue-700 transition-colors">Mentors</a>
-              <a href="#fitness" className="hover:text-blue-700 transition-colors">Fitness</a>
-              <a href="#who" className="hover:text-blue-700 transition-colors">Who It&apos;s For</a>
-              <Link href="/corporate" className="flex items-center gap-1 text-blue-700 font-bold hover:text-blue-800 transition-colors">
-                <Building2 size={14} /> For Business
+          <div className="max-w-7xl mx-auto bg-white/80 backdrop-blur-xl rounded-2xl px-4 sm:px-6 py-3 shadow-lg shadow-black/[0.04] border border-gray-100/50">
+            <div className="flex items-center justify-between">
+              <Link href="/" className="flex items-center gap-2">
+                <Image src="/images/logo/syllabrix-logo.png" alt="Syllabrix" width={160} height={45} className="h-9 w-auto object-contain" priority />
               </Link>
+              <div className="hidden md:flex items-center gap-7 text-sm font-medium text-gray-600">
+                <a href="#features" className="hover:text-blue-700 transition-colors">Features</a>
+                <a href="#jee" className="hover:text-blue-700 transition-colors">JEE Prep</a>
+                <a href="#mentors" className="hover:text-blue-700 transition-colors">Mentors</a>
+                <a href="#fitness" className="hover:text-blue-700 transition-colors">Fitness</a>
+                <a href="#who" className="hover:text-blue-700 transition-colors">Who It&apos;s For</a>
+                <Link href="/corporate" className="flex items-center gap-1 text-blue-700 font-bold hover:text-blue-800 transition-colors">
+                  <Building2 size={14} /> For Business
+                </Link>
+              </div>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Link href="/sign-in" className="hidden sm:inline-flex px-4 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-all">Sign In</Link>
+                <Link href="/sign-up" className="px-4 sm:px-5 py-2.5 rounded-xl text-sm font-bold bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-200/40 hover:from-blue-700 transition-all flex items-center gap-1.5">
+                  Get Started <ArrowRight size={14} />
+                </Link>
+                <button
+                  onClick={() => setMobileMenuOpen(o => !o)}
+                  className="md:hidden p-2 rounded-xl text-gray-600 hover:bg-gray-100 transition-all"
+                  aria-label="Toggle menu"
+                >
+                  {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-2 sm:gap-3">
-              <Link href="/sign-in" className="inline-flex px-4 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-100 transition-all">Sign In</Link>
-              <Link href="/sign-up" className="px-4 sm:px-5 py-2.5 rounded-xl text-sm font-bold bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-200/40 hover:from-blue-700 transition-all flex items-center gap-1.5">
-                Get Started <ArrowRight size={14} />
-              </Link>
-            </div>
+
+            {/* Mobile menu */}
+            {mobileMenuOpen && (
+              <div className="md:hidden pt-3 pb-2 border-t border-gray-100 mt-3 flex flex-col gap-1">
+                {[
+                  { href: '#features', label: 'Features' },
+                  { href: '#jee', label: 'JEE Prep' },
+                  { href: '#mentors', label: 'Mentors' },
+                  { href: '#fitness', label: 'Fitness' },
+                  { href: '#who', label: "Who It's For" },
+                ].map(item => (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    {item.label}
+                  </a>
+                ))}
+                <Link
+                  href="/corporate"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2.5 rounded-xl text-sm font-bold text-blue-700 hover:bg-blue-50 transition-colors flex items-center gap-1.5"
+                >
+                  <Building2 size={14} /> For Business
+                </Link>
+                <Link
+                  href="/sign-in"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="px-3 py-2.5 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Sign In
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </nav>
@@ -179,7 +227,7 @@ export default function LandingPage() {
               </div>
 
               {/* Stats row */}
-              <div className="mt-10 grid grid-cols-3 sm:grid-cols-3 gap-4 sm:gap-6">
+              <div className="mt-10 grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6">
                 {STATS.slice(0, 6).map((s, i) => (
                   <div key={i}>
                     <p className="text-xl sm:text-2xl font-extrabold text-white">{s.num}</p>
@@ -366,7 +414,7 @@ export default function LandingPage() {
                 ⚠️ Sensitive professions (Medical, Electrical, etc.) include knowledge-only modules — no practical simulations for safety.
               </p>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {[
                 { emoji: '👨‍🍳', title: 'Be a Chef', color: 'from-orange-100 to-amber-100', border: 'border-orange-200' },
                 { emoji: '💼', title: 'Run a Startup', color: 'from-blue-100 to-indigo-100', border: 'border-blue-200' },
