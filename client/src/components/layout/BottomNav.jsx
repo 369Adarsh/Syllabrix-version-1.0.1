@@ -2,17 +2,36 @@
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, BookOpen, Compass, Gamepad2, User, Sparkles, MessageCircle, Menu, ShieldCheck, Brain, Briefcase, GraduationCap, Users } from 'lucide-react';
+import { Home, BookOpen, Compass, Gamepad2, User, Sparkles, MessageCircle, Menu, ShieldCheck, Brain, Briefcase, GraduationCap, Users, Newspaper, Zap } from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
+import { getPlatformMode } from '@/utils/platformMode';
 
-// Student-specific bottom nav tabs (per spec section 8)
-const STUDENT_NAV = [
-  { href: '/home',          icon: Home,     label: 'Home'    },
-  { href: '/ai-buddy',      icon: BookOpen, label: 'Learn'   },
-  { href: '/experience-lab',icon: Compass,  label: 'Explore' },
-  { href: '/arcade',        icon: Gamepad2, label: 'Play'    },
-  { href: '/profile',       icon: User,     label: 'Profile' },
+// Student bottom nav — default (curious_mind, board_warrior, exam_command, skill_builder)
+const STUDENT_NAV_DEFAULT = [
+  { href: '/home',           icon: Home,     label: 'Home'    },
+  { href: '/ai-buddy',       icon: Sparkles, label: 'Learn'   },
+  { href: '/experience-lab', icon: Compass,  label: 'Explore' },
+  { href: '/arcade',         icon: Gamepad2, label: 'Play'    },
+  { href: '/profile',        icon: User,     label: 'Profile' },
+];
+
+// Young Explorer — age-appropriate bottom nav (no career explorer)
+const STUDENT_NAV_YOUNG_EXPLORER = [
+  { href: '/home',       icon: Home,     label: 'Home'    },
+  { href: '/learn-play', icon: BookOpen, label: 'Learn'   },
+  { href: '/stories',    icon: BookOpen, label: 'Stories' },
+  { href: '/arcade',     icon: Gamepad2, label: 'Play'    },
+  { href: '/profile',    icon: User,     label: 'Profile' },
+];
+
+// UPSC Aspirant — exam-focused bottom nav
+const STUDENT_NAV_UPSC = [
+  { href: '/home',                icon: Home,        label: 'Briefing' },
+  { href: '/prep/current-affairs',icon: Newspaper,   label: 'Affairs'  },
+  { href: '/prep/daily-quiz',     icon: Brain,       label: 'Quiz'     },
+  { href: '/ai-buddy',            icon: Sparkles,    label: 'Mentor'   },
+  { href: '/profile',             icon: User,        label: 'Profile'  },
 ];
 
 // Parent-specific bottom nav tabs (per spec section 8)
@@ -35,10 +54,10 @@ const PROFESSIONAL_NAV = [
 
 // Generic bottom nav for all other user types
 const GENERIC_NAV = [
-  { href: '/home',       icon: Home,          label: 'Home'     },
-  { href: '/ai-library', icon: BookOpen,      label: 'Library'  },
-  { href: '/ai-world',   icon: Sparkles,      label: 'AI Studio', center: true },
-  { href: '/messages',   icon: MessageCircle, label: 'Messages' },
+  { href: '/home',     icon: Home,          label: 'Home'     },
+  { href: '/newsroom', icon: Newspaper,     label: 'News'     },
+  { href: '/ai-world', icon: Sparkles,      label: 'AI Studio', center: true },
+  { href: '/messages', icon: MessageCircle, label: 'Messages' },
 ];
 
 export default function BottomNav({ onMenuClick = () => {} }) {
@@ -48,6 +67,11 @@ export default function BottomNav({ onMenuClick = () => {} }) {
   const isStudent = user?.user_type === 'student';
   const isParent = user?.user_type === 'parent';
   const isProfessional = user?.user_type === 'professional_learner' || user?.user_type === 'organization';
+
+  const studentMode = isStudent ? getPlatformMode(user) : null;
+  const STUDENT_NAV = studentMode === 'young_explorer' ? STUDENT_NAV_YOUNG_EXPLORER
+    : studentMode === 'upsc_aspirant' ? STUDENT_NAV_UPSC
+    : STUDENT_NAV_DEFAULT;
 
   if (isProfessional) {
     return (

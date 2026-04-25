@@ -17,7 +17,6 @@ import {
   Zap, Briefcase, ScanSearch, Target, TrendingUp,
   Bot, BadgeCheck, CalendarDays, UserCircle2, Plus, Search
 } from 'lucide-react';
-import { getStudentNavRestrictions } from '@/utils/ageGroup';
 import { getPlatformMode, PLATFORM_MODES } from '@/utils/platformMode';
 import { parentAPI } from '@/lib/api/parent.api';
 
