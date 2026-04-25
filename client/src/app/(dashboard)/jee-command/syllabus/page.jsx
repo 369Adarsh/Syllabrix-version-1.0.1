@@ -22,6 +22,7 @@ const SUBJECT_CONFIG = {
   physics:     { color: '#378ADD', bg: 'bg-blue-500',    label: 'Physics',     icon: '⚛️' },
   chemistry:   { color: '#0F6E56', bg: 'bg-emerald-600', label: 'Chemistry',   icon: '🧪' },
   mathematics: { color: '#534AB7', bg: 'bg-violet-600',  label: 'Mathematics', icon: '📐' },
+  biology:     { color: '#15803d', bg: 'bg-green-600',   label: 'Biology',     icon: '🌿' },
 };
 
 function ChapterCard({ chapter, index }) {
@@ -68,7 +69,11 @@ function ChapterCard({ chapter, index }) {
 function SyllabusContent() {
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
-  const { selectedClass } = useJee();
+  const { selectedClass, examType } = useJee();
+  const isNeet = examType === 'neet';
+  const availableSubjects = isNeet
+    ? { physics: SUBJECT_CONFIG.physics, chemistry: SUBJECT_CONFIG.chemistry, biology: SUBJECT_CONFIG.biology }
+    : { physics: SUBJECT_CONFIG.physics, chemistry: SUBJECT_CONFIG.chemistry, mathematics: SUBJECT_CONFIG.mathematics };
   const [activeSubject, setActiveSubject] = useState(searchParams?.get('subject') || 'physics');
   const [chapters, setChapters] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -94,7 +99,7 @@ function SyllabusContent() {
   return (
     <div>
       <div className="flex gap-2 mb-4 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-        {Object.entries(SUBJECT_CONFIG).map(([slug, cfg]) => (
+        {Object.entries(availableSubjects).map(([slug, cfg]) => (
           <button
             key={slug}
             onClick={() => setActiveSubject(slug)}

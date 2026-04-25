@@ -104,8 +104,7 @@ function StudentSidebarContent({ onClose }) {
         <NavItem href="/ai-library"    icon={Library}      label="AI Library"    {...props} />
         <NavItem href="/ai-study-table" icon={Table2}      label="AI Study Table" {...props} />
         <NavItem href="/prep"          icon={GraduationCap} label="PrepSmart"    {...props} />
-        <NavItem href="/jee-command"   icon={Zap}          label="JEE Command"   {...props} />
-        <NavItem href="/jee-neet"      icon={BookOpen}     label="JEE & NEET Studio" {...props} />
+        <NavItem href="/jee-command"   icon={Zap}          label="Exam Command"  {...props} />
         <NavItem href="/mindmap"       icon={Brain}        label="Mind Maps"     {...props} />
         <NavItem href="/newsroom"      icon={Newspaper}    label="Newsroom"      {...props} />
 
