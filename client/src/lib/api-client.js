@@ -3,7 +3,7 @@ import axios from 'axios';
 const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api',
   headers: { 'Content-Type': 'application/json' },
-  timeout: 30000, // 30s for normal requests
+  timeout: 60000, // 60s — accommodates Render free-tier cold starts
 });
 
 // Request interceptor — attach JWT

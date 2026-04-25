@@ -55,14 +55,18 @@ export default function SignInPage() {
         router.push(loggedInUser.is_profile_complete ? '/home' : '/complete-profile');
       }
     } catch (err) {
-      const msg = err.response?.data?.message || 'Invalid email or password';
-      if (msg.toLowerCase().includes('verify your email')) {
-        setUnverifiedEmail(email);
-      } else if (msg.includes('Admin Portal')) {
-        // Special case for admins trying to use regular login
-        toast.error(msg, { icon: '🛡️', duration: 4000 });
+      const isNetworkError = !err.response && (err.code === 'ECONNABORTED' || err.code === 'ERR_NETWORK' || err.message?.includes('timeout'));
+      if (isNetworkError) {
+        toast.error('Server is starting up — please wait 30 seconds and try again.', { duration: 6000 });
       } else {
-        toast.error(msg);
+        const msg = err.response?.data?.message || 'Invalid email or password';
+        if (msg.toLowerCase().includes('verify your email')) {
+          setUnverifiedEmail(email);
+        } else if (msg.includes('Admin Portal')) {
+          toast.error(msg, { icon: '🛡️', duration: 4000 });
+        } else {
+          toast.error(msg);
+        }
       }
     } finally {
       setLoading(false);
