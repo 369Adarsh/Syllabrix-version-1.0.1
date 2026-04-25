@@ -10,6 +10,7 @@ const progressService = require('./jee-progress.service');
 const subscriptionService = require('./jee-subscription.service');
 const studyPlanService = require('./jee-studyplan.service');
 const contentService = require('./jee-content.service');
+const videoService = require('./jee-videos.service');
 
 // ── SYLLABUS ──────────────────────────────────────────────────────────────────
 router.get('/subjects', authenticate, syllabusService.getSubjects);
@@ -85,6 +86,9 @@ router.delete('/bookmarks/:id', authenticate, progressService.removeBookmark);
 // ── ERROR LOG ─────────────────────────────────────────────────────────────────
 router.get('/errors', authenticate, progressService.getErrors);
 router.put('/errors/:id/review', authenticate, progressService.reviewError);
+
+// ── YOUTUBE VIDEOS ────────────────────────────────────────────────────────────
+router.get('/videos', authenticate, videoService.getVideosForChapter);
 
 // ── SUBSCRIPTION ──────────────────────────────────────────────────────────────
 router.get('/subscription/status', authenticate, subscriptionService.getStatus);

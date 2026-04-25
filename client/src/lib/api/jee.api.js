@@ -23,6 +23,9 @@ export const jeeAPI = {
   generateNCERTChapter: (data) => api.post('/jee/ncert/generate', data),
   escalateToTeacher: (data) => api.post('/jee/ai/escalate-to-teacher', data),
 
+  // Videos
+  getVideos: (params) => api.get('/jee/videos', { params }),
+
   // Books
   getBooks: () => api.get('/jee/books'),
   getBookChapters: (bookSlug) => api.get(`/jee/books/${bookSlug}/chapters`),
