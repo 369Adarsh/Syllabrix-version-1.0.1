@@ -8,6 +8,7 @@ import TopBar from '@/components/layout/TopBar';
 import BottomNav from '@/components/layout/BottomNav';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import { AccessibilityProvider } from '@/contexts/AccessibilityContext';
 
 const FULL_BLEED_PAGES = ['/live-classes/room'];
 
@@ -72,11 +73,13 @@ function DashboardLayoutWithNotifications({ children }) {
   useServerKeepAlive();
 
   return (
-    <NotificationProvider token={token}>
-      <ThemeProvider>
-        <DashboardLayoutInner>{children}</DashboardLayoutInner>
-      </ThemeProvider>
-    </NotificationProvider>
+    <AccessibilityProvider>
+      <NotificationProvider token={token}>
+        <ThemeProvider>
+          <DashboardLayoutInner>{children}</DashboardLayoutInner>
+        </ThemeProvider>
+      </NotificationProvider>
+    </AccessibilityProvider>
   );
 }
 

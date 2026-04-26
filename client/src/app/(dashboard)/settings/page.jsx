@@ -2,18 +2,20 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAccessibility } from '@/contexts/AccessibilityContext';
 import { profileAPI } from '@/lib/api/profile.api';
 import { uploadAPI } from '@/lib/api/upload.api';
 import Avatar from '@/components/ui/Avatar';
 import Link from 'next/link';
-import { 
-  Camera, Save, Settings, Loader2, User, MapPin, 
-  Phone, Briefcase, ShieldAlert, Key, Globe, LayoutDashboard, Terminal 
+import {
+  Camera, Save, Settings, Loader2, User, MapPin,
+  Phone, Briefcase, ShieldAlert, Key, Globe, LayoutDashboard, Terminal, Eye
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function SettingsPage() {
   const { user, refreshUser } = useAuth();
+  const { prefs, setPrefs } = useAccessibility();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
   
@@ -52,6 +54,7 @@ export default function SettingsPage() {
   const TABS = [
     { id: 'profile', label: 'Identity', icon: User },
     ...(hasAdminAccess ? [{ id: 'admin', label: 'Administration', icon: ShieldAlert }] : []),
+    { id: 'accessibility', label: 'Accessibility', icon: Eye },
     { id: 'preferences', label: 'Preferences', icon: Globe },
     { id: 'security', label: 'Security', icon: Key },
   ];
@@ -239,6 +242,72 @@ export default function SettingsPage() {
                   <p className="text-xs text-gray-500 font-medium leading-relaxed max-w-2xl">
                     All administrative actions, configuration adjustments, and user identity sweeps are logged to the central ledger via your operational `SYLLABRIX_JWT`.
                   </p>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'accessibility' && (
+              <motion.div
+                key="accessibility"
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+                transition={{ duration: 0.2 }}
+                className="bg-white/80 backdrop-blur-xl rounded-[32px] border border-white p-8 shadow-2xl shadow-blue-900/5 space-y-8"
+              >
+                <div className="flex items-center gap-4 pb-6 border-b border-gray-100">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center">
+                    <Eye size={22} className="text-indigo-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-gray-900">Accessibility</h2>
+                    <p className="text-sm text-gray-500 font-medium">Adjust display to improve readability and comfort.</p>
+                  </div>
+                </div>
+
+                {/* Font Size */}
+                <div>
+                  <label className="block text-[11px] font-black uppercase tracking-widest text-gray-800 mb-4">Text Size</label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { value: 'normal', label: 'Normal', sample: 'Aa' },
+                      { value: 'large', label: 'Large', sample: 'Aa' },
+                      { value: 'xl', label: 'Extra Large', sample: 'Aa' },
+                    ].map(({ value, label, sample }) => (
+                      <button
+                        key={value}
+                        onClick={() => setPrefs({ fontSize: value })}
+                        className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all ${
+                          prefs.fontSize === value
+                            ? 'border-indigo-500 bg-indigo-50 shadow-md shadow-indigo-100'
+                            : 'border-gray-200 bg-gray-50/50 hover:border-gray-300'
+                        }`}
+                      >
+                        <span
+                          className={`font-black text-gray-900 ${value === 'normal' ? 'text-xl' : value === 'large' ? 'text-2xl' : 'text-3xl'}`}
+                        >
+                          {sample}
+                        </span>
+                        <span className={`text-xs font-bold ${prefs.fontSize === value ? 'text-indigo-600' : 'text-gray-500'}`}>{label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* High Contrast */}
+                <div className="flex items-center justify-between p-5 rounded-2xl bg-gray-50/50 border border-gray-200">
+                  <div>
+                    <p className="text-sm font-black text-gray-900">High Contrast Mode</p>
+                    <p className="text-xs text-gray-500 font-medium mt-0.5">Increases contrast for muted text and borders.</p>
+                  </div>
+                  <button
+                    onClick={() => setPrefs({ highContrast: !prefs.highContrast })}
+                    className={`relative w-12 h-6 rounded-full transition-colors ${prefs.highContrast ? 'bg-indigo-600' : 'bg-gray-200'}`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${prefs.highContrast ? 'translate-x-6' : 'translate-x-0'}`}
+                    />
+                  </button>
                 </div>
               </motion.div>
             )}

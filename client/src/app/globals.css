@@ -297,3 +297,18 @@ body {
   outline-offset: 2px;
   border-radius: 4px;
 }
+
+/* ═══ ACCESSIBILITY — FONT SIZE ═══ */
+html[data-font-size="large"]  { zoom: 1.1; }
+html[data-font-size="xl"]     { zoom: 1.2; }
+
+/* ═══ ACCESSIBILITY — HIGH CONTRAST ═══ */
+html[data-high-contrast="true"] .bg-white             { background-color: #ffffff !important; }
+html[data-high-contrast="true"] .text-gray-400,
+html[data-high-contrast="true"] .text-gray-500         { color: #374151 !important; }
+html[data-high-contrast="true"] .border-gray-100,
+html[data-high-contrast="true"] .border-gray-200       { border-color: #9ca3af !important; }
+html[data-high-contrast="true"] .text-gray-600,
+html[data-high-contrast="true"] .text-gray-700         { color: #111827 !important; }
+html[data-high-contrast="true"] a:focus-visible,
+html[data-high-contrast="true"] button:focus-visible   { outline: 3px solid #1d4ed8 !important; outline-offset: 3px; }

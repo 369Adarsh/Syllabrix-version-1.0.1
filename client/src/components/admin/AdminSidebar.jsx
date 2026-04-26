@@ -28,8 +28,9 @@ const LIBRARY_NAV = [
 ];
 
 const PLATFORM_NAV = [
-  { href: '/admin/audit',    label: 'Audit Logs', icon: FileText },
-  { href: '/admin/settings', label: 'Settings',   icon: Settings },
+  { href: '/admin/analytics', label: 'Platform Analytics', icon: BarChart },
+  { href: '/admin/audit',     label: 'Audit Logs',         icon: FileText },
+  { href: '/admin/settings',  label: 'Settings',           icon: Settings },
 ];
 
 const RESTRICTED_NAV = [
@@ -39,10 +40,10 @@ const RESTRICTED_NAV = [
 ];
 
 const ROLE_PERMISSIONS = {
-  super_admin:     ['/admin', '/admin/users', '/admin/moderation', '/admin/finance', '/admin/audit', '/admin/console', '/admin/settings', '/admin/reports', '/admin/tickets', '/admin/library', '/admin/debug', '/admin/enterprise', '/admin/workbench'],
-  moderator:       ['/admin', '/admin/users', '/admin/moderation', '/admin/reports', '/admin/tickets', '/admin/library', '/admin/settings'],
-  finance_manager: ['/admin', '/admin/finance', '/admin/reports', '/admin/settings'],
-  analyst:         ['/admin', '/admin/users', '/admin/moderation', '/admin/finance', '/admin/audit', '/admin/reports', '/admin/tickets', '/admin/library', '/admin/settings'],
+  super_admin:     ['/admin', '/admin/users', '/admin/moderation', '/admin/finance', '/admin/audit', '/admin/console', '/admin/settings', '/admin/reports', '/admin/tickets', '/admin/library', '/admin/debug', '/admin/enterprise', '/admin/workbench', '/admin/analytics'],
+  moderator:       ['/admin', '/admin/users', '/admin/moderation', '/admin/reports', '/admin/tickets', '/admin/library', '/admin/settings', '/admin/analytics'],
+  finance_manager: ['/admin', '/admin/finance', '/admin/reports', '/admin/settings', '/admin/analytics'],
+  analyst:         ['/admin', '/admin/users', '/admin/moderation', '/admin/finance', '/admin/audit', '/admin/reports', '/admin/tickets', '/admin/library', '/admin/settings', '/admin/analytics'],
 };
 
 export default function AdminSidebar({ isOpen, onClose }) {

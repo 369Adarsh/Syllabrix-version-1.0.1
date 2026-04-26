@@ -20,6 +20,7 @@ const PAGE_TITLES = {
   '/admin/tickets':   { title: 'SyllaDesk',          subtitle: 'Unified ticketing system for issues and solutions' },
   '/admin/library':   { title: 'Academic Library',   subtitle: 'Upload and organize books, notes, and AI-indexed course materials' },
   '/admin/debug':     { title: 'SyllaTrace',         subtitle: 'Live request trace, error log, slow queries, and system diagnostics' },
+  '/admin/analytics': { title: 'Platform Analytics', subtitle: 'Mode distribution and student engagement across the platform' },
 };
 
 function AdminLayoutInner({ children }) {
