@@ -181,9 +181,10 @@ function StudentSidebarContent({ onClose }) {
           <Section label="Home" />
           <NavItem href="/home"            icon={Home}          label="Dashboard"      {...p} />
 
-          <Section label="Prepare" />
-          <NavItem href="/prep"            icon={GraduationCap} label="PrepSmart"      {...p} />
-          <NavItem href="/jee-command"     icon={Zap}           label="Exam Hub"       {...p} />
+          <Section label="Board Prep" />
+          <NavItem href="/boards"          icon={Target}        label="Board Hub"      {...p} />
+          <NavItem href="/boards/chapters" icon={BookOpen}      label="Chapter Tracker" {...p} />
+          <NavItem href="/prep/daily-quiz" icon={Brain}         label="Quiz Practice"  {...p} />
           <NavItem href="/mindmap"         icon={Brain}         label="Mind Maps"      {...p} />
           <NavItem href="/prep/my-stats"   icon={BarChart2}     label="My Stats"       {...p} />
 

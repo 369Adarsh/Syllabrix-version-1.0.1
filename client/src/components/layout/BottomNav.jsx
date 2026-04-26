@@ -2,7 +2,7 @@
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, BookOpen, Compass, Gamepad2, User, Sparkles, MessageCircle, Menu, ShieldCheck, Brain, Briefcase, GraduationCap, Users, Newspaper, Zap } from 'lucide-react';
+import { Home, BookOpen, Compass, Gamepad2, User, Sparkles, MessageCircle, Menu, ShieldCheck, Brain, Briefcase, GraduationCap, Users, Newspaper, Zap, Target } from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { getPlatformMode } from '@/utils/platformMode';
@@ -23,6 +23,15 @@ const STUDENT_NAV_YOUNG_EXPLORER = [
   { href: '/stories',    icon: BookOpen, label: 'Stories' },
   { href: '/arcade',     icon: Gamepad2, label: 'Play'    },
   { href: '/profile',    icon: User,     label: 'Profile' },
+];
+
+// Board Warrior — board exam bottom nav
+const STUDENT_NAV_BOARD = [
+  { href: '/home',            icon: Home,        label: 'Home'    },
+  { href: '/boards',          icon: Target,      label: 'Boards'  },
+  { href: '/boards/chapters', icon: BookOpen,    label: 'Chapters'},
+  { href: '/ai-buddy',        icon: Sparkles,    label: 'AI Buddy'},
+  { href: '/profile',         icon: User,        label: 'Profile' },
 ];
 
 // UPSC Aspirant — exam-focused bottom nav
@@ -71,6 +80,7 @@ export default function BottomNav({ onMenuClick = () => {} }) {
   const studentMode = isStudent ? getPlatformMode(user) : null;
   const STUDENT_NAV = studentMode === 'young_explorer' ? STUDENT_NAV_YOUNG_EXPLORER
     : studentMode === 'upsc_aspirant' ? STUDENT_NAV_UPSC
+    : studentMode === 'board_warrior' ? STUDENT_NAV_BOARD
     : STUDENT_NAV_DEFAULT;
 
   if (isProfessional) {
