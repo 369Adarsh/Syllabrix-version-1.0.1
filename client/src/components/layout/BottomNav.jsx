@@ -25,6 +25,15 @@ const STUDENT_NAV_YOUNG_EXPLORER = [
   { href: '/profile',    icon: User,     label: 'Profile' },
 ];
 
+// Curious Mind — discovery-focused bottom nav
+const STUDENT_NAV_CURIOUS_MIND = [
+  { href: '/home',     icon: Home,     label: 'Home'     },
+  { href: '/discover', icon: Compass,  label: 'Discover' },
+  { href: '/ai-buddy', icon: Sparkles, label: 'AI Buddy' },
+  { href: '/arcade',   icon: Gamepad2, label: 'Play'     },
+  { href: '/profile',  icon: User,     label: 'Profile'  },
+];
+
 // Board Warrior — board exam bottom nav
 const STUDENT_NAV_BOARD = [
   { href: '/home',            icon: Home,        label: 'Home'    },
@@ -81,6 +90,7 @@ export default function BottomNav({ onMenuClick = () => {} }) {
   const STUDENT_NAV = studentMode === 'young_explorer' ? STUDENT_NAV_YOUNG_EXPLORER
     : studentMode === 'upsc_aspirant' ? STUDENT_NAV_UPSC
     : studentMode === 'board_warrior' ? STUDENT_NAV_BOARD
+    : studentMode === 'curious_mind' ? STUDENT_NAV_CURIOUS_MIND
     : STUDENT_NAV_DEFAULT;
 
   if (isProfessional) {

@@ -147,7 +147,13 @@ function StudentSidebarContent({ onClose }) {
         <div className="flex-1 overflow-y-auto py-2" style={{ scrollbarWidth: 'none' }}>
           <Section label="Home" />
           <NavItem href="/home"            icon={Home}         label="Dashboard"      {...p} />
-          <NavItem href="/groups"          icon={Users}        label="Connections"    {...p} />
+
+          <Section label="Discover" />
+          <NavItem href="/discover"        icon={Compass}      label="Discovery Hub"  {...p} />
+          <NavItem href="/discover/science" icon={FlaskConical} label="World of Science" {...p} />
+          <NavItem href="/discover/maths"  icon={Brain}        label="World of Maths" {...p} />
+          <NavItem href="/discover/history" icon={BookOpen}    label="World of History" {...p} />
+          <NavItem href="/discover/skill-quiz" icon={Target}   label="Skill Quiz"     {...p} />
 
           <Section label="Learn" />
           <NavItem href="/ai-buddy"        icon={Sparkles}     label="AI Buddy"       {...p} />
@@ -155,11 +161,8 @@ function StudentSidebarContent({ onClose }) {
           <NavItem href="/mindmap"         icon={Brain}        label="Mind Maps"      {...p} />
           <NavItem href="/newsroom"        icon={Newspaper}    label="Newsroom"       {...p} />
 
-          <Section label="Discover" />
-          <NavItem href="/career-explorer" icon={Map}          label="Career Explorer" {...p} />
-          <NavItem href="/experience-lab"  icon={FlaskConical} label="Experience Lab"  {...p} />
-
-          <Section label="Play" />
+          <Section label="Connect & Play" />
+          <NavItem href="/groups"          icon={Users}        label="Connections"    {...p} />
           <NavItem href="/arcade"          icon={Gamepad2}     label="Arcade"         {...p} />
           <NavItem href="/leaderboard"     icon={Trophy}       label="Leaderboard"    {...p} />
 
