@@ -250,6 +250,11 @@ function StudentSidebarContent({ onClose }) {
           <NavItem href="/home"              icon={Home}          label="Daily Briefing" {...p} />
           <NavItem href="/prep/current-affairs" icon={Newspaper}  label="Current Affairs" {...p} />
 
+          <Section label="UPSC Hub" />
+          <NavItem href="/upsc"              icon={Target}        label="Command Center"  {...p} />
+          <NavItem href="/upsc/syllabus"     icon={Map}           label="Syllabus Tracker" {...p} />
+          <NavItem href="/upsc/answer-writing" icon={FileText}    label="Answer Writing"  {...p} />
+
           <Section label="Prepare" />
           <NavItem href="/prep"              icon={GraduationCap} label="PrepSmart"       {...p} />
           <NavItem href="/prep/daily-quiz"   icon={Brain}         label="Quiz Bank"       {...p} />

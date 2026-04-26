@@ -28,7 +28,7 @@ const STUDENT_NAV_YOUNG_EXPLORER = [
 // UPSC Aspirant — exam-focused bottom nav
 const STUDENT_NAV_UPSC = [
   { href: '/home',                icon: Home,        label: 'Briefing' },
-  { href: '/prep/current-affairs',icon: Newspaper,   label: 'Affairs'  },
+  { href: '/upsc',                icon: Zap,         label: 'UPSC'     },
   { href: '/prep/daily-quiz',     icon: Brain,       label: 'Quiz'     },
   { href: '/ai-buddy',            icon: Sparkles,    label: 'Mentor'   },
   { href: '/profile',             icon: User,        label: 'Profile'  },
