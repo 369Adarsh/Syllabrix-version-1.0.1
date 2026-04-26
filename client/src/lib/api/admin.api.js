@@ -16,6 +16,8 @@ export const adminAPI = {
     axios.post(`${BASE}/users/${id}/status`, { status, reason }, getHeaders()),
   verifyUserEmail: (id) =>
     axios.post(`${BASE}/users/${id}/verify-email`, {}, getHeaders()),
+  deleteUser: (id) =>
+    axios.delete(`${BASE}/users/${id}`, getHeaders()),
 
   // Reports / Moderation
   getReports: (params = {}) => axios.get(`${BASE}/reports`, { ...getHeaders(), params }),

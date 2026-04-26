@@ -124,6 +124,161 @@ class AdminService {
   }
 
   /**
+   * 3.7. PERMANENT USER DELETION (Super Admin only)
+   * Hard-deletes user + all DB records + all Cloudinary assets in one operation.
+   */
+  async deleteUser(userId, adminId) {
+    if (parseInt(userId) === parseInt(adminId)) {
+      throw new Error('You cannot delete your own account.');
+    }
+
+    const [target] = await pool.query(
+      'SELECT id, username, email, user_type FROM users WHERE id = ?',
+      [userId]
+    );
+    if (!target[0]) throw new Error('User not found.');
+    if (target[0].user_type === 'syllabrix_admin') {
+      throw new Error('Admin accounts cannot be deleted.');
+    }
+
+    // Extract Cloudinary public_id from a stored URL
+    const extractPublicId = (url) => {
+      if (!url || !url.includes('/upload/')) return null;
+      const after = url.split('/upload/')[1];
+      const withoutVersion = after.replace(/^v\d+\//, '');
+      return withoutVersion.replace(/\.[^.]+$/, '') || null;
+    };
+
+    const { deleteFromCloudinary } = require('../../utils/cloudinary-upload');
+    const publicIds = new Set();
+    const addUrl = (url) => { const pid = extractPublicId(url); if (pid) publicIds.add(pid); };
+
+    // --- Collect all Cloudinary assets before DB deletion ---
+
+    // Profile & cover photos
+    const [[userRow]] = await pool.query(
+      'SELECT profile_photo_url, cover_photo_url FROM users WHERE id = ?', [userId]
+    );
+    if (userRow) { addUrl(userRow.profile_photo_url); addUrl(userRow.cover_photo_url); }
+
+    // Post media (single + JSON array)
+    try {
+      const [posts] = await pool.query('SELECT media_url, media_urls FROM posts WHERE user_id = ?', [userId]);
+      posts.forEach(p => {
+        addUrl(p.media_url);
+        if (p.media_urls) {
+          try { JSON.parse(p.media_urls).forEach?.(addUrl); } catch (_) {}
+        }
+      });
+    } catch (_) {}
+
+    // Stories
+    try {
+      const [stories] = await pool.query('SELECT media_url FROM stories WHERE user_id = ?', [userId]);
+      stories.forEach(s => addUrl(s.media_url));
+    } catch (_) {}
+
+    // DMs and group messages
+    try {
+      const [dms] = await pool.query('SELECT media_url FROM messages WHERE sender_id = ?', [userId]);
+      dms.forEach(m => addUrl(m.media_url));
+    } catch (_) {}
+    try {
+      const [gms] = await pool.query('SELECT media_url FROM group_messages WHERE sender_id = ?', [userId]);
+      gms.forEach(m => addUrl(m.media_url));
+    } catch (_) {}
+
+    // Career resumes / study documents / fitness progress photos
+    const urlTableQueries = [
+      ['SELECT resume_url AS u FROM career_resumes WHERE user_id = ?'],
+      ['SELECT file_url AS u FROM study_documents WHERE user_id = ?'],
+      ['SELECT photo_url AS u FROM fitness_progress_logs WHERE user_id = ?'],
+    ];
+    for (const [q] of urlTableQueries) {
+      try { (await pool.query(q, [userId]))[0].forEach(r => addUrl(r.u)); } catch (_) {}
+    }
+
+    // Profile documents (teacher certs, parent/institute IDs, org logos)
+    const profileDocQueries = [
+      ['SELECT id_document_url, qualification_doc_url, video_selfie_url FROM teacher_profiles WHERE user_id = ?',
+        ['id_document_url', 'qualification_doc_url', 'video_selfie_url']],
+      ['SELECT id_document_url FROM parent_profiles WHERE user_id = ?', ['id_document_url']],
+      ['SELECT authorized_person_id_url, logo_url FROM institute_profiles WHERE user_id = ?',
+        ['authorized_person_id_url', 'logo_url']],
+      ['SELECT logo_url FROM organization_profiles WHERE user_id = ?', ['logo_url']],
+    ];
+    for (const [q, cols] of profileDocQueries) {
+      try {
+        const [[row]] = await pool.query(q, [userId]);
+        if (row) cols.forEach(c => addUrl(row[c]));
+      } catch (_) {}
+    }
+
+    // lib_uploads — has explicit public_ids
+    try {
+      const [uploads] = await pool.query('SELECT file_public_id FROM lib_uploads WHERE uploaded_by = ?', [userId]);
+      uploads.forEach(u => { if (u.file_public_id) publicIds.add(u.file_public_id); });
+    } catch (_) {}
+
+    // --- DB deletion in a transaction ---
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      await conn.query(
+        `INSERT INTO admin_audit_logs (admin_id, action_type, target_type, target_id, old_value, reason, created_at)
+         VALUES (?, 'user_delete', 'users', ?, ?, 'Permanently deleted by super admin', NOW())`,
+        [adminId, userId, JSON.stringify({ username: target[0].username, email: target[0].email, user_type: target[0].user_type })]
+      );
+
+      const cascadeTables = [
+        'user_sessions', 'notifications', 'follows', 'post_likes', 'post_comments', 'reports',
+        'stories', 'messages', 'group_messages', 'career_resumes', 'study_documents',
+        'fitness_progress_logs', 'lib_uploads',
+        'student_profiles', 'teacher_profiles', 'institute_profiles', 'parent_profiles',
+        'professional_learner_profiles', 'organization_profiles', 'hr_professional_profiles',
+        'career_profiles', 'fitness_profiles',
+      ];
+
+      for (const table of cascadeTables) {
+        try {
+          if (table === 'follows') {
+            await conn.query('DELETE FROM `follows` WHERE follower_id = ? OR following_id = ?', [userId, userId]);
+          } else if (table === 'reports') {
+            await conn.query('DELETE FROM `reports` WHERE reporter_id = ? OR reported_user_id = ?', [userId, userId]);
+          } else if (table === 'notifications') {
+            await conn.query('DELETE FROM `notifications` WHERE user_id = ? OR actor_id = ?', [userId, userId]);
+          } else if (table === 'messages') {
+            await conn.query('DELETE FROM `messages` WHERE sender_id = ? OR receiver_id = ?', [userId, userId]);
+          } else if (table === 'group_messages') {
+            await conn.query('DELETE FROM `group_messages` WHERE sender_id = ?', [userId]);
+          } else {
+            await conn.query(`DELETE FROM \`${table}\` WHERE user_id = ?`, [userId]);
+          }
+        } catch (_) {}
+      }
+
+      try { await conn.query('DELETE FROM posts WHERE user_id = ?', [userId]); } catch (_) {}
+      await conn.query('UPDATE admin_audit_logs SET admin_id = NULL WHERE admin_id = ?', [userId]);
+      await conn.query('DELETE FROM users WHERE id = ?', [userId]);
+
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+
+    // --- Cloudinary cleanup (after DB commit, fire-and-forget) ---
+    if (publicIds.size > 0) {
+      Promise.allSettled([...publicIds].map(pid => deleteFromCloudinary(pid))).catch(() => {});
+    }
+
+    return { message: `User @${target[0].username} has been permanently deleted.` };
+  }
+
+  /**
    * 4. FINANCIAL MONITORING
    * Aggregated revenue stats from the payments table.
    */

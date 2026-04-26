@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { adminAPI } from '@/lib/api/admin.api';
 import UserActivityPanel from '@/components/admin/UserActivityPanel';
-import { Search, Ban, CheckCircle, ShieldCheck, ChevronLeft, ChevronRight, Activity, MailCheck } from 'lucide-react';
+import { Search, Ban, CheckCircle, ShieldCheck, ChevronLeft, ChevronRight, Activity, MailCheck, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const USER_TYPES = ['all', 'student', 'teacher', 'institute', 'parent', 'professional_learner', 'organization', 'hr_professional'];
@@ -39,6 +39,7 @@ export default function AdminUsersPage() {
   const [userType, setUserType] = useState('all');
   const [status, setStatus] = useState('all');
   const [actionLoading, setActionLoading] = useState(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
@@ -91,6 +92,21 @@ export default function AdminUsersPage() {
       fetchUsers();
     } catch (e) {
       toast.error('Action failed: ' + (e.response?.data?.error || e.message));
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleDeleteUser = async (userId, username) => {
+    setActionLoading(`delete-${userId}`);
+    try {
+      await adminAPI.deleteUser(userId);
+      toast.success(`@${username} has been permanently deleted.`);
+      setDeleteConfirmId(null);
+      setUsers(prev => prev.filter(u => u.id !== userId));
+      setTotal(prev => prev - 1);
+    } catch (e) {
+      toast.error('Delete failed: ' + (e.response?.data?.error || e.message));
     } finally {
       setActionLoading(null);
     }
@@ -178,6 +194,24 @@ export default function AdminUsersPage() {
                 {u.is_active ? <><Ban size={13} /> Ban</> : <><CheckCircle size={13} /> Reinstate</>}
               </button>
             </div>
+            {deleteConfirmId === u.id ? (
+              <div className="flex items-center gap-2 pt-1">
+                <span className="text-xs text-red-700 font-semibold flex-1">Permanently delete @{u.username}?</span>
+                <button onClick={() => handleDeleteUser(u.id, u.username)} disabled={actionLoading === `delete-${u.id}`}
+                  className="text-xs font-bold px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-all">
+                  {actionLoading === `delete-${u.id}` ? 'Deleting…' : 'Confirm'}
+                </button>
+                <button onClick={() => setDeleteConfirmId(null)}
+                  className="text-xs font-bold px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 transition-all">
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setDeleteConfirmId(u.id)}
+                className="w-full flex items-center justify-center gap-1.5 text-xs font-bold py-2 rounded-xl bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 transition-all mt-1">
+                <Trash2 size={13} /> Delete User
+              </button>
+            )}
           </div>
         ))}
       </div>
@@ -245,22 +279,40 @@ export default function AdminUsersPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => { setSelectedUser(u); setIsPanelOpen(true); }}
-                        className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200">
-                        <Activity size={12} /> Activity
-                      </button>
-                      {!u.email_verified_at && (
-                        <button onClick={() => handleVerifyEmail(u.id, u.username)} disabled={actionLoading === `verify-${u.id}`}
-                          className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 disabled:opacity-50">
-                          <ShieldCheck size={12} /> Verify
+                    {deleteConfirmId === u.id ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-red-700 font-semibold whitespace-nowrap">Delete forever?</span>
+                        <button onClick={() => handleDeleteUser(u.id, u.username)} disabled={actionLoading === `delete-${u.id}`}
+                          className="flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-all whitespace-nowrap">
+                          {actionLoading === `delete-${u.id}` ? 'Deleting…' : 'Yes, Delete'}
                         </button>
-                      )}
-                      <button onClick={() => handleStatusChange(u.id, u.is_active, u.username)} disabled={actionLoading === u.id}
-                        className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-all disabled:opacity-50 border ${u.is_active ? 'bg-red-50 text-red-700 hover:bg-red-100 border-red-200' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200'}`}>
-                        {u.is_active ? <><Ban size={12} /> Ban</> : <><CheckCircle size={12} /> Reinstate</>}
-                      </button>
-                    </div>
+                        <button onClick={() => setDeleteConfirmId(null)}
+                          className="text-xs font-bold px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 transition-all">
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => { setSelectedUser(u); setIsPanelOpen(true); }}
+                          className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200">
+                          <Activity size={12} /> Activity
+                        </button>
+                        {!u.email_verified_at && (
+                          <button onClick={() => handleVerifyEmail(u.id, u.username)} disabled={actionLoading === `verify-${u.id}`}
+                            className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 disabled:opacity-50">
+                            <ShieldCheck size={12} /> Verify
+                          </button>
+                        )}
+                        <button onClick={() => handleStatusChange(u.id, u.is_active, u.username)} disabled={actionLoading === u.id}
+                          className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-all disabled:opacity-50 border ${u.is_active ? 'bg-red-50 text-red-700 hover:bg-red-100 border-red-200' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200'}`}>
+                          {u.is_active ? <><Ban size={12} /> Ban</> : <><CheckCircle size={12} /> Reinstate</>}
+                        </button>
+                        <button onClick={() => setDeleteConfirmId(u.id)}
+                          className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 transition-all">
+                          <Trash2 size={12} /> Delete
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

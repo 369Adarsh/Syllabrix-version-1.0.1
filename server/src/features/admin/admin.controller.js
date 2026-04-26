@@ -95,6 +95,19 @@ class AdminController {
   }
 
   /**
+   * Permanently delete a user (super admin only)
+   */
+  async deleteUser(req, res) {
+    try {
+      const { id } = req.params;
+      const result = await AdminService.deleteUser(id, req.user.id);
+      res.json(result);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  /**
    * Financial analytics
    */
   async getRevenueStats(req, res) {

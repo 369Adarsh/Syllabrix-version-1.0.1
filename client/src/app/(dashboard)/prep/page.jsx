@@ -23,44 +23,55 @@ function YoungExplorerPrep({ user }) {
     { href: '/stories',                 icon: '📚', label: 'Story Library',  desc: 'Read illustrated stories',         bg: 'bg-teal-50 border-teal-200',     text: 'text-teal-700'   },
   ];
   return (
-    <div className="max-w-xl mx-auto space-y-5">
+    <div className="space-y-6">
       <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #F59E0B, #EF4444)' }}>
-        <div className="px-5 py-5 relative">
-          <div className="absolute top-0 right-0 w-28 h-28 rounded-full bg-white/10 -translate-y-1/3 translate-x-1/4 pointer-events-none" />
-          <div className="relative z-10">
-            <p className="text-white/80 text-[11px] font-bold uppercase tracking-widest mb-0.5">🌈 Young Explorer</p>
-            <h1 className="text-white font-extrabold text-[20px]">Hello, {name}! Ready to learn?</h1>
-            <p className="text-white/70 text-[12px] mt-1">Pick a game and earn stars today!</p>
+        <div className="px-6 py-6 md:px-10 md:py-8 relative">
+          <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-white/10 -translate-y-1/3 translate-x-1/4 pointer-events-none" />
+          <div className="relative z-10 flex items-center justify-between gap-6">
+            <div>
+              <p className="text-white/80 text-[11px] font-bold uppercase tracking-widest mb-1">🌈 Young Explorer</p>
+              <h1 className="text-white font-extrabold text-2xl md:text-3xl leading-tight">Hello, {name}! Ready to learn?</h1>
+              <p className="text-white/70 text-sm mt-1.5">Pick a game and earn stars today!</p>
+            </div>
+            <span className="text-6xl md:text-7xl flex-shrink-0 hidden sm:block">🌟</span>
           </div>
         </div>
       </div>
-      <div>
-        <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">Play & Learn</p>
-        <div className="space-y-3">
-          {ACTIONS.map(a => (
-            <Link key={a.href} href={a.href}
-              className={`flex items-center gap-4 p-4 rounded-2xl border hover:shadow-md transition-all active:scale-[0.98] ${a.bg}`}>
-              <span className="text-[32px] flex-shrink-0">{a.icon}</span>
-              <div className="flex-1">
-                <p className={`text-[14px] font-extrabold ${a.text}`}>{a.label}</p>
-                <p className="text-[11px] text-gray-500 mt-0.5">{a.desc}</p>
-              </div>
-              <ChevronRight size={16} className="text-gray-300 flex-shrink-0" />
-            </Link>
-          ))}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-4">
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Play & Learn</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {ACTIONS.map(a => (
+              <Link key={a.href} href={a.href}
+                className={`flex flex-col gap-3 p-5 rounded-2xl border hover:shadow-lg transition-all active:scale-[0.98] group ${a.bg}`}>
+                <span className="text-[40px]">{a.icon}</span>
+                <div>
+                  <p className={`text-[14px] font-extrabold ${a.text}`}>{a.label}</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">{a.desc}</p>
+                </div>
+                <ChevronRight size={14} className={`${a.text} opacity-0 group-hover:opacity-100 transition-opacity`} />
+              </Link>
+            ))}
+          </div>
         </div>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <Link href="/ai-buddy" className="bg-indigo-50 border border-indigo-200 rounded-2xl p-4 text-center hover:shadow-md transition-all">
-          <span className="text-[28px]">✨</span>
-          <p className="text-[13px] font-extrabold text-indigo-700 mt-1">AI Buddy</p>
-          <p className="text-[10px] text-gray-500">Ask me anything!</p>
-        </Link>
-        <Link href="/learn-play" className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center hover:shadow-md transition-all">
-          <span className="text-[28px]">🎮</span>
-          <p className="text-[13px] font-extrabold text-amber-700 mt-1">All Games</p>
-          <p className="text-[10px] text-gray-500">See all activities</p>
-        </Link>
+
+        <div className="space-y-4">
+          <Link href="/ai-buddy" className="flex flex-col gap-3 bg-indigo-50 border border-indigo-200 rounded-2xl p-5 hover:shadow-lg transition-all group">
+            <span className="text-[40px]">✨</span>
+            <div>
+              <p className="text-[14px] font-extrabold text-indigo-700">AI Buddy</p>
+              <p className="text-[12px] text-gray-500 mt-0.5">Ask me anything!</p>
+            </div>
+          </Link>
+          <Link href="/learn-play" className="flex flex-col gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-5 hover:shadow-lg transition-all group">
+            <span className="text-[40px]">🎮</span>
+            <div>
+              <p className="text-[14px] font-extrabold text-amber-700">All Games</p>
+              <p className="text-[12px] text-gray-500 mt-0.5">See all activities</p>
+            </div>
+          </Link>
+        </div>
       </div>
     </div>
   );
@@ -86,60 +97,89 @@ function BoardWarriorPrep({ user }) {
   ];
 
   return (
-    <div className="max-w-xl mx-auto space-y-5">
+    <div className="space-y-6">
       <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #059669, #16A34A)' }}>
-        <div className="px-5 py-5 relative">
-          <div className="absolute top-0 right-0 w-28 h-28 rounded-full bg-white/10 -translate-y-1/3 translate-x-1/4 pointer-events-none" />
-          <div className="relative z-10">
-            <p className="text-white/80 text-[11px] font-bold uppercase tracking-widest mb-0.5">🎯 Board Warrior · Class {validClass}</p>
-            <h1 className="text-white font-extrabold text-[20px]">Focus, {name}!</h1>
-            <div className="flex items-center gap-4 mt-3">
-              <div>
-                <p className="text-white font-extrabold text-[22px] leading-none">{overallPct}%</p>
-                <p className="text-white/60 text-[10px]">Syllabus done</p>
-              </div>
-              {days !== null && (
+        <div className="px-6 py-6 md:px-10 md:py-8 relative">
+          <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-white/10 -translate-y-1/3 translate-x-1/4 pointer-events-none" />
+          <div className="relative z-10 flex items-center justify-between gap-6">
+            <div>
+              <p className="text-white/80 text-[11px] font-bold uppercase tracking-widest mb-1">🎯 Board Warrior · Class {validClass}</p>
+              <h1 className="text-white font-extrabold text-2xl md:text-3xl leading-tight">Focus, {name}!</h1>
+              <div className="flex items-center gap-6 mt-3">
                 <div>
-                  <p className="text-white font-extrabold text-[22px] leading-none">{days}</p>
-                  <p className="text-white/60 text-[10px]">Days to exam</p>
+                  <p className="text-white font-extrabold text-2xl leading-none">{overallPct}%</p>
+                  <p className="text-white/60 text-[11px] mt-0.5">Syllabus done</p>
                 </div>
-              )}
+                {days !== null && (
+                  <div>
+                    <p className="text-white font-extrabold text-2xl leading-none">{days}</p>
+                    <p className="text-white/60 text-[11px] mt-0.5">Days to exam</p>
+                  </div>
+                )}
+              </div>
+              <div className="mt-4 h-1.5 bg-white/20 rounded-full overflow-hidden max-w-xs">
+                <div className="h-full bg-white/80 rounded-full transition-all" style={{ width: `${overallPct}%` }} />
+              </div>
             </div>
-            <div className="mt-3 h-1.5 bg-white/20 rounded-full overflow-hidden">
-              <div className="h-full bg-white/80 rounded-full transition-all" style={{ width: `${overallPct}%` }} />
-            </div>
+            <span className="text-6xl md:text-7xl flex-shrink-0 hidden sm:block">📚</span>
           </div>
         </div>
       </div>
 
-      {/* Subject mini-stats */}
-      <div className="grid grid-cols-5 gap-1.5">
-        {BOARD_SUBJECTS.map(s => (
-          <Link key={s.slug} href={`/boards/chapters?subject=${s.slug}`}
-            className={`rounded-xl border p-2 text-center hover:shadow-md transition-all ${s.light} ${s.border}`}>
-            <p className="text-[16px] mb-0.5">{s.emoji}</p>
-            <p className={`text-[13px] font-extrabold ${s.text}`}>{stats[s.slug]?.pct || 0}%</p>
-            <p className="text-[8px] text-gray-400 font-semibold truncate">{s.name.split(' ')[0]}</p>
-          </Link>
-        ))}
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-5">
+          {/* Subject mini-stats */}
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Progress by Subject</p>
+            <div className="grid grid-cols-5 gap-2">
+              {BOARD_SUBJECTS.map(s => (
+                <Link key={s.slug} href={`/boards/chapters?subject=${s.slug}`}
+                  className={`rounded-xl border p-3 text-center hover:shadow-md transition-all ${s.light} ${s.border}`}>
+                  <p className="text-[18px] mb-1">{s.emoji}</p>
+                  <p className={`text-[14px] font-extrabold ${s.text}`}>{stats[s.slug]?.pct || 0}%</p>
+                  <p className="text-[9px] text-gray-400 font-semibold truncate mt-0.5">{s.name.split(' ')[0]}</p>
+                </Link>
+              ))}
+            </div>
+          </div>
 
-      <div>
-        <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">Today's Actions</p>
-        <div className="space-y-3">
-          {ACTIONS.map(({ href, icon: Icon, label, desc, color, text }) => (
-            <Link key={href} href={href}
-              className={`flex items-center gap-4 p-4 rounded-2xl border hover:shadow-md transition-all active:scale-[0.98] ${color}`}>
-              <div className="w-10 h-10 rounded-xl bg-white/80 flex items-center justify-center flex-shrink-0">
-                <Icon size={18} className={text} />
-              </div>
-              <div className="flex-1">
-                <p className={`text-[14px] font-extrabold ${text}`}>{label}</p>
-                <p className="text-[11px] text-gray-500 mt-0.5">{desc}</p>
-              </div>
-              <ChevronRight size={16} className="text-gray-300 flex-shrink-0" />
-            </Link>
-          ))}
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Today's Actions</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {ACTIONS.map(({ href, icon: Icon, label, desc, color, text }) => (
+                <Link key={href} href={href}
+                  className={`flex flex-col gap-3 p-5 rounded-2xl border hover:shadow-lg transition-all active:scale-[0.98] group ${color}`}>
+                  <div className="w-10 h-10 rounded-xl bg-white/80 flex items-center justify-center">
+                    <Icon size={18} className={text} />
+                  </div>
+                  <div>
+                    <p className={`text-[14px] font-extrabold ${text}`}>{label}</p>
+                    <p className="text-[11px] text-gray-500 mt-0.5">{desc}</p>
+                  </div>
+                  <ChevronRight size={14} className={`${text} opacity-0 group-hover:opacity-100 transition-opacity`} />
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5">
+            <p className="text-xs font-bold uppercase tracking-widest text-emerald-700 mb-3">Study Tip</p>
+            <p className="text-[13px] text-emerald-800 leading-relaxed font-medium">
+              Complete <span className="font-extrabold">{days && totalChapters - totalDone > 0 ? Math.ceil((totalChapters - totalDone) / Math.max(days, 1)) : 1} chapter/day</span> to finish your syllabus on time. Start with your weakest subject!
+            </p>
+          </div>
+          <Link href="/boards" className="flex items-center gap-3 p-4 bg-white rounded-2xl border border-gray-100 hover:shadow-md transition-all group">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+              <Clock size={18} className="text-emerald-600" />
+            </div>
+            <div className="flex-1">
+              <p className="text-[13px] font-extrabold text-gray-800">Board Hub</p>
+              <p className="text-[11px] text-gray-400">Countdown & full overview</p>
+            </div>
+            <ChevronRight size={14} className="text-gray-300 group-hover:text-gray-500" />
+          </Link>
         </div>
       </div>
     </div>
@@ -156,49 +196,69 @@ function CuriousMindPrep({ user }) {
     { href: '/prep/daily-quiz',       icon: Brain,    label: 'Quiz Hub',       desc: 'Weekly subject challenge',         color: 'bg-teal-50 border-teal-200',     text: 'text-teal-700'   },
   ];
   return (
-    <div className="max-w-xl mx-auto space-y-5">
+    <div className="space-y-6">
       <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #0D9488, #0891B2)' }}>
-        <div className="px-5 py-5 relative">
-          <div className="absolute top-0 right-0 w-28 h-28 rounded-full bg-white/10 -translate-y-1/3 translate-x-1/4 pointer-events-none" />
-          <div className="relative z-10">
-            <p className="text-white/80 text-[11px] font-bold uppercase tracking-widest mb-0.5">🔭 Curious Mind</p>
-            <h1 className="text-white font-extrabold text-[20px]">Hey {name}, explore today!</h1>
-            <p className="text-white/70 text-[12px] mt-1">Learning feels best when it surprises you.</p>
+        <div className="px-6 py-6 md:px-10 md:py-8 relative">
+          <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-white/10 -translate-y-1/3 translate-x-1/4 pointer-events-none" />
+          <div className="relative z-10 flex items-center justify-between gap-6">
+            <div>
+              <p className="text-white/80 text-[11px] font-bold uppercase tracking-widest mb-1">🔭 Curious Mind</p>
+              <h1 className="text-white font-extrabold text-2xl md:text-3xl leading-tight">Hey {name}, explore today!</h1>
+              <p className="text-white/60 text-sm mt-1.5">Learning feels best when it surprises you.</p>
+            </div>
+            <span className="text-6xl md:text-7xl flex-shrink-0 hidden sm:block">🌌</span>
           </div>
         </div>
       </div>
 
-      {/* Did You Know */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-4" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-[16px]">💡</span>
-          <p className="text-[11px] font-extrabold text-gray-600 uppercase tracking-widest">Did You Know Today?</p>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">Discover Today</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {ACTIONS.map(({ href, icon: Icon, label, desc, color, text }) => (
+              <Link key={href} href={href}
+                className={`flex flex-col gap-3 p-5 rounded-2xl border hover:shadow-lg transition-all active:scale-[0.98] group ${color}`}>
+                <div className="w-10 h-10 rounded-xl bg-white/80 flex items-center justify-center">
+                  <Icon size={18} className={text} />
+                </div>
+                <div>
+                  <p className={`text-[14px] font-extrabold ${text}`}>{label}</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">{desc}</p>
+                </div>
+                <ChevronRight size={14} className={`${text} opacity-0 group-hover:opacity-100 transition-opacity`} />
+              </Link>
+            ))}
+          </div>
         </div>
-        <div className="flex items-start gap-3">
-          <span className="text-[26px] flex-shrink-0">{fact.emoji}</span>
-          <p className="text-[12px] text-gray-700 leading-relaxed font-medium">{fact.fact}</p>
-        </div>
-        <Link href="/discover" className="flex items-center gap-1 mt-3 text-[11px] font-bold text-teal-600 hover:text-teal-700">
-          Explore more like this <ArrowRight size={11} />
-        </Link>
-      </div>
 
-      <div>
-        <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">Discover Today</p>
-        <div className="space-y-3">
-          {ACTIONS.map(({ href, icon: Icon, label, desc, color, text }) => (
-            <Link key={href} href={href}
-              className={`flex items-center gap-4 p-4 rounded-2xl border hover:shadow-md transition-all active:scale-[0.98] ${color}`}>
-              <div className="w-10 h-10 rounded-xl bg-white/80 flex items-center justify-center flex-shrink-0">
-                <Icon size={18} className={text} />
+        <div className="space-y-4">
+          {/* Did You Know */}
+          <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center">
+                <span className="text-[15px]">💡</span>
               </div>
-              <div className="flex-1">
-                <p className={`text-[14px] font-extrabold ${text}`}>{label}</p>
-                <p className="text-[11px] text-gray-500 mt-0.5">{desc}</p>
-              </div>
-              <ChevronRight size={16} className="text-gray-300 flex-shrink-0" />
+              <p className="text-sm font-extrabold text-gray-700">Did You Know?</p>
+            </div>
+            <div className="flex items-start gap-3 mb-3">
+              <span className="text-[30px] flex-shrink-0">{fact.emoji}</span>
+              <p className="text-[13px] text-gray-700 leading-relaxed font-medium">{fact.fact}</p>
+            </div>
+            <Link href="/discover" className="flex items-center gap-1 text-[12px] font-bold text-teal-600 hover:text-teal-700">
+              Explore more <ArrowRight size={11} />
             </Link>
-          ))}
+          </div>
+          <Link href="/ai-buddy"
+            className="flex items-center gap-3 p-4 bg-indigo-50 border border-indigo-200 rounded-2xl hover:shadow-md transition-all group">
+            <div className="w-10 h-10 rounded-xl bg-white/80 flex items-center justify-center flex-shrink-0">
+              <Sparkles size={18} className="text-indigo-600" />
+            </div>
+            <div className="flex-1">
+              <p className="text-[13px] font-extrabold text-indigo-700">Ask AI Spark</p>
+              <p className="text-[11px] text-gray-500">Curious about anything?</p>
+            </div>
+            <ChevronRight size={14} className="text-gray-300 group-hover:text-indigo-400" />
+          </Link>
         </div>
       </div>
     </div>
