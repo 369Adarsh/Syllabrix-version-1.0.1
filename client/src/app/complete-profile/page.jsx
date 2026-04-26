@@ -55,31 +55,27 @@ const Inp = ({ label, name, form, set, required, placeholder, type = 'text', rea
   </Field>
 );
 
-// Full name is always locked — stored at registration and shown read-only.
-// If not captured (pre-fix accounts), show a support notice instead of a blank editable field.
-const FullNameField = ({ form, user, label = 'Full Name', placeholder = 'Your full name' }) => (
-  <div>
-    <Field label={label} required>
-      <div className="relative">
-        <input
-          type="text"
-          value={form.full_name || ''}
-          readOnly
-          placeholder={placeholder}
-          className={inp + ' bg-gray-100 text-gray-500 cursor-not-allowed pr-9'}
-        />
-        <Lock size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
-      </div>
-    </Field>
-    {!user?.full_name && (
-      <p className="text-[11px] text-amber-600 mt-1">
-        Name was not captured at sign-up — contact{' '}
-        <a href="mailto:support@syllabrix.com" className="underline">support@syllabrix.com</a>{' '}
-        to update it.
-      </p>
-    )}
-  </div>
-);
+// Full name is locked if it was captured at registration; editable if missing (pre-fix child accounts).
+const FullNameField = ({ form, set, user, label = 'Full Name', placeholder = 'Your full name' }) => {
+  const locked = !!user?.full_name;
+  return (
+    <div>
+      <Field label={label} required>
+        <div className="relative">
+          <input
+            type="text"
+            value={form.full_name || ''}
+            readOnly={locked}
+            onChange={locked ? undefined : e => set('full_name', e.target.value)}
+            placeholder={placeholder}
+            className={inp + (locked ? ' bg-gray-100 text-gray-500 cursor-not-allowed pr-9' : '')}
+          />
+          {locked && <Lock size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />}
+        </div>
+      </Field>
+    </div>
+  );
+};
 const Sel = ({ label, name, form, set, options, required, placeholder }) => (
   <Field label={label} required={required}>
     <select value={form[name] || ''} onChange={e => set(name, e.target.value)} className={inp}>
@@ -395,7 +391,7 @@ export default function CompleteProfilePage() {
           {type === 'student' && step === 1 && (
             <div className="space-y-4">
               <h2 className="text-[17px] font-extrabold text-gray-900">Basic Information</h2>
-              <FullNameField form={form} user={user} />
+              <FullNameField form={form} set={set} user={user} />
               <Inp label="Phone Number" name="phone" form={form} set={set} placeholder="+91 XXXXX XXXXX" type="tel" />
               <Sel label="Gender" name="gender" form={form} set={set} options={['Male','Female','Other','Prefer not to say']} />
               <div className="grid grid-cols-2 gap-3">
@@ -517,7 +513,7 @@ export default function CompleteProfilePage() {
           {type === 'teacher' && step === 1 && (
             <div className="space-y-4">
               <h2 className="text-[17px] font-extrabold text-gray-900">Basic Information</h2>
-              <FullNameField form={form} user={user} />
+              <FullNameField form={form} set={set} user={user} />
               <Inp label="Phone Number" name="phone" form={form} set={set} placeholder="+91 XXXXX XXXXX" type="tel" />
               <Sel label="Gender" name="gender" form={form} set={set} options={['Male','Female','Other','Prefer not to say']} />
               <div className="grid grid-cols-2 gap-3">
@@ -655,7 +651,7 @@ export default function CompleteProfilePage() {
           {type === 'parent' && step === 1 && (
             <div className="space-y-4">
               <h2 className="text-[17px] font-extrabold text-gray-900">Basic Information</h2>
-              <FullNameField form={form} user={user} />
+              <FullNameField form={form} set={set} user={user} />
               <Inp label="Phone Number" name="phone" form={form} set={set} placeholder="+91 XXXXX XXXXX" type="tel" />
               <Sel label="Gender" name="gender" form={form} set={set} options={['Male','Female','Other','Prefer not to say']} />
               <div className="grid grid-cols-2 gap-3">
@@ -690,7 +686,7 @@ export default function CompleteProfilePage() {
           {type === 'professional_learner' && step === 1 && (
             <div className="space-y-4">
               <h2 className="text-[17px] font-extrabold text-gray-900">Basic Information</h2>
-              <FullNameField form={form} user={user} />
+              <FullNameField form={form} set={set} user={user} />
               <Inp label="Phone Number" name="phone" form={form} set={set} placeholder="+91 XXXXX XXXXX" type="tel" />
               <Sel label="Gender" name="gender" form={form} set={set} options={['Male','Female','Other','Prefer not to say']} />
               <div className="grid grid-cols-2 gap-3">
@@ -758,7 +754,7 @@ export default function CompleteProfilePage() {
             <div className="space-y-4">
               <h2 className="text-[17px] font-extrabold text-gray-900">Admin Contact Details</h2>
               <p className="text-[12px] text-gray-400 -mt-1">Details of the person managing this organization account.</p>
-              <FullNameField form={form} user={user} label="Admin Full Name" placeholder="Contact person's full name" />
+              <FullNameField form={form} set={set} user={user} label="Admin Full Name" placeholder="Contact person's full name" />
               <Inp label="Admin Phone" name="phone" form={form} set={set} placeholder="+91 XXXXX XXXXX" type="tel" />
               <div className="grid grid-cols-2 gap-3">
                 <Inp label="City" name="address_city" form={form} set={set} placeholder="City of HQ" />
@@ -798,7 +794,7 @@ export default function CompleteProfilePage() {
             <div className="space-y-4">
               <h2 className="text-[17px] font-extrabold text-gray-900">Personal Information</h2>
               <p className="text-[12px] text-gray-400 -mt-1">Tell us a bit about yourself.</p>
-              <FullNameField form={form} user={user} />
+              <FullNameField form={form} set={set} user={user} />
               <Inp label="Phone Number" name="phone" form={form} set={set} placeholder="+91 XXXXX XXXXX" type="tel" />
               <Sel label="Gender" name="gender" form={form} set={set} options={['Male','Female','Other','Prefer not to say']} />
               <div className="grid grid-cols-2 gap-3">

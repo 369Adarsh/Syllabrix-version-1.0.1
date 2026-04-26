@@ -172,6 +172,7 @@ const register = async (userData) => {
       try {
         await register({
           ...child,
+          username: child.fullName || child.username, // frontend sends 'fullName'; register() expects 'username'
           user_type: 'student',
           guardian_id: generatedGID // pass the parent's new G-ID
         });
