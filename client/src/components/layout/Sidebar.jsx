@@ -15,7 +15,7 @@ import {
   Building2, Heart, Network, BookOpen, Star, Award,
   Shield, Rss, BarChart2, Clock, FileText, ClipboardList, PlusCircle,
   Zap, Briefcase, ScanSearch, Target, TrendingUp,
-  Bot, BadgeCheck, CalendarDays, UserCircle2, Plus, Search
+  Bot, BadgeCheck, CalendarDays, UserCircle2, Plus, Search, Globe2
 } from 'lucide-react';
 import { getPlatformMode, PLATFORM_MODES } from '@/utils/platformMode';
 import { parentAPI } from '@/lib/api/parent.api';
@@ -119,6 +119,10 @@ function StudentSidebarContent({ onClose }) {
         <div className="flex-1 overflow-y-auto py-2" style={{ scrollbarWidth: 'none' }}>
           <Section label="Home" />
           <NavItem href="/home"         icon={Home}        label="My Dashboard"  {...p} />
+
+          <Section label="My World" />
+          <NavItem href="/my-world"     icon={Globe2}      label="Community Feed" {...p} />
+          <NavItem href="/my-world/post" icon={Plus}       label="Share Activity" {...p} />
 
           <Section label="Learn & Play" />
           <NavItem href="/learn-play"   icon={Gamepad2}    label="Learn & Play"  {...p} />

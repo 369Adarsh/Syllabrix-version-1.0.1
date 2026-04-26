@@ -14,6 +14,8 @@ import toast from 'react-hot-toast';
 import { careerAPI } from '@/lib/api/career.api';
 import ProfessionalProfile from '@/components/profile/ProfessionalProfile';
 import ProfileView from '@/components/profile/ProfileView';
+import YoungExplorerProfile from '@/components/profile/YoungExplorerProfile';
+import { getPlatformMode } from '@/utils/platformMode';
 
 // ═══════════════════════════════════════════════════════════════════
 // CONSTANTS & CONFIG
@@ -1584,6 +1586,7 @@ export default function MyProfilePage() {
 
   const type   = user.user_type;
   const p      = user?.profile || {};
+  const platformMode = getPlatformMode(user);
   const cfg    = getConfig(type);
   const TypeIcon = cfg.icon;
   const handleSaveProfessional = useCallback(async (formData) => {
@@ -1619,8 +1622,13 @@ export default function MyProfilePage() {
   return (
     <div className="min-h-screen bg-[#F1F4F8]">
 
+      {/* Young Explorer Profile — ages 4–11 */}
+      {type === 'student' && platformMode === 'young_explorer' && (
+        <YoungExplorerProfile />
+      )}
+
       {/* New Professional/Organization View — full-width, self-contained layout */}
-      {(type === 'professional_learner' || type === 'organization') && (
+      {!(type === 'student' && platformMode === 'young_explorer') && (type === 'professional_learner' || type === 'organization') && (
         <ProfessionalProfile
           user={user}
           dashboardData={dashboardData}
@@ -1631,7 +1639,7 @@ export default function MyProfilePage() {
       )}
 
       {/* Legacy/Default View for other roles */}
-      {!(type === 'professional_learner' || type === 'organization') && (
+      {!(type === 'student' && platformMode === 'young_explorer') && !(type === 'professional_learner' || type === 'organization') && (
         <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
           {/* ── 1+2. PROFILE VIEW (shared component) ── */}
         <ProfileView userId={user?.id?.toString()} />

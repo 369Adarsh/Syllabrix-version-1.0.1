@@ -2,7 +2,7 @@
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, BookOpen, Compass, Gamepad2, User, Sparkles, MessageCircle, Menu, ShieldCheck, Brain, Briefcase, GraduationCap, Users, Newspaper, Zap, Target } from 'lucide-react';
+import { Home, BookOpen, Compass, Gamepad2, User, Sparkles, MessageCircle, Menu, ShieldCheck, Brain, Briefcase, GraduationCap, Users, Newspaper, Zap, Target, Globe2 } from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import { getPlatformMode } from '@/utils/platformMode';
@@ -18,11 +18,11 @@ const STUDENT_NAV_DEFAULT = [
 
 // Young Explorer — age-appropriate bottom nav (no career explorer)
 const STUDENT_NAV_YOUNG_EXPLORER = [
-  { href: '/home',       icon: Home,     label: 'Home'    },
-  { href: '/learn-play', icon: BookOpen, label: 'Learn'   },
-  { href: '/stories',    icon: BookOpen, label: 'Stories' },
-  { href: '/arcade',     icon: Gamepad2, label: 'Play'    },
-  { href: '/profile',    icon: User,     label: 'Profile' },
+  { href: '/home',      icon: Home,     label: 'Home'     },
+  { href: '/my-world',  icon: Globe2,   label: 'My World' },
+  { href: '/stories',   icon: BookOpen, label: 'Stories'  },
+  { href: '/arcade',    icon: Gamepad2, label: 'Play'     },
+  { href: '/profile',   icon: User,     label: 'Profile'  },
 ];
 
 // Curious Mind — discovery-focused bottom nav
