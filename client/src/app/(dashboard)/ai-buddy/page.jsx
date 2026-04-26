@@ -12,11 +12,105 @@ import {
   TrendingUp, Award, Globe, BarChart3, Bot, CheckCircle, CheckCircle2, Menu,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { getPlatformMode } from '@/utils/platformMode';
 
 // ════════════════════════════════════════════════════════════
-//  QUICK PROMPTS
+//  MODE BUDDY CONFIG — personality per platform mode
 // ════════════════════════════════════════════════════════════
-const QUICK_PROMPTS = [
+const MODE_BUDDY = {
+  young_explorer: {
+    name: 'Boli',
+    emoji: '🦜',
+    subtitle: "Hi! I'm Boli, your learning buddy!",
+    greeting: "Hi! I'm Boli! Shall we play a word game today? 🦜",
+    avatarBg: 'bg-amber-500',
+    headerGradient: 'from-amber-500 to-orange-500',
+    newChatLabel: 'New Chat',
+    prompts: [
+      { icon: '🔤', text: 'Say the sound for the letter B', tag: 'Phonics' },
+      { icon: '🌸', text: 'Help me build the word FLOWER', tag: 'Words' },
+      { icon: '📖', text: 'Tell me a short story about a lion', tag: 'Stories' },
+      { icon: '🔢', text: 'How do I count to 20 in Hindi?', tag: 'Hindi' },
+      { icon: '🎵', text: 'Teach me a rhyme about animals', tag: 'Rhymes' },
+      { icon: '✏️', text: 'How do I write the letter A nicely?', tag: 'Writing' },
+    ],
+    context: 'You are Boli, a friendly parrot mascot for young children (ages 5-10). Use simple words and very short sentences. Add lots of emojis. Be encouraging and playful. Help with reading, writing, phonics, and basic concepts. Celebrate small wins with excitement.',
+  },
+  curious_mind: {
+    name: 'Spark',
+    emoji: '🔭',
+    subtitle: 'Your curiosity coach',
+    greeting: "Hey! I found something cool about black holes. Want to know? 🔭",
+    avatarBg: 'bg-teal-500',
+    headerGradient: 'from-teal-500 to-cyan-600',
+    newChatLabel: 'New Explore',
+    prompts: [
+      { icon: '🌌', text: 'Tell me something amazing about space', tag: 'Science' },
+      { icon: '🧮', text: 'Why does Fibonacci appear in nature?', tag: 'Maths' },
+      { icon: '🏛️', text: 'What was daily life like in ancient India?', tag: 'History' },
+      { icon: '🔬', text: 'How do vaccines train your immune system?', tag: 'Biology' },
+      { icon: '💡', text: 'Give me a mind-blowing physics fact', tag: 'Physics' },
+      { icon: '🎯', text: 'What career suits a creative thinker?', tag: 'Career' },
+    ],
+    context: 'You are Spark, an enthusiastic discovery coach for Class 6-8 students. Make learning exciting. Share fascinating facts, ask curious questions back, and connect topics to real life. Use engaging, age-appropriate language. Spark wonder and curiosity in every response.',
+  },
+  board_warrior: {
+    name: 'Coach',
+    emoji: '🎯',
+    subtitle: 'CBSE board exam coach',
+    greeting: "Ready to ace your boards? Let's clear your doubts — ask me anything! 🎯",
+    avatarBg: 'bg-emerald-600',
+    headerGradient: 'from-emerald-600 to-green-600',
+    newChatLabel: 'New Doubt',
+    prompts: [
+      { icon: '📐', text: 'Explain Pythagoras theorem with examples', tag: 'Maths' },
+      { icon: '⚗️', text: 'What are the products of burning magnesium?', tag: 'Science' },
+      { icon: '🌍', text: 'What caused the French Revolution?', tag: 'SST' },
+      { icon: '📝', text: 'How to write a CBSE formal letter properly?', tag: 'English' },
+      { icon: '🔋', text: 'Explain the working of an electric motor', tag: 'Physics' },
+      { icon: '🧬', text: 'Difference between mitosis and meiosis?', tag: 'Biology' },
+    ],
+    context: 'You are Coach, a friendly CBSE board exam coach for Class 9-10 students. Give clear, exam-oriented explanations aligned to the NCERT curriculum. Suggest how to structure answers for board exams. Be encouraging. Highlight key points students should memorise.',
+  },
+  exam_command: {
+    name: 'Commander',
+    emoji: '⚡',
+    subtitle: 'JEE / NEET command mode',
+    greeting: "Let's command this exam. What concept shall we crack today? ⚡",
+    avatarBg: 'bg-blue-700',
+    headerGradient: 'from-blue-700 to-indigo-700',
+    newChatLabel: 'New Session',
+    prompts: [
+      { icon: '⚛️', text: 'Derive the equations of motion (JEE Physics)', tag: 'Physics' },
+      { icon: '🧪', text: 'Explain SN1 vs SN2 reactions with conditions', tag: 'Chemistry' },
+      { icon: '📊', text: 'How to solve Integration by Parts for JEE?', tag: 'Maths' },
+      { icon: '🧬', text: 'Explain cell division for NEET in detail', tag: 'Biology' },
+      { icon: '🎯', text: 'What are the 5 highest-weightage NEET chapters?', tag: 'Strategy' },
+      { icon: '💡', text: 'JEE 2023 PYQ — Explain Bernoulli\'s principle', tag: 'PYQ' },
+    ],
+    context: 'You are Commander, an expert JEE/NEET preparation coach. Explain concepts rigorously with formulas and derivations where needed. Give exam-focused answers with application tips. Mention which concepts are frequently tested in JEE/NEET. Be precise and thorough.',
+  },
+  upsc_aspirant: {
+    name: 'Mentor',
+    emoji: '🏛️',
+    subtitle: 'UPSC civil services mentor',
+    greeting: "Good morning. Ready for today's analysis? What shall we begin with? 🏛️",
+    avatarBg: 'bg-sky-900',
+    headerGradient: 'from-sky-900 to-blue-950',
+    newChatLabel: 'New Session',
+    prompts: [
+      { icon: '📰', text: 'Summarise the most important current affairs for UPSC today', tag: 'Current Affairs' },
+      { icon: '⚖️', text: 'Explain Article 356 — President\'s Rule in India', tag: 'Polity' },
+      { icon: '💹', text: 'Key features of India\'s federal structure', tag: 'GS2' },
+      { icon: '🌍', text: 'India\'s foreign policy: Non-Alignment to Strategic Autonomy', tag: 'IR' },
+      { icon: '🧭', text: 'Civil servant dilemma: loyalty vs public good (ethics case)', tag: 'GS4' },
+      { icon: '✍️', text: 'Write a 150-word model answer on India\'s water crisis', tag: 'Answer Writing' },
+    ],
+    context: 'You are Mentor, an expert UPSC civil services preparation guide. Give analytical, multi-dimensional answers. For GS questions: Introduction → Body (multiple perspectives with examples) → Conclusion. For ethics, discuss values and dilemmas. Cite government schemes, committees, and reports where relevant. Write in a Mains-exam style.',
+  },
+};
+
+const DEFAULT_PROMPTS = [
   { icon: '📈', text: 'Recent industry shifts in Tech 2026', tag: 'Market' },
   { icon: '🎯', text: 'Mastery roadmap for Cloud Architecture', tag: 'Skills' },
   { icon: '💼', text: 'Salary negotiation strategy for Lead roles', tag: 'Career' },
@@ -39,7 +133,7 @@ const INTENT_BADGES = {
 // ════════════════════════════════════════════════════════════
 //  SESSION SIDEBAR
 // ════════════════════════════════════════════════════════════
-function SessionSidebar({ sessions, activeId, onSelect, onNew, onDelete, onClearAll, collapsed, onToggle, loading, isMobileOpen, onMobileClose }) {
+function SessionSidebar({ sessions, activeId, onSelect, onNew, onDelete, onClearAll, collapsed, onToggle, loading, isMobileOpen, onMobileClose, newChatLabel = 'New Chat' }) {
   const [showConfirm, setShowConfirm] = useState(false);
 
   const formatTime = (dateStr) => {
@@ -72,7 +166,7 @@ function SessionSidebar({ sessions, activeId, onSelect, onNew, onDelete, onClear
       <div className="px-3 py-3 border-b border-gray-100 flex items-center justify-between">
         <button onClick={onNew}
           className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-blue-600 text-white text-xs font-black uppercase tracking-widest hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all active:scale-[0.98]">
-          <Plus size={14} strokeWidth={3} /> New Strategy
+          <Plus size={14} strokeWidth={3} /> {newChatLabel}
         </button>
         <button onClick={() => { onToggle(); onMobileClose?.(); }} className="ml-2 p-2 rounded-lg hover:bg-gray-100 transition-colors" title="Hide sidebar">
           <PanelLeftClose size={14} className="text-gray-400" />
@@ -105,7 +199,7 @@ function SessionSidebar({ sessions, activeId, onSelect, onNew, onDelete, onClear
                 <MessageSquare size={14} className={`mt-0.5 flex-shrink-0 ${activeId === s.id ? 'text-blue-500' : 'text-gray-400'}`} />
                 <div className="flex-1 min-w-0">
                   <p className={`text-[12px] font-black tracking-tight truncate ${activeId === s.id ? 'text-blue-700' : 'text-gray-700'}`}>
-                    {s.title || 'New Strategy'}
+                    {s.title || '{newChatLabel}'}
                   </p>
                   <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1 font-bold uppercase">
                     <Clock size={9} /> {formatTime(s.last_message_at || s.created_at)}
@@ -178,7 +272,7 @@ function SessionSidebar({ sessions, activeId, onSelect, onNew, onDelete, onClear
         </div>
         <button onClick={() => { onNew(); onMobileClose?.(); }}
           className="mx-3 mt-3 flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-blue-600 text-white text-xs font-black uppercase tracking-widest hover:bg-blue-700 shadow-xl shadow-blue-100 transition-all active:scale-[0.98]">
-          <Plus size={14} strokeWidth={3} /> New Strategy
+          <Plus size={14} strokeWidth={3} /> {newChatLabel}
         </button>
         <div className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5 mt-1">
           {loading ? (
@@ -201,7 +295,7 @@ function SessionSidebar({ sessions, activeId, onSelect, onNew, onDelete, onClear
                 <MessageSquare size={14} className={`mt-0.5 flex-shrink-0 ${activeId === s.id ? 'text-blue-500' : 'text-gray-400'}`} />
                 <div className="flex-1 min-w-0">
                   <p className={`text-[12px] font-black tracking-tight truncate ${activeId === s.id ? 'text-blue-700' : 'text-gray-700'}`}>
-                    {s.title || 'New Strategy'}
+                    {s.title || '{newChatLabel}'}
                   </p>
                   <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
                     <Clock size={9} /> {formatTime(s.last_message_at || s.created_at)}
@@ -225,7 +319,7 @@ function SessionSidebar({ sessions, activeId, onSelect, onNew, onDelete, onClear
 // ════════════════════════════════════════════════════════════
 //  CHAT MESSAGE BUBBLE
 // ════════════════════════════════════════════════════════════
-function ChatBubble({ msg, isUser }) {
+function ChatBubble({ msg, isUser, avatarBg = 'bg-blue-600', emoji = null }) {
   const [copied, setCopied] = useState(false);
 
   const formatContent = (text) => {
@@ -252,9 +346,15 @@ function ChatBubble({ msg, isUser }) {
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} animate-fade-in group/bubble`}>
       {!isUser && (
-        <div className="w-8 h-8 md:w-10 md:h-10 rounded-2xl bg-blue-600 flex items-center justify-center mr-2 md:mr-3 mt-1 flex-shrink-0 shadow-lg shadow-blue-100">
-          <Bot size={15} className="text-white md:hidden" />
-          <Bot size={18} className="text-white hidden md:block" />
+        <div className={`w-8 h-8 md:w-10 md:h-10 rounded-2xl ${avatarBg} flex items-center justify-center mr-2 md:mr-3 mt-1 flex-shrink-0 shadow-lg`}>
+          {emoji ? (
+            <span className="text-[13px] md:text-[16px]">{emoji}</span>
+          ) : (
+            <>
+              <Bot size={15} className="text-white md:hidden" />
+              <Bot size={18} className="text-white hidden md:block" />
+            </>
+          )}
         </div>
       )}
       <div className={`relative max-w-[85%] md:max-w-[80%] px-4 md:px-5 py-3 md:py-4 text-sm leading-relaxed ${
@@ -283,6 +383,14 @@ function ChatBubble({ msg, isUser }) {
 // ════════════════════════════════════════════════════════════
 export default function AIBuddyPage() {
   const { user } = useAuth();
+  const mode = getPlatformMode(user);
+  const buddy = MODE_BUDDY[mode] || null;
+  const isStudentMode = !!buddy;
+  const QUICK_PROMPTS = buddy?.prompts || DEFAULT_PROMPTS;
+  const avatarBg = buddy?.avatarBg || 'bg-blue-600';
+  const buddyName = buddy ? `${buddy.emoji} ${buddy.name}` : 'Professional AI Mentor';
+  const buddySubtitle = buddy?.subtitle || 'Your professional trajectory companion';
+  const newChatLabel = buddy?.newChatLabel || 'New Strategy';
 
   // Session state
   const [sessions, setSessions] = useState([]);
@@ -310,8 +418,9 @@ export default function AIBuddyPage() {
   // ── Load data on mount ──
   useEffect(() => {
     loadSessions();
-    loadDashboardFacts();
-  }, []);
+    if (!isStudentMode) loadDashboardFacts();
+    else setDataLoading(false);
+  }, [isStudentMode]);
 
   const loadDashboardFacts = async () => {
     setDataLoading(true);
@@ -436,6 +545,7 @@ export default function AIBuddyPage() {
       const res = await aiAPI.buddyChat(msg, activeSessionId || undefined, {
         class_level: user?.class_name?.toString().replace(/\D/g, '') || undefined,
         board: user?.board || undefined,
+        ...(buddy?.context ? { system_context: buddy.context } : {}),
       });
       const data = res.data?.data || res.data;
       const reply = data.reply;
@@ -479,6 +589,7 @@ export default function AIBuddyPage() {
         loading={sessionsLoading}
         isMobileOpen={mobileSessionOpen}
         onMobileClose={() => setMobileSessionOpen(false)}
+        newChatLabel={newChatLabel}
       />
 
 
@@ -501,16 +612,22 @@ export default function AIBuddyPage() {
               )}
             </button>
 
-            <div className="w-9 h-9 md:w-11 md:h-11 rounded-2xl bg-blue-600 flex items-center justify-center shadow-xl shadow-blue-100 flex-shrink-0">
-              <Bot size={18} className="text-white md:hidden" />
-              <Bot size={22} className="text-white hidden md:block" />
+            <div className={`w-9 h-9 md:w-11 md:h-11 rounded-2xl ${avatarBg} flex items-center justify-center shadow-xl flex-shrink-0`}>
+              {buddy ? (
+                <span className="text-[16px] md:text-[20px]">{buddy.emoji}</span>
+              ) : (
+                <>
+                  <Bot size={18} className="text-white md:hidden" />
+                  <Bot size={22} className="text-white hidden md:block" />
+                </>
+              )}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h1 className="font-black text-gray-900 text-sm md:text-lg tracking-tighter uppercase truncate">
-                  <span className="hidden sm:inline">Professional </span>AI Mentor
+                  {buddyName}
                 </h1>
-                {dashboardData?.marketFitScore && (
+                {!isStudentMode && dashboardData?.marketFitScore && (
                   <div className="hidden sm:flex px-2 py-0.5 bg-blue-50 border border-blue-100 rounded-lg items-center gap-1.5 animate-pulse flex-shrink-0">
                     <div className="w-1 h-1 rounded-full bg-blue-600" />
                     <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest">{dashboardData.marketFitScore}% Match</span>
@@ -519,8 +636,8 @@ export default function AIBuddyPage() {
               </div>
               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5 truncate">
                 {activeSessionId
-                  ? sessions.find(s => s.id === activeSessionId)?.title || 'Strategic Session'
-                  : `${dashboardData?.profile?.industry || 'Professional'} Trajectory`}
+                  ? sessions.find(s => s.id === activeSessionId)?.title || 'Active Session'
+                  : buddySubtitle}
               </p>
             </div>
           </div>
@@ -553,81 +670,87 @@ export default function AIBuddyPage() {
           ) : messages.length === 0 ? (
             /* Empty state */
             <div className="flex flex-col items-center justify-center py-6 md:py-8">
-              <div className="w-16 h-16 md:w-20 md:h-20 rounded-[28px] md:rounded-[32px] bg-blue-50 border border-blue-100 flex items-center justify-center mb-4 md:mb-6 shadow-sm">
-                <Bot size={28} className="text-blue-600 md:hidden" />
-                <Bot size={32} className="text-blue-600 hidden md:block" />
+              <div className={`w-16 h-16 md:w-20 md:h-20 rounded-[28px] md:rounded-[32px] ${avatarBg} flex items-center justify-center mb-4 md:mb-6 shadow-lg`}>
+                {buddy ? (
+                  <span className="text-[32px] md:text-[40px]">{buddy.emoji}</span>
+                ) : (
+                  <>
+                    <Bot size={28} className="text-white md:hidden" />
+                    <Bot size={32} className="text-white hidden md:block" />
+                  </>
+                )}
               </div>
-              <h2 className="font-black text-gray-900 text-xl md:text-2xl mb-1 tracking-tighter uppercase">
-                Intelligence Pulse
-              </h2>
-              <p className="text-sm text-gray-400 mb-8 md:mb-10 text-center max-w-sm font-medium px-4">
-                Real-time professional facts and strategic gaps identified in your profile.
-              </p>
 
-              {/* Data Wired Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 w-full max-w-4xl mb-8 md:mb-12">
-                 {/* Trajectory Card */}
-                 <div className="bg-white border border-gray-100 rounded-[24px] md:rounded-[32px] p-5 md:p-6 shadow-sm hover:shadow-xl hover:border-blue-100 transition-all group overflow-hidden relative">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 opacity-20 blur-3xl -mr-10 -mt-10" />
-                    <div className="flex items-center justify-between mb-3 md:mb-4">
-                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">Market Fit</p>
-                       <TrendingUp size={14} className="text-blue-600" />
-                    </div>
-                    <p className="text-3xl font-black text-gray-900 leading-none">{dashboardData?.marketFitScore || 0}%</p>
-                    <div className="mt-3 md:mt-4 space-y-2">
-                       <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${dashboardData?.marketFitScore || 0}%` }}
-                            className="h-full bg-blue-600"
-                          />
-                       </div>
-                       <p className="text-[10px] text-blue-600 font-bold">TOP {dashboardData?.marketPercentile || '15'}% WORLDWIDE</p>
-                    </div>
-                 </div>
+              {buddy ? (
+                <>
+                  <h2 className="font-black text-gray-900 text-xl md:text-2xl mb-1 tracking-tighter">
+                    {buddy.name}
+                  </h2>
+                  <p className="text-sm text-gray-500 mb-8 md:mb-10 text-center max-w-sm font-medium px-4">
+                    {buddy.greeting}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h2 className="font-black text-gray-900 text-xl md:text-2xl mb-1 tracking-tighter uppercase">
+                    Intelligence Pulse
+                  </h2>
+                  <p className="text-sm text-gray-400 mb-8 md:mb-10 text-center max-w-sm font-medium px-4">
+                    Real-time professional facts and strategic gaps identified in your profile.
+                  </p>
 
-                 {/* Critical Gaps Card */}
-                 <div className="bg-white border border-gray-100 rounded-[24px] md:rounded-[32px] p-5 md:p-6 shadow-sm hover:shadow-xl hover:border-blue-100 transition-all group overflow-hidden relative">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-50 opacity-20 blur-3xl -mr-10 -mt-10" />
-                    <div className="flex items-center justify-between mb-3 md:mb-4">
-                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">Critical Gaps</p>
-                       <Award size={14} className="text-emerald-600" />
+                  {/* Career data cards — only for professional/default modes */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 w-full max-w-4xl mb-8 md:mb-12">
+                    <div className="bg-white border border-gray-100 rounded-[24px] md:rounded-[32px] p-5 md:p-6 shadow-sm hover:shadow-xl hover:border-blue-100 transition-all group overflow-hidden relative">
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 opacity-20 blur-3xl -mr-10 -mt-10" />
+                      <div className="flex items-center justify-between mb-3 md:mb-4">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">Market Fit</p>
+                        <TrendingUp size={14} className="text-blue-600" />
+                      </div>
+                      <p className="text-3xl font-black text-gray-900 leading-none">{dashboardData?.marketFitScore || 0}%</p>
+                      <div className="mt-3 md:mt-4 space-y-2">
+                        <div className="w-full h-1 bg-gray-100 rounded-full overflow-hidden">
+                          <motion.div initial={{ width: 0 }} animate={{ width: `${dashboardData?.marketFitScore || 0}%` }} className="h-full bg-blue-600" />
+                        </div>
+                        <p className="text-[10px] text-blue-600 font-bold">TOP {dashboardData?.marketPercentile || '15'}% WORLDWIDE</p>
+                      </div>
                     </div>
-                    <p className="text-lg md:text-xl font-black text-gray-900 leading-tight">
-                       {dashboardData?.skillGaps?.[0]?.skill_name || 'Alignment Peak'}
-                    </p>
-                    <p className="text-[10px] text-gray-400 mt-2 font-medium">
-                       {dashboardData?.skillGaps?.[0]
-                         ? `Expected Yield: ${dashboardData.skillGaps[0].salary_impact || '+₹3 LPA'}`
-                         : 'Profile perfectly matched to Tier-1 trends.'}
-                    </p>
-                 </div>
-
-                 {/* Market Opportunity Card */}
-                 <div className="bg-white border border-gray-100 rounded-[24px] md:rounded-[32px] p-5 md:p-6 shadow-sm hover:shadow-xl hover:border-blue-100 transition-all group overflow-hidden relative">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-purple-50 opacity-20 blur-3xl -mr-10 -mt-10" />
-                    <div className="flex items-center justify-between mb-3 md:mb-4">
-                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">Market Trends</p>
-                       <Globe size={14} className="text-purple-600" />
+                    <div className="bg-white border border-gray-100 rounded-[24px] md:rounded-[32px] p-5 md:p-6 shadow-sm hover:shadow-xl hover:border-blue-100 transition-all group overflow-hidden relative">
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-50 opacity-20 blur-3xl -mr-10 -mt-10" />
+                      <div className="flex items-center justify-between mb-3 md:mb-4">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">Critical Gaps</p>
+                        <Award size={14} className="text-emerald-600" />
+                      </div>
+                      <p className="text-lg md:text-xl font-black text-gray-900 leading-tight">
+                        {dashboardData?.skillGaps?.[0]?.skill_name || 'Alignment Peak'}
+                      </p>
+                      <p className="text-[10px] text-gray-400 mt-2 font-medium">
+                        {dashboardData?.skillGaps?.[0] ? `Expected Yield: ${dashboardData.skillGaps[0].salary_impact || '+₹3 LPA'}` : 'Profile perfectly matched to Tier-1 trends.'}
+                      </p>
                     </div>
-                    <p className="text-lg md:text-xl font-black text-gray-900 leading-tight">
-                       {dashboardData?.profile?.industry || 'Tech Innovation'}
-                    </p>
-                    <p className="text-[10px] text-purple-600 mt-2 font-bold uppercase tracking-tight">
-                       Rising +12% Demand
-                    </p>
-                 </div>
-              </div>
+                    <div className="bg-white border border-gray-100 rounded-[24px] md:rounded-[32px] p-5 md:p-6 shadow-sm hover:shadow-xl hover:border-blue-100 transition-all group overflow-hidden relative">
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-purple-50 opacity-20 blur-3xl -mr-10 -mt-10" />
+                      <div className="flex items-center justify-between mb-3 md:mb-4">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">Market Trends</p>
+                        <Globe size={14} className="text-purple-600" />
+                      </div>
+                      <p className="text-lg md:text-xl font-black text-gray-900 leading-tight">
+                        {dashboardData?.profile?.industry || 'Tech Innovation'}
+                      </p>
+                      <p className="text-[10px] text-purple-600 mt-2 font-bold uppercase tracking-tight">Rising +12% Demand</p>
+                    </div>
+                  </div>
+                </>
+              )}
 
               {/* Quick prompts */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-w-lg w-full px-1">
                 {QUICK_PROMPTS.map((p, i) => (
                   <button key={i} onClick={() => sendMessage(p.text)}
-                    className="text-left bg-white border border-gray-100 rounded-[24px] md:rounded-[32px] p-4 md:p-5 hover:shadow-2xl hover:border-blue-200 transition-all active:scale-[0.98] group relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-16 h-16 bg-blue-50 opacity-0 group-hover:opacity-100 blur-2xl -mr-8 -mt-8 transition-opacity" />
-                    <div className="flex items-center gap-2 md:gap-3 mb-1.5 md:mb-2 relative z-10">
+                    className="text-left bg-white border border-gray-100 rounded-[20px] md:rounded-[24px] p-4 hover:shadow-xl hover:border-gray-200 transition-all active:scale-[0.98] group relative overflow-hidden">
+                    <div className="flex items-center gap-2 mb-1.5 relative z-10">
                       <span className="text-base md:text-lg">{p.icon}</span>
-                      <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 group-hover:text-blue-600 transition-colors">{p.tag} Intelligence</span>
+                      <span className="text-[9px] font-black uppercase tracking-[0.15em] text-gray-400 group-hover:text-gray-600 transition-colors">{p.tag}</span>
                     </div>
                     <p className="text-[12px] md:text-[13px] text-gray-800 leading-snug font-bold relative z-10">{p.text}</p>
                   </button>
@@ -638,7 +761,7 @@ export default function AIBuddyPage() {
             /* Messages */
             <>
               {messages.map((msg, i) => (
-                <ChatBubble key={i} msg={msg} isUser={msg.role === 'user'} />
+                <ChatBubble key={i} msg={msg} isUser={msg.role === 'user'} avatarBg={avatarBg} emoji={buddy?.emoji || null} />
               ))}
             </>
           )}
@@ -646,9 +769,15 @@ export default function AIBuddyPage() {
           {/* Typing indicator */}
           {sending && (
             <div className="flex items-start gap-3 md:gap-4 animate-fade-in px-1 md:px-2">
-              <div className="w-8 h-8 md:w-10 md:h-10 rounded-2xl bg-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-100">
-                <Bot size={15} className="text-white md:hidden animate-pulse" />
-                <Bot size={18} className="text-white hidden md:block animate-pulse" />
+              <div className={`w-8 h-8 md:w-10 md:h-10 rounded-2xl ${avatarBg} flex items-center justify-center flex-shrink-0 shadow-lg`}>
+                {buddy ? (
+                  <span className="text-[14px] animate-pulse">{buddy.emoji}</span>
+                ) : (
+                  <>
+                    <Bot size={15} className="text-white md:hidden animate-pulse" />
+                    <Bot size={18} className="text-white hidden md:block animate-pulse" />
+                  </>
+                )}
               </div>
               <div className="bg-white border border-gray-100 rounded-[20px] md:rounded-[24px] rounded-bl-lg px-4 md:px-5 py-3 md:py-4 shadow-sm">
                 <div className="flex gap-2">
@@ -682,7 +811,7 @@ export default function AIBuddyPage() {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={isListening ? '🎤 Listening...' : 'Ask me anything...'}
+                placeholder={isListening ? '🎤 Listening...' : buddy ? `Ask ${buddy.name} anything...` : 'Ask me anything...'}
                 className="w-full bg-gray-50/80 border border-gray-200 rounded-xl px-3 md:px-4 py-2.5 md:py-3 text-sm font-medium text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 focus:bg-white transition-all pr-10"
                 disabled={sending}
               />
