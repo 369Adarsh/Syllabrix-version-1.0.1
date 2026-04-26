@@ -20,6 +20,8 @@ const GREETING = () => {
   return 'Good Evening';
 };
 
+const YOUNG_HASHTAG_SET = new Set(ACTIVITY_TYPES.map(a => a.id));
+
 const activityMeta = (hashtags = []) =>
   ACTIVITY_TYPES.find(a => hashtags.includes(a.id)) || ACTIVITY_TYPES[7];
 
@@ -134,7 +136,12 @@ function PostCard({ post, currentUserId }) {
 
       {post.media_url && (
         <div className="px-4 pb-3">
-          <img src={post.media_url} alt="activity" className="w-full rounded-xl object-cover max-h-64" />
+          <img
+            src={post.media_url}
+            alt="activity"
+            className="w-full rounded-xl object-cover max-h-64"
+            onError={e => { e.currentTarget.style.display = 'none'; }}
+          />
         </div>
       )}
 
@@ -209,8 +216,13 @@ export default function MyWorldPage() {
   const loadFeed = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await postsAPI.getFeed({ limit: 30, page: 1 });
-      setPosts(res.data?.data || []);
+      const res = await postsAPI.getFeed({ limit: 50, page: 1 });
+      const all = res.data?.data || [];
+      // Only show posts created by young explorer users (they always have an activity hashtag)
+      const youngPosts = all.filter(p =>
+        Array.isArray(p.hashtags) && p.hashtags.some(h => YOUNG_HASHTAG_SET.has(h))
+      );
+      setPosts(youngPosts);
     } catch {
       // show empty state
     } finally {
@@ -222,12 +234,13 @@ export default function MyWorldPage() {
 
   const goPost = () => router.push('/my-world/post');
 
-  const greetName = user?.full_name?.split(' ')[0] || user?.username || 'Explorer';
+  const greetName = user?.profile?.full_name?.split(' ')[0] || user?.full_name?.split(' ')[0] || 'Explorer';
   const classLabel = user?.profile?.class_name ? `${user.profile.class_name}` : '';
 
   if (!user || mode !== 'young_explorer') return null;
 
-  const filtered = tab === 'my' ? posts.filter(p => p.user_id === user?.id) : posts;
+  const allYoungPosts = posts;
+  const filtered = tab === 'my' ? allYoungPosts.filter(p => p.user_id === user?.id) : allYoungPosts;
 
   return (
     <div className="space-y-6">
