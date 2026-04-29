@@ -37,7 +37,7 @@ function NotificationRow({ n, onRead, onDismiss }) {
       exit={{ opacity: 0, x: -20 }}
       transition={{ duration: 0.18 }}
       onClick={handleClick}
-      className={`relative flex items-start gap-3 px-4 py-3.5 cursor-pointer transition-colors group border-b border-gray-50 last:border-0 ${
+      className={`relative flex items-start gap-3 px-4 py-4 cursor-pointer transition-colors group border-b border-gray-50 last:border-0 active:bg-gray-100/60 ${
         !n.is_read ? 'bg-blue-50/50 hover:bg-blue-50/80' : 'hover:bg-gray-50'
       }`}
     >
@@ -79,14 +79,14 @@ function NotificationRow({ n, onRead, onDismiss }) {
       </div>
 
       {/* Right: unread dot + dismiss */}
-      <div className="flex flex-col items-end gap-2 flex-shrink-0 self-center">
-        {!n.is_read && <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />}
+      <div className="flex flex-col items-end gap-2 flex-shrink-0 self-start pt-1">
+        {!n.is_read && <div className="w-2.5 h-2.5 rounded-full bg-blue-500 flex-shrink-0" />}
         <button
           onClick={e => { e.stopPropagation(); onDismiss(n.id); }}
-          className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-gray-200 transition-all"
+          className="p-1.5 rounded-lg hover:bg-gray-200 active:bg-gray-300 transition-all text-gray-300 hover:text-gray-500 active:text-gray-500 sm:opacity-0 sm:group-hover:opacity-100"
           title="Remove"
         >
-          <Trash2 size={12} className="text-gray-400" />
+          <Trash2 size={13} />
         </button>
       </div>
     </motion.div>
@@ -121,12 +121,12 @@ export default function NotificationsPage() {
   const unreadFiltered = notifications.filter(n => !n.is_read).length;
 
   return (
-    <div className="max-w-2xl mx-auto pb-10 space-y-4">
+    <div className="max-w-2xl mx-auto pb-10 space-y-4 pt-1">
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center shadow-sm">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center shadow-sm flex-shrink-0">
             <Bell size={20} className="text-white" />
           </div>
           <div>
@@ -139,7 +139,7 @@ export default function NotificationsPage() {
         {unreadCount > 0 && (
           <button
             onClick={handleMarkAllRead}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-blue-600 hover:bg-blue-50 border border-blue-100 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-blue-600 hover:bg-blue-50 active:bg-blue-100 border border-blue-100 transition-colors whitespace-nowrap"
           >
             <CheckCheck size={13} /> Mark all read
           </button>
@@ -179,7 +179,7 @@ export default function NotificationsPage() {
           <Loader2 size={28} className="animate-spin text-rose-400" />
         </div>
       ) : sections.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-14 text-center">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 sm:p-14 text-center">
           <div className="w-16 h-16 rounded-2xl bg-rose-50 flex items-center justify-center mx-auto mb-4">
             <Bell size={28} className="text-rose-300" />
           </div>
