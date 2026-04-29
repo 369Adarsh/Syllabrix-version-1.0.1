@@ -13,11 +13,11 @@ import {
 // ─── DATA ────────────────────────────────────────────────────────────────────
 
 const STATS = [
-  { num: '574+', label: 'Professions to Explore' },
+  { num: '6', label: 'Learner Personas' },
   { num: '30+', label: 'AI-Powered Features' },
   { num: '15+', label: 'Educational Games' },
   { num: '54', label: 'Verified News Sources' },
-  { num: '5', label: 'User Types Supported' },
+  { num: '7', label: 'Learning Pillars' },
   { num: '100%', label: 'Free to Start' },
 ];
 
@@ -25,7 +25,7 @@ const PILLARS = [
   { icon: Users, name: 'Connect', desc: 'Social feed, groups, messaging — safe space to learn together', color: 'from-blue-500 to-blue-600' },
   { icon: BookOpen, name: 'Learn', desc: 'Live classes, virtual labs, AI tutor, doubt solving', color: 'from-emerald-500 to-teal-600' },
   { icon: Gamepad2, name: 'Play', desc: '15 educational games + micro-learning clips', color: 'from-purple-500 to-fuchsia-600' },
-  { icon: FlaskConical, name: 'Experience', desc: '574+ profession simulations — doctor to shopkeeper', color: 'from-amber-500 to-orange-600' },
+  { icon: FlaskConical, name: 'Experience', desc: 'Virtual profession simulations — doctor to shopkeeper', color: 'from-amber-500 to-orange-600' },
   { icon: GraduationCap, name: 'Prepare', desc: 'AI newsroom, daily quizzes, JEE & exam prep', color: 'from-rose-500 to-red-600' },
   { icon: Brain, name: 'AI Powered', desc: 'Mind maps, career explorer, mock interviews, debates', color: 'from-indigo-500 to-violet-600' },
   { icon: Award, name: 'Grow', desc: 'Certificates, Skills Passport, Leaderboards, Badges', color: 'from-cyan-500 to-blue-600' },
@@ -237,48 +237,57 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Right — floating feature cards */}
+            {/* Right — who it's for: persona cards */}
             <div className="hidden lg:block relative h-[480px]">
+              {/* Students */}
               <div className="absolute top-0 left-8 w-60 bg-white/10 backdrop-blur-sm border border-white/15 rounded-2xl p-4 shadow-xl">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-red-600 flex items-center justify-center"><GraduationCap size={18} className="text-white" /></div>
-                  <div><p className="text-white font-bold text-sm">JEE Command</p><p className="text-blue-300/50 text-[10px]">Complete exam prep hub</p></div>
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center"><GraduationCap size={18} className="text-white" /></div>
+                  <div><p className="text-white font-bold text-sm">For Students</p><p className="text-blue-300/50 text-[10px]">Age 7–22 · Learn & Grow</p></div>
                 </div>
                 <div className="flex gap-1.5 flex-wrap">
-                  {['Syllabus', 'PYQ', 'Mock Tests', 'AI Tutor'].map(t => (
+                  {['AI Tutor', 'JEE Prep', 'Games', 'Career Explore'].map(t => (
+                    <span key={t} className="text-[9px] px-2 py-0.5 bg-blue-400/20 text-blue-200 rounded-full">{t}</span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Professionals */}
+              <div className="absolute top-28 right-0 w-56 bg-white/10 backdrop-blur-sm border border-white/15 rounded-2xl p-4 shadow-xl">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center"><Briefcase size={18} className="text-white" /></div>
+                  <div><p className="text-white font-bold text-sm">For Professionals</p><p className="text-blue-300/50 text-[10px]">Upskill · Certify · Lead</p></div>
+                </div>
+                <div className="flex gap-1">{[1, 2, 3, 4, 5].map(i => <div key={i} className="flex-1 h-1 rounded-full bg-amber-400/40" />)}</div>
+              </div>
+
+              {/* Parents */}
+              <div className="absolute top-52 left-0 w-64 bg-white/10 backdrop-blur-sm border border-white/15 rounded-2xl p-4 shadow-xl">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center"><Heart size={18} className="text-white" /></div>
+                  <div><p className="text-white font-bold text-sm">For Parents</p><p className="text-blue-300/50 text-[10px]">Safety · Reports · Control</p></div>
+                </div>
+                <div className="flex gap-1.5 flex-wrap">
+                  {['Live Monitoring', 'Weekly Reports', 'Safety Controls'].map(t => (
                     <span key={t} className="text-[9px] px-2 py-0.5 bg-rose-400/20 text-rose-200 rounded-full">{t}</span>
                   ))}
                 </div>
               </div>
 
-              <div className="absolute top-28 right-0 w-56 bg-white/10 backdrop-blur-sm border border-white/15 rounded-2xl p-4 shadow-xl">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-fuchsia-600 flex items-center justify-center"><Brain size={18} className="text-white" /></div>
-                  <div><p className="text-white font-bold text-sm">AI Mind Map</p><p className="text-blue-300/50 text-[10px]">Any topic → visual map</p></div>
-                </div>
-                <div className="flex gap-1">{[1, 2, 3, 4, 5].map(i => <div key={i} className="flex-1 h-1 rounded-full bg-purple-400/40" />)}</div>
-              </div>
-
-              <div className="absolute top-52 left-0 w-64 bg-white/10 backdrop-blur-sm border border-white/15 rounded-2xl p-4 shadow-xl">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center"><FlaskConical size={18} className="text-white" /></div>
-                  <div><p className="text-white font-bold text-sm">574+ Professions</p><p className="text-blue-300/50 text-[10px]">Virtual world simulations</p></div>
-                </div>
-                <div className="flex gap-1.5">{['👨‍🍳', '✈️', '💼', '🎭', '🔬'].map((e, i) => <span key={i} className="text-lg">{e}</span>)}</div>
-              </div>
-
+              {/* Teachers */}
               <div className="absolute bottom-16 right-4 w-52 bg-white/10 backdrop-blur-sm border border-white/15 rounded-2xl p-4 shadow-xl">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center"><Gamepad2 size={18} className="text-white" /></div>
-                  <div><p className="text-white font-bold text-sm">15+ Games</p><p className="text-blue-300/50 text-[10px]">Math, Logic, GK, Language</p></div>
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center"><PenTool size={18} className="text-white" /></div>
+                  <div><p className="text-white font-bold text-sm">For Teachers</p><p className="text-blue-300/50 text-[10px]">Teach · Create · Grow</p></div>
                 </div>
-                <div className="w-full bg-white/10 rounded-full h-1.5 mt-1"><div className="bg-amber-400 h-1.5 rounded-full w-3/4" /></div>
+                <div className="w-full bg-white/10 rounded-full h-1.5 mt-1"><div className="bg-emerald-400 h-1.5 rounded-full w-4/5" /></div>
               </div>
 
+              {/* HR / Enterprise */}
               <div className="absolute bottom-0 left-12 w-56 bg-white/10 backdrop-blur-sm border border-white/15 rounded-2xl p-4 shadow-xl">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center"><Dumbbell size={18} className="text-white" /></div>
-                  <div><p className="text-white font-bold text-sm">Fitness Hub</p><p className="text-blue-300/50 text-[10px]">Workouts, yoga, AI coach</p></div>
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center"><Building2 size={18} className="text-white" /></div>
+                  <div><p className="text-white font-bold text-sm">For HR & Enterprises</p><p className="text-blue-300/50 text-[10px]">L&D · Assessments · ROI</p></div>
                 </div>
               </div>
             </div>
