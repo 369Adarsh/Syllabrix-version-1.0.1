@@ -260,7 +260,7 @@ export default function TopBar({ onMenuClick = () => {} }) {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -4, scale: 0.97 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-[44px] w-[380px] max-w-[calc(100vw-16px)] bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.14)] border border-gray-200/80 z-50 overflow-hidden"
+                      className="fixed sm:absolute left-2 right-2 sm:left-auto sm:right-0 top-[62px] sm:top-[44px] sm:w-[380px] bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.14)] border border-gray-200/80 z-50 overflow-hidden"
                     >
                       {/* Header */}
                       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
