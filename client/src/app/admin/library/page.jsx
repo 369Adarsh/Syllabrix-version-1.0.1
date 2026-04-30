@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { adminAPI } from '@/lib/api/admin.api';
 import { toast } from 'sonner';
 import {
@@ -10,7 +10,7 @@ import {
   Landmark, Shield, Train, Briefcase, Scale, Stethoscope,
   Cpu as CpuIcon, Palette, BookMarked, Sparkles, BarChart3,
   FolderTree, Star, Clock, ChevronUp, UploadCloud, Layers3,
-  Pencil, ListOrdered, Copy
+  Pencil, ListOrdered, Copy, GripVertical, ArrowUpDown
 } from 'lucide-react';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -1196,15 +1196,99 @@ function AddBookModal({ onClose, onSave, subject }) {
 
 function BulkChapterModal({ onClose, onSave, bookTitle }) {
   const uid = () => Math.random().toString(36).slice(2);
-  const emptyRow = () => ({ _id: uid(), chapter_number: '', title: '', description: '', estimated_study_time_mins: '', file: null, fileType: 'textbook' });
+  const emptyRow = () => ({ _id: uid(), chapter_number: '', title: '', description: '', estimated_study_time_mins: '', file: null, fileType: 'textbook', _extracting: false });
   const [rows, setRows] = useState([emptyRow(), emptyRow(), emptyRow()]);
   const [saving, setSaving] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(null); // e.g. "Uploading 2/5…"
+  const [uploadProgress, setUploadProgress] = useState(null);
+  const [dropZoneActive, setDropZoneActive] = useState(false);
+  const [dragRowIdx, setDragRowIdx] = useState(null);
+  const [dragOverRowIdx, setDragOverRowIdx] = useState(null);
+  const dropCounter = useRef(0);
 
   const setRow = (idx, key, val) => setRows(p => p.map((r, i) => i === idx ? { ...r, [key]: val } : r));
   const addRow = () => setRows(p => [...p, emptyRow()]);
   const removeRow = (idx) => setRows(p => p.filter((_, i) => i !== idx));
 
+  // ── Sort rows by chapter number ──────────────────────────────────────────────
+  const sortByChapterNumber = () => {
+    setRows(prev => [...prev].sort((a, b) => {
+      const na = parseInt(a.chapter_number) || Infinity;
+      const nb = parseInt(b.chapter_number) || Infinity;
+      return na - nb;
+    }));
+    toast.success('Sorted by chapter number');
+  };
+
+  // ── Bulk file drop zone ──────────────────────────────────────────────────────
+  const handleFileDrop = async (e) => {
+    e.preventDefault();
+    dropCounter.current = 0;
+    setDropZoneActive(false);
+    const files = Array.from(e.dataTransfer?.files || []).filter(f => /\.(pdf|doc|docx)$/i.test(f.name));
+    if (!files.length) return toast.error('Drop PDF or DOCX files only');
+
+    const base = rows.filter(r => r.title.trim() || r.file).length;
+    const newRows = files.map((f, i) => ({
+      _id: uid(),
+      chapter_number: String(base + i + 1),
+      title: f.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ').trim(),
+      description: '',
+      estimated_study_time_mins: '',
+      file: f,
+      fileType: 'textbook',
+      _extracting: f.name.toLowerCase().endsWith('.pdf'),
+    }));
+
+    setRows(prev => [...prev.filter(r => r.title.trim() || r.file), ...newRows]);
+
+    // Extract titles in parallel
+    await Promise.all(newRows.map(async (nr) => {
+      if (!nr._extracting) return;
+      try {
+        const fd = new FormData(); fd.append('file', nr.file);
+        const res = await adminAPI.extractPdfTitle(fd);
+        const t = res.data?.title?.trim();
+        setRows(prev => prev.map(r => r._id === nr._id ? { ...r, title: t || r.title, _extracting: false } : r));
+      } catch (_) {
+        setRows(prev => prev.map(r => r._id === nr._id ? { ...r, _extracting: false } : r));
+      }
+    }));
+    toast.success(`${files.length} file${files.length !== 1 ? 's' : ''} added`);
+  };
+
+  // ── Row drag-to-reorder ──────────────────────────────────────────────────────
+  const handleRowDragStart = (e, idx) => {
+    setDragRowIdx(idx);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(idx));
+  };
+
+  const handleRowDragOver = (e, idx) => {
+    if (e.dataTransfer.types.includes('Files')) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverRowIdx !== idx) setDragOverRowIdx(idx);
+  };
+
+  const handleRowDrop = (e, toIdx) => {
+    if (e.dataTransfer.types.includes('Files')) return;
+    e.preventDefault();
+    const fromIdx = dragRowIdx;
+    setDragRowIdx(null);
+    setDragOverRowIdx(null);
+    if (fromIdx === null || fromIdx === toIdx) return;
+    setRows(prev => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, moved);
+      // Renumber sequentially after reorder
+      return next.map((r, i) => ({ ...r, chapter_number: String(i + 1) }));
+    });
+  };
+
+  const handleRowDragEnd = () => { setDragRowIdx(null); setDragOverRowIdx(null); };
+
+  // ── Paste from Excel ─────────────────────────────────────────────────────────
   const handlePaste = (e, idx) => {
     const text = e.clipboardData.getData('text');
     const lines = text.trim().split('\n');
@@ -1214,9 +1298,9 @@ function BulkChapterModal({ onClose, onSave, bookTitle }) {
       const cols = line.split('\t');
       const maybeNum = parseInt(cols[0]);
       if (!isNaN(maybeNum) && cols.length > 1) {
-        return { _id: uid(), chapter_number: String(maybeNum), title: (cols[1] || '').trim(), description: (cols[2] || '').trim(), estimated_study_time_mins: (cols[3] || '').trim(), file: null, fileType: 'textbook' };
+        return { _id: uid(), chapter_number: String(maybeNum), title: (cols[1] || '').trim(), description: (cols[2] || '').trim(), estimated_study_time_mins: (cols[3] || '').trim(), file: null, fileType: 'textbook', _extracting: false };
       }
-      return { _id: uid(), chapter_number: '', title: (cols[0] || '').trim(), description: (cols[1] || '').trim(), estimated_study_time_mins: '', file: null, fileType: 'textbook' };
+      return { _id: uid(), chapter_number: '', title: (cols[0] || '').trim(), description: (cols[1] || '').trim(), estimated_study_time_mins: '', file: null, fileType: 'textbook', _extracting: false };
     });
     setRows(p => { const next = [...p]; next.splice(idx, 1, ...newRows); return next; });
   };
@@ -1234,7 +1318,6 @@ function BulkChapterModal({ onClose, onSave, bookTitle }) {
         estimated_study_time_mins: r.estimated_study_time_mins !== '' ? parseInt(r.estimated_study_time_mins) : null,
       })));
 
-      // Upload files for rows that have one
       const rowsWithFiles = validRows.map((r, i) => ({ ...r, chapterId: created?.[i]?.id })).filter(r => r.file && r.chapterId);
       if (rowsWithFiles.length > 0) {
         for (let i = 0; i < rowsWithFiles.length; i++) {
@@ -1257,15 +1340,55 @@ function BulkChapterModal({ onClose, onSave, bookTitle }) {
   return (
     <Modal title={bookTitle ? `Bulk Add Chapters · ${bookTitle}` : 'Bulk Add Chapters'} onClose={onClose} size="xl">
       <div className="space-y-4">
+
+        {/* Hint bar */}
         <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-indigo-50 border border-indigo-100">
           <Copy size={13} className="text-indigo-500 shrink-0" />
-          <p className="text-xs text-indigo-700">Paste from Excel/Sheets — columns: <strong>No. · Title · Description · Mins</strong></p>
+          <p className="text-xs text-indigo-700">Paste from Excel/Sheets — <strong>No. · Title · Description · Mins</strong> · or drag & drop PDFs below</p>
         </div>
 
+        {/* ── Bulk file drop zone ── */}
+        <div
+          onDragEnter={e => { e.preventDefault(); dropCounter.current++; setDropZoneActive(true); }}
+          onDragOver={e => e.preventDefault()}
+          onDragLeave={() => { dropCounter.current--; if (dropCounter.current <= 0) { dropCounter.current = 0; setDropZoneActive(false); } }}
+          onDrop={handleFileDrop}
+          className={`flex items-center gap-4 p-4 rounded-xl border-2 border-dashed transition-all select-none ${
+            dropZoneActive
+              ? 'border-indigo-400 bg-indigo-50 scale-[1.01]'
+              : 'border-gray-200 bg-gray-50 hover:border-indigo-300 hover:bg-indigo-50/30'
+          }`}
+        >
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${dropZoneActive ? 'bg-indigo-100' : 'bg-gray-100'}`}>
+            <UploadCloud size={20} className={dropZoneActive ? 'text-indigo-500' : 'text-gray-400'} />
+          </div>
+          <div>
+            <p className={`text-sm font-bold transition-colors ${dropZoneActive ? 'text-indigo-700' : 'text-gray-600'}`}>
+              {dropZoneActive ? 'Release to add chapters' : 'Drag & drop multiple PDFs here'}
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">Each file → one row · Titles auto-extracted · Chapter numbers assigned in order</p>
+          </div>
+        </div>
+
+        {/* Row count + sort button */}
+        <div className="flex items-center justify-between px-0.5">
+          <p className="text-xs text-gray-400">
+            {rows.length} row{rows.length !== 1 ? 's' : ''} · <span className="text-indigo-500 font-semibold">{validRows.length} valid</span>
+          </p>
+          <button
+            onClick={sortByChapterNumber}
+            className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-700 px-2.5 py-1.5 rounded-lg hover:bg-indigo-50 border border-indigo-100 transition-colors"
+          >
+            <ArrowUpDown size={11} /> Sort by #
+          </button>
+        </div>
+
+        {/* ── Table ── */}
         <div className="overflow-x-auto rounded-xl border border-gray-200">
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
+                <th className="w-7 px-1" />
                 <th className="px-3 py-3 text-left text-[10px] uppercase font-black text-gray-400 tracking-wider w-16">#</th>
                 <th className="px-3 py-3 text-left text-[10px] uppercase font-black text-gray-400 tracking-wider">Title *</th>
                 <th className="px-3 py-3 text-left text-[10px] uppercase font-black text-gray-400 tracking-wider">Description</th>
@@ -1276,40 +1399,65 @@ function BulkChapterModal({ onClose, onSave, bookTitle }) {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {rows.map((row, idx) => (
-                <tr key={row._id} className="group hover:bg-gray-50/50 transition-colors">
+                <tr
+                  key={row._id}
+                  draggable
+                  onDragStart={e => handleRowDragStart(e, idx)}
+                  onDragOver={e => handleRowDragOver(e, idx)}
+                  onDrop={e => handleRowDrop(e, idx)}
+                  onDragEnd={handleRowDragEnd}
+                  className={`group transition-all ${
+                    dragRowIdx === idx
+                      ? 'opacity-30 bg-indigo-50'
+                      : dragOverRowIdx === idx && dragRowIdx !== null
+                      ? 'border-t-[3px] border-indigo-400 bg-indigo-50/40'
+                      : 'hover:bg-gray-50/50'
+                  }`}
+                >
+                  {/* Drag handle */}
+                  <td className="pl-2.5 pr-0 py-2.5 w-7 cursor-grab active:cursor-grabbing select-none">
+                    <GripVertical size={14} className="text-gray-200 group-hover:text-gray-400 transition-colors" />
+                  </td>
+                  {/* # */}
                   <td className="px-3 py-2.5">
                     <input
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
+                      type="text" inputMode="numeric" pattern="[0-9]*"
                       value={row.chapter_number}
                       onChange={e => { if (/^\d*$/.test(e.target.value)) setRow(idx, 'chapter_number', e.target.value); }}
                       placeholder={String(idx + 1)}
                       className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 font-mono text-center focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
                     />
                   </td>
+                  {/* Title */}
                   <td className="px-3 py-2.5">
-                    <input value={row.title} onChange={e => setRow(idx, 'title', e.target.value)}
-                      onPaste={e => handlePaste(e, idx)}
-                      placeholder="e.g. Physical World"
-                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all" />
+                    <div className="relative">
+                      <input
+                        value={row.title}
+                        onChange={e => setRow(idx, 'title', e.target.value)}
+                        onPaste={e => handlePaste(e, idx)}
+                        placeholder="e.g. Physical World"
+                        className={`w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all ${row._extracting ? 'pr-7' : ''}`}
+                      />
+                      {row._extracting && <Loader2 size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 animate-spin text-indigo-400 pointer-events-none" />}
+                    </div>
                   </td>
+                  {/* Description */}
                   <td className="px-3 py-2.5">
                     <input value={row.description} onChange={e => setRow(idx, 'description', e.target.value)}
                       placeholder="Brief description…"
                       className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 placeholder-gray-300 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all" />
                   </td>
+                  {/* Mins */}
                   <td className="px-3 py-2.5">
                     <input
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
+                      type="text" inputMode="numeric" pattern="[0-9]*"
                       value={row.estimated_study_time_mins}
                       onChange={e => { if (/^\d*$/.test(e.target.value)) setRow(idx, 'estimated_study_time_mins', e.target.value); }}
                       placeholder="60"
                       className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 placeholder-gray-300 text-center focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
                     />
                   </td>
+                  {/* Material */}
                   <td className="px-3 py-2.5">
                     {row.file ? (
                       <div className="flex items-center gap-2">
@@ -1331,16 +1479,19 @@ function BulkChapterModal({ onClose, onSave, bookTitle }) {
                           setRow(idx, 'file', f);
                           if (f && f.name.toLowerCase().endsWith('.pdf') && !rows[idx].title.trim()) {
                             try {
+                              setRow(idx, '_extracting', true);
                               const fd = new FormData(); fd.append('file', f);
                               const res = await adminAPI.extractPdfTitle(fd);
                               const t = res.data?.title?.trim();
                               if (t) setRow(idx, 'title', t);
                             } catch (_) {}
+                            setRow(idx, '_extracting', false);
                           }
                         }} />
                       </label>
                     )}
                   </td>
+                  {/* Remove */}
                   <td className="px-2 py-2.5">
                     <button onClick={() => removeRow(idx)} className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-50 text-red-400 transition-all"><X size={13} /></button>
                   </td>
