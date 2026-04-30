@@ -62,6 +62,7 @@ export const adminAPI = {
   deleteLibraryTopic: (id) => axios.delete(`${BASE}/library/topics/${id}`, getHeaders()),
   getLibraryUploads: (entity_type, entity_id) => axios.get(`${BASE}/library/uploads`, { ...getHeaders(), params: { entity_type, entity_id } }),
   uploadLibraryFile: (formData) => axios.post(`${BASE}/library/uploads`, formData, { headers: { ...getHeaders().headers, 'Content-Type': 'multipart/form-data' } }),
+  extractPdfTitle: (formData) => axios.post(`${BASE}/library/extract-pdf-title`, formData, { headers: { ...getHeaders().headers, 'Content-Type': 'multipart/form-data' } }),
   toggleLibraryAiIndex: (id) => axios.patch(`${BASE}/library/uploads/${id}/ai-index`, {}, getHeaders()),
   deleteLibraryUpload: (id) => axios.delete(`${BASE}/library/uploads/${id}`, getHeaders()),
   getExamTree: () => axios.get(`${BASE}/library/exams/tree`, getHeaders()),

@@ -86,6 +86,7 @@ router.post('/library/topics',         requireAdminRole(['moderator']),         
 router.delete('/library/topics/:id',   requireAdminRole(['moderator']),            LibraryCtrl.deleteTopic);
 router.get('/library/uploads',         requireAdminRole(['moderator', 'analyst']), LibraryCtrl.getUploads);
 router.post('/library/uploads',        requireAdminRole(['moderator']),            uploadSingle, LibraryCtrl.uploadFile);
+router.post('/library/extract-pdf-title', requireAdminRole(['moderator']),         uploadSingle, LibraryCtrl.extractPdfTitle);
 router.patch('/library/uploads/:id/ai-index', requireAdminRole(['moderator']),    LibraryCtrl.toggleAiIndex);
 router.delete('/library/uploads/:id',  requireAdminRole(['moderator']),            LibraryCtrl.deleteUpload);
 router.get('/library/exams/tree',      requireAdminRole(['moderator', 'analyst']), LibraryCtrl.getExamTree);

@@ -153,6 +153,33 @@ class AdminLibraryController {
       res.json(result);
     } catch (e) { res.status(400).json({ error: e.message }); }
   }
+
+  async extractPdfTitle(req, res) {
+    try {
+      if (!req.file) return res.json({ title: '' });
+      const isPdf = req.file.mimetype === 'application/pdf' || req.file.originalname?.toLowerCase().endsWith('.pdf');
+      if (!isPdf) return res.json({ title: '' });
+
+      const pdfParse = require('pdf-parse');
+      const data = await pdfParse(req.file.buffer, { max: 1 });
+
+      // 1. Try PDF metadata title
+      let title = (data.info?.Title || '').trim();
+
+      // 2. Fall back to first meaningful line of text from page 1
+      if (!title) {
+        const lines = data.text
+          .split('\n')
+          .map(l => l.replace(/\s+/g, ' ').trim())
+          .filter(l => l.length > 3 && l.length < 200 && !/^\d+$/.test(l));
+        title = lines[0] || '';
+      }
+
+      res.json({ title: title.slice(0, 200) });
+    } catch (e) {
+      res.json({ title: '' }); // Never block — silently fail
+    }
+  }
   async toggleAiIndex(req, res) {
     try { res.json(await LibraryService.toggleAiIndex(req.params.id)); }
     catch (e) { res.status(400).json({ error: e.message }); }

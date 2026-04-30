@@ -1326,7 +1326,18 @@ function BulkChapterModal({ onClose, onSave, bookTitle }) {
                       <label className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border border-dashed border-gray-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all group/up">
                         <UploadCloud size={14} className="text-gray-300 group-hover/up:text-indigo-500 transition-colors shrink-0" />
                         <span className="text-xs text-gray-400 group-hover/up:text-indigo-600 transition-colors">Upload file</span>
-                        <input type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={e => setRow(idx, 'file', e.target.files[0] || null)} />
+                        <input type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={async e => {
+                          const f = e.target.files[0] || null;
+                          setRow(idx, 'file', f);
+                          if (f && f.name.toLowerCase().endsWith('.pdf') && !rows[idx].title.trim()) {
+                            try {
+                              const fd = new FormData(); fd.append('file', f);
+                              const res = await adminAPI.extractPdfTitle(fd);
+                              const t = res.data?.title?.trim();
+                              if (t) setRow(idx, 'title', t);
+                            } catch (_) {}
+                          }
+                        }} />
                       </label>
                     )}
                   </td>
@@ -1366,7 +1377,23 @@ function UploadFileModal({ onClose, onSave, book_id, entity_type = 'book', defau
   const [file, setFile] = useState(null);
   const [fileType, setFileType] = useState(defaultFileType);
   const [description, setDescription] = useState('');
+  const [extracting, setExtracting] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const handleFileChange = async (selected) => {
+    setFile(selected);
+    if (!selected || !selected.name.toLowerCase().endsWith('.pdf')) return;
+    setExtracting(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', selected);
+      const res = await adminAPI.extractPdfTitle(fd);
+      const extracted = res.data?.title?.trim();
+      if (extracted) setDescription(extracted);
+    } catch (_) {}
+    setExtracting(false);
+  };
+
   const save = async () => {
     if (!file) return toast.error('Select a file');
     setSaving(true);
@@ -1392,7 +1419,7 @@ function UploadFileModal({ onClose, onSave, book_id, entity_type = 'book', defau
             <p className="text-gray-700 text-sm truncate">{file ? file.name : 'Click to select file'}</p>
             <p className="text-gray-400 text-xs">{file ? `${(file.size/1024/1024).toFixed(1)} MB` : 'PDF, DOC, DOCX · Max 50 MB'}</p>
           </div>
-          <input type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={e => setFile(e.target.files[0])} />
+          <input type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={e => handleFileChange(e.target.files[0])} />
         </label>
         <Field label="Type">
           <select value={fileType} onChange={e => setFileType(e.target.value)} className={selectCls}>
@@ -1404,10 +1431,13 @@ function UploadFileModal({ onClose, onSave, book_id, entity_type = 'book', defau
             <option value="supplement">Supplement</option>
           </select>
         </Field>
-        <Field label="Label (optional)">
-          <input value={description} onChange={e => setDescription(e.target.value)}
-            placeholder={isNotes ? 'e.g. Chapter-wise Short Notes 2024' : 'e.g. NCERT Solutions 2024–25'}
-            className={inputCls} />
+        <Field label={extracting ? 'Label — extracting from PDF…' : 'Label (auto-extracted from PDF)'}>
+          <div className="relative">
+            <input value={description} onChange={e => setDescription(e.target.value)}
+              placeholder={isNotes ? 'e.g. Chapter-wise Short Notes 2024' : 'e.g. NCERT Solutions 2024–25'}
+              className={`${inputCls} ${extracting ? 'pr-8' : ''}`} />
+            {extracting && <Loader2 size={13} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-indigo-400" />}
+          </div>
         </Field>
         <div className="flex items-start gap-2.5 p-3 rounded-xl bg-violet-50 border border-violet-200">
           <Brain size={13} className="text-violet-500 shrink-0 mt-0.5" />
