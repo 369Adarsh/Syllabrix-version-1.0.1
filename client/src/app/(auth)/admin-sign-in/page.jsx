@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
-import { Loader2, Eye, EyeOff, Mail, Lock, ArrowRight, Shield, KeyRound } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Mail, Lock, ArrowRight, Shield, KeyRound, Wifi } from 'lucide-react';
 
 export default function AdminSignInPage() {
   const { login, logout, user, loading: authLoading } = useAuth();
@@ -15,11 +15,42 @@ export default function AdminSignInPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState(null);
   const [resending, setResending] = useState(false);
+  const [serverStatus, setServerStatus] = useState(null);
+  const [retryCountdown, setRetryCountdown] = useState(null);
 
   // 2FA challenge state
   const [requires2FA, setRequires2FA] = useState(false);
   const [pre2FAToken, setPre2FAToken] = useState(null);
   const [totpCode, setTotpCode] = useState('');
+
+  // Detect cold start
+  useEffect(() => {
+    const base = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
+    let t = setTimeout(() => setServerStatus('warming'), 2000);
+    fetch(`${base}/api/health`)
+      .then(() => { clearTimeout(t); setServerStatus('ready'); })
+      .catch(() => { clearTimeout(t); setServerStatus('warming'); });
+    return () => clearTimeout(t);
+  }, []);
+
+  // Auto-dismiss "ready" banner
+  useEffect(() => {
+    if (serverStatus !== 'ready') return;
+    const t = setTimeout(() => setServerStatus(null), 3000);
+    return () => clearTimeout(t);
+  }, [serverStatus]);
+
+  // Auto-retry countdown
+  useEffect(() => {
+    if (retryCountdown === null) return;
+    if (retryCountdown === 0) {
+      setRetryCountdown(null);
+      document.getElementById('admin-signin-form')?.requestSubmit();
+      return;
+    }
+    const t = setTimeout(() => setRetryCountdown(c => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [retryCountdown]);
 
   // Redirect already-authenticated admins to dash
   useEffect(() => {
@@ -60,11 +91,17 @@ export default function AdminSignInPage() {
       toast.success('Admin portal access granted.', { icon: '🛡️' });
       router.push('/admin');
     } catch (err) {
-      const msg = err.response?.data?.message || 'Invalid administrative credentials';
-      if (msg.toLowerCase().includes('verify your email')) {
-        setUnverifiedEmail(email);
+      const isNetworkError = !err.response && (err.code === 'ECONNABORTED' || err.code === 'ERR_NETWORK' || err.message?.includes('timeout'));
+      if (isNetworkError) {
+        setServerStatus('warming');
+        setRetryCountdown(15);
       } else {
-        toast.error(msg);
+        const msg = err.response?.data?.message || 'Invalid administrative credentials';
+        if (msg.toLowerCase().includes('verify your email')) {
+          setUnverifiedEmail(email);
+        } else {
+          toast.error(msg);
+        }
       }
     } finally {
       setLoading(false);
@@ -155,6 +192,30 @@ export default function AdminSignInPage() {
         </p>
       </div>
 
+      {/* Server cold-start banner */}
+      {serverStatus === 'warming' && (
+        <div className="mb-5 p-3.5 rounded-xl bg-amber-50 border border-amber-200 flex items-center gap-3">
+          <Loader2 size={15} className="animate-spin text-amber-500 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[12.5px] font-semibold text-amber-800">Server is waking up&hellip;</p>
+            <p className="text-[11.5px] text-amber-600 mt-0.5">
+              {retryCountdown !== null
+                ? `Auto-retrying in ${retryCountdown}s — your credentials are saved`
+                : 'This takes ~30 seconds on first load.'}
+            </p>
+          </div>
+          {retryCountdown !== null && (
+            <span className="text-[13px] font-bold text-amber-700 tabular-nums shrink-0">{retryCountdown}s</span>
+          )}
+        </div>
+      )}
+      {serverStatus === 'ready' && (
+        <div className="mb-5 p-3 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center gap-2 animate-in fade-in slide-in-from-top-1 duration-300">
+          <Wifi size={14} className="text-emerald-500 shrink-0" />
+          <p className="text-[12px] font-medium text-emerald-700">Server is ready</p>
+        </div>
+      )}
+
       {/* Email not verified banner */}
       {unverifiedEmail && (
         <div className="mb-5 p-4 rounded-xl bg-amber-50 border border-amber-200 flex gap-3 animate-in fade-in zoom-in duration-300">
@@ -178,7 +239,7 @@ export default function AdminSignInPage() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form id="admin-signin-form" onSubmit={handleSubmit} className="space-y-5">
         {/* Email */}
         <div>
           <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">

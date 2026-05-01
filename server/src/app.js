@@ -18,6 +18,7 @@ const { traceMiddleware } = require('./middleware/trace.middleware');
 
 // Import routes
 const routes = require('./routes/index');
+const { socialPool, ldPool } = require('./database/connection');
 
 const app = express();
 
@@ -87,13 +88,18 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // ======================== HEALTH CHECK ========================
-app.get('/api/health', (req, res) => {
+// Also warms up both DB pools on cold-start so auth works immediately after wake.
+app.get('/api/health', async (req, res) => {
+  const [social, ld] = await Promise.allSettled([
+    socialPool.query('SELECT 1'),
+    ldPool.query('SELECT 1'),
+  ]);
   res.status(200).json({
     success: true,
     message: 'Syllabrix API is running',
     environment: config.NODE_ENV,
     version: '1.0.0',
-    phase: 1,
+    db: { social: social.status === 'fulfilled', ld: ld.status === 'fulfilled' },
     timestamp: new Date().toISOString(),
   });
 });

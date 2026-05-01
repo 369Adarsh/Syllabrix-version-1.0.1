@@ -27,7 +27,7 @@ A Cloud Integration iFlow that runs every 2 hours, calls the Syllabrix API to fe
 You need your JWT from Syllabrix. Run this in your terminal or use Postman:
 
 ```bash
-curl -X POST https://syllabrix-version-101-production.up.railway.app/api/auth/login \
+curl -X POST https://syllabrix-api.onrender.com/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"YOUR_EMAIL","password":"YOUR_PASSWORD"}'
 ```
@@ -103,7 +103,7 @@ Copy the `token` value from the response. Keep it — you'll paste it into CPI.
 
 **Connection tab:**
 ```
-URL: https://syllabrix-version-101-production.up.railway.app/api/career/learning
+URL: https://syllabrix-api.onrender.com/api/career/learning
 Method: GET
 Authentication: None (we'll add JWT via header)
 ```
@@ -204,7 +204,7 @@ def Message processData(Message message) {
     
     sb.append("""
     <div style="text-align: center; margin-top: 20px;">
-      <a href="https://syllabrix.in/career/learning" 
+      <a href="https://syllabrix.com/career/learning" 
          style="background: #6C47FF; color: white; padding: 12px 28px; 
                 border-radius: 8px; text-decoration: none; font-size: 14px; 
                 font-weight: bold;">

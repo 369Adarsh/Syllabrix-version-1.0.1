@@ -4,9 +4,15 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { Toaster } from 'react-hot-toast';
 
 export default function Providers({ children }) {
-  // Toaster uses a portal — only render it after client hydration to prevent mismatch
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    setMounted(true);
+    // Pre-warm the Render server so it's awake before the user tries to login.
+    // Render free tier sleeps after 15 min of inactivity and ignores self-pings.
+    // This fires on every page load — harmless when server is already awake.
+    const base = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
+    fetch(`${base}/api/health`).catch(() => {});
+  }, []);
 
   return (
     <AuthProvider>

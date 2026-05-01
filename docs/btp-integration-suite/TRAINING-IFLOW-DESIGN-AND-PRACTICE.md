@@ -302,7 +302,7 @@ Cron Expression: 0 9 * * *   (every day at 9:00 AM)
 
 ### HTTP Adapter
 ```
-URL:    https://syllabrix-version-101-production.up.railway.app/api/career/jobs
+URL:    https://syllabrix-api.onrender.com/api/career/jobs
 Method: GET
 ```
 
@@ -351,7 +351,7 @@ def Message processData(Message message) {
 
     sb.append("""
     <div style="text-align: center; margin-top: 20px;">
-      <a href="https://syllabrix.in/career/jobs"
+      <a href="https://syllabrix.com/career/jobs"
          style="background: #6366f1; color: white; padding: 12px 28px; border-radius: 8px; text-decoration: none;">
         View All Jobs
       </a>
@@ -413,7 +413,7 @@ Unit:      Hour(s)
 
 ### HTTP Adapter
 ```
-URL:    https://syllabrix-version-101-production.up.railway.app/api/career/profile
+URL:    https://syllabrix-api.onrender.com/api/career/profile
 Method: GET
 ```
 
@@ -475,7 +475,7 @@ def Message processData(Message message) {
       </tr>
     </table>
     <div style="text-align: center; margin-top: 20px;">
-      <a href="https://syllabrix.in/career"
+      <a href="https://syllabrix.com/career"
          style="background: #7c3aed; color: white; padding: 12px 28px;
                 border-radius: 8px; text-decoration: none;">
         Update Profile
@@ -579,7 +579,7 @@ def Message processData(Message message) {
        Completed: <b>${completed}</b></p>
   </div>
   <div style="text-align: center; padding: 20px; background: #f0fdfa; border-radius: 0 0 12px 12px;">
-    <a href="https://syllabrix.in"
+    <a href="https://syllabrix.com"
        style="background: #0f766e; color: white; padding: 12px 28px; border-radius: 8px; text-decoration: none;">
       Go to Syllabrix
     </a>

@@ -103,7 +103,7 @@ Value: application/json
 
 **HTTP Adapter — Connection:**
 ```
-URL: https://syllabrix-api.up.railway.app/api/career/profile
+URL: https://syllabrix-api.onrender.com/api/career/profile
 Method: GET
 Send Body: No (GET request)
 Request Headers: Authorization    ← select the header we set

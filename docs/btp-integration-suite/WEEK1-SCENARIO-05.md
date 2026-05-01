@@ -207,7 +207,7 @@ Body:
 1. **Request Reply** → connect Content Modifier → Request Reply
 2. Receiver → HTTP Adapter:
    ```
-   URL:    https://syllabrix-api.up.railway.app/api/career/learning/generate
+   URL:    https://syllabrix-api.onrender.com/api/career/learning/generate
    Method: POST
    ```
 

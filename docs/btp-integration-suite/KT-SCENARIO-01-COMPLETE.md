@@ -170,7 +170,7 @@ Complete ALL of these before touching the iFlow designer.
 
 **Step 2:** Create a POST request:
 ```
-URL:    https://syllabrix-version-101-production.up.railway.app/api/auth/login
+URL:    https://syllabrix-api.onrender.com/api/auth/login
 Method: POST
 Body:   raw → JSON
 ```
@@ -340,7 +340,7 @@ This step makes the actual HTTP GET call to fetch your learning paths.
 5. Click the **Connection** tab in the bottom panel
 6. Fill in:
    ```
-   Address (URL): https://syllabrix-version-101-production.up.railway.app/api/career/learning
+   Address (URL): https://syllabrix-api.onrender.com/api/career/learning
    Query:         (leave empty)
    Proxy Type:    Internet
    Method:        GET
@@ -437,7 +437,7 @@ def Message processData(Message message) {
     
     sb.append("""
     <div style="text-align: center; margin-top: 20px;">
-      <a href="https://syllabrix.in/career/learning"
+      <a href="https://syllabrix.com/career/learning"
          style="background: #6C47FF; color: white; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-size: 14px;">
         Continue Learning
       </a>

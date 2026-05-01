@@ -23,7 +23,7 @@ Create these in Monitor → Manage Security → Security Material:
 
 ### Get Syllabrix JWT Once
 ```bash
-curl -X POST https://syllabrix-api.up.railway.app/api/auth/login \
+curl -X POST https://syllabrix-api.onrender.com/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"YOUR_EMAIL","password":"YOUR_PASSWORD"}'
 ```

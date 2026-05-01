@@ -18,7 +18,7 @@
 **Business Story:**  
 Syllabrix is an EdTech SaaS platform (REST API on Railway). You are building a suite of integrations between Syllabrix and the SAP ecosystem — connecting learning progress, career data, HR systems, and notification engines. Each scenario is a standalone iFlow that solves a real business problem and covers a distinct Integration Suite concept.
 
-**Syllabrix Base URL:** `https://syllabrix-api.up.railway.app`  
+**Syllabrix Base URL:** `https://syllabrix-api.onrender.com`  
 **Auth:** Bearer JWT (POST `/api/auth/login` → get token)
 
 ---
@@ -68,7 +68,7 @@ Timer (every 2 hrs)
 ### iFlow Steps
 1. **Timer Start Event** — Schedule: Every 2 hours
 2. **Request-Reply** — HTTP Receiver Adapter
-   - URL: `https://syllabrix-api.up.railway.app/api/career/learning`
+   - URL: `https://syllabrix-api.onrender.com/api/career/learning`
    - Method: GET
    - Header: `Authorization: Bearer {{jwt_token}}`
 3. **Message Mapping (XSLT or Groovy)**
@@ -576,7 +576,7 @@ Inbound Security:
 ```
 Type: OAuth2 Client Credentials
 Name: SyllabrixOAuth
-Token Service URL: https://syllabrix-api.up.railway.app/api/auth/login
+Token Service URL: https://syllabrix-api.onrender.com/api/auth/login
 Client ID: (username)
 Client Secret: (password)
 Scope: (leave blank)
@@ -591,10 +591,10 @@ import org.apache.http.impl.client.HttpClients
 
 def Message processData(Message message) {
   def client = HttpClients.createDefault()
-  def post = new HttpPost("https://syllabrix-api.up.railway.app/api/auth/login")
+  def post = new HttpPost("https://syllabrix-api.onrender.com/api/auth/login")
   post.setHeader("Content-Type", "application/json")
   post.setEntity(new org.apache.http.entity.StringEntity(
-    '{"email":"bot@syllabrix.in","password":"yourpassword"}'
+    '{"email":"bot@syllabrix.com","password":"yourpassword"}'
   ))
   def response = client.execute(post)
   def json = new JsonSlurper().parse(response.getEntity().getContent())
@@ -635,7 +635,7 @@ External Partner
 ### API Proxy Configuration
 ```yaml
 basePath: /v1/syllabrix
-targetEndpoint: https://syllabrix-api.up.railway.app
+targetEndpoint: https://syllabrix-api.onrender.com
 virtualHost: prod
 
 policies:
@@ -729,7 +729,7 @@ Reconnect Attempts: 5
 {
   "specversion": "1.0",
   "type": "com.syllabrix.skills.analyzed",
-  "source": "https://syllabrix-api.up.railway.app",
+  "source": "https://syllabrix-api.onrender.com",
   "id": "evt-12345",
   "time": "2026-04-12T10:30:00Z",
   "data": {

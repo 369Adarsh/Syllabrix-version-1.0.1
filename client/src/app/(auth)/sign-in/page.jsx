@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
-import { Loader2, Eye, EyeOff, Mail, Lock, ArrowRight, MailWarning } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Mail, Lock, ArrowRight, MailWarning, Wifi } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 
 export default function SignInPage() {
@@ -16,6 +16,38 @@ export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState(null);
   const [resending, setResending] = useState(false);
+  // null = unknown, 'ready' = up, 'warming' = cold start in progress
+  const [serverStatus, setServerStatus] = useState(null);
+  const [retryCountdown, setRetryCountdown] = useState(null);
+
+  // Detect cold start — if health ping takes > 2s the server is waking up
+  useEffect(() => {
+    const base = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
+    let warmingTimer = setTimeout(() => setServerStatus('warming'), 2000);
+    fetch(`${base}/api/health`)
+      .then(() => { clearTimeout(warmingTimer); setServerStatus('ready'); })
+      .catch(() => { clearTimeout(warmingTimer); setServerStatus('warming'); });
+    return () => clearTimeout(warmingTimer);
+  }, []);
+
+  // Auto-retry countdown when server was cold and user hit submit too early
+  useEffect(() => {
+    if (retryCountdown === null) return;
+    if (retryCountdown === 0) {
+      setRetryCountdown(null);
+      document.getElementById('signin-form')?.requestSubmit();
+      return;
+    }
+    const t = setTimeout(() => setRetryCountdown(c => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [retryCountdown]);
+
+  // Hide the "ready" banner after 3 s
+  useEffect(() => {
+    if (serverStatus !== 'ready') return;
+    const t = setTimeout(() => setServerStatus(null), 3000);
+    return () => clearTimeout(t);
+  }, [serverStatus]);
 
   // Redirect already-authenticated users away from sign-in
   useEffect(() => {
@@ -57,7 +89,8 @@ export default function SignInPage() {
     } catch (err) {
       const isNetworkError = !err.response && (err.code === 'ECONNABORTED' || err.code === 'ERR_NETWORK' || err.message?.includes('timeout'));
       if (isNetworkError) {
-        toast.error('Server is starting up — please wait 30 seconds and try again.', { duration: 6000 });
+        setServerStatus('warming');
+        setRetryCountdown(15); // auto-retry in 15 s
       } else {
         const msg = err.response?.data?.message || 'Invalid email or password';
         if (msg.toLowerCase().includes('verify your email')) {
@@ -85,6 +118,32 @@ export default function SignInPage() {
         </p>
       </div>
 
+      {/* Server cold-start banner */}
+      {serverStatus === 'warming' && (
+        <div className="mb-5 p-3.5 rounded-xl bg-amber-50 border border-amber-200 flex items-center gap-3">
+          <Loader2 size={15} className="animate-spin text-amber-500 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[12.5px] font-semibold text-amber-800">
+              Server is waking up&hellip;
+            </p>
+            <p className="text-[11.5px] text-amber-600 mt-0.5">
+              {retryCountdown !== null
+                ? `Auto-retrying in ${retryCountdown}s — your credentials are saved`
+                : 'This takes ~30 seconds on first load. You can sign in once it\'s ready.'}
+            </p>
+          </div>
+          {retryCountdown !== null && (
+            <span className="text-[13px] font-bold text-amber-700 tabular-nums shrink-0">{retryCountdown}s</span>
+          )}
+        </div>
+      )}
+      {serverStatus === 'ready' && (
+        <div className="mb-5 p-3 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center gap-2 animate-in fade-in slide-in-from-top-1 duration-300">
+          <Wifi size={14} className="text-emerald-500 shrink-0" />
+          <p className="text-[12px] font-medium text-emerald-700">Server is ready</p>
+        </div>
+      )}
+
       {/* Email not verified banner */}
       {unverifiedEmail && (
         <div className="mb-5 p-4 rounded-xl bg-amber-50 border border-amber-200 flex gap-3">
@@ -106,7 +165,7 @@ export default function SignInPage() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form id="signin-form" onSubmit={handleSubmit} className="space-y-5">
         {/* Email */}
         <div>
           <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">
