@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   LayoutDashboard, BookOpen, ListChecks, ClipboardList,
-  MessageSquare, BarChart2, FlaskConical, CalendarDays, Zap, Video, Library
+  MessageSquare, BarChart2, FlaskConical, CalendarDays, Zap, Video
 } from 'lucide-react';
 
 export const JeeContext = createContext({
@@ -25,11 +25,9 @@ const K_MODE  = 'syl_jee_mode';
 
 const JEE_TABS = [
   { id: 'dashboard',      label: 'Dashboard',      href: '/jee-command',                icon: LayoutDashboard },
-  { id: 'syllabus',       label: 'Syllabus',        href: '/jee-command/syllabus',        icon: BookOpen        },
-  { id: 'textbook',       label: 'Textbook',        href: '/jee-command/textbook',        icon: Library         },
+  { id: 'study',          label: 'Study',           href: '/jee-command/study',           icon: BookOpen,
+    extraPaths: ['/jee-command/syllabus', '/jee-command/textbook', '/jee-command/ncert', '/jee-command/books'] },
   { id: 'videos',         label: 'Video Lectures',  href: '/jee-command/videos',          icon: Video           },
-  { id: 'ncert',          label: 'NCERT',           href: '/jee-command/ncert',           icon: BookOpen        },
-  { id: 'books',          label: 'Ref Books',       href: '/jee-command/books',           icon: BookOpen        },
   { id: 'pyq',            label: 'PYQ Bank',        href: '/jee-command/pyq',             icon: ListChecks      },
   { id: 'mock-tests',     label: 'Mock Tests',      href: '/jee-command/mock-tests',      icon: ClipboardList   },
   { id: 'ai-tutor',       label: 'AI Tutor',        href: '/jee-command/ai-tutor',        icon: MessageSquare   },
@@ -40,10 +38,9 @@ const JEE_TABS = [
 
 const NEET_TABS = [
   { id: 'dashboard',      label: 'Dashboard',      href: '/jee-command',                icon: LayoutDashboard },
-  { id: 'syllabus',       label: 'Syllabus',        href: '/jee-command/syllabus',        icon: BookOpen        },
-  { id: 'textbook',       label: 'Textbook',        href: '/jee-command/textbook',        icon: Library         },
+  { id: 'study',          label: 'Study',           href: '/jee-command/study',           icon: BookOpen,
+    extraPaths: ['/jee-command/syllabus', '/jee-command/textbook', '/jee-command/ncert'] },
   { id: 'videos',         label: 'Video Lectures',  href: '/jee-command/videos',          icon: Video           },
-  { id: 'ncert',          label: 'NCERT',           href: '/jee-command/ncert',           icon: BookOpen        },
   { id: 'pyq',            label: 'PYQ Bank',        href: '/jee-command/pyq',             icon: ListChecks      },
   { id: 'mock-tests',     label: 'Mock Tests',      href: '/jee-command/mock-tests',      icon: ClipboardList   },
   { id: 'ai-tutor',       label: 'AI Tutor',        href: '/jee-command/ai-tutor',        icon: MessageSquare   },
@@ -176,7 +173,9 @@ export default function JeeCommandLayout({ children }) {
           {/* Tab Navigation */}
           <div className="flex overflow-x-auto border-t border-white/10" style={{ scrollbarWidth: 'none' }}>
             {TABS.map(tab => {
-              const active = pathname === tab.href || (tab.href !== '/jee-command' && pathname.startsWith(tab.href));
+              const active = pathname === tab.href ||
+                (tab.href !== '/jee-command' && pathname.startsWith(tab.href)) ||
+                (tab.extraPaths?.some(p => pathname.startsWith(p)));
               const Icon = tab.icon;
               return (
                 <Link
