@@ -1,10 +1,9 @@
 'use client';
 import { useState, useEffect, Suspense } from 'react';
 import { useJee } from '../layout';
-import { BookOpen, Library, Book, Sparkles } from 'lucide-react';
+import { BookOpen, Library, Sparkles } from 'lucide-react';
 import SyllabusPage from '../syllabus/page';
 import TextbookPage from '../textbook/page';
-import NcertPage from '../ncert/page';
 import BooksPage from '../books/page';
 
 const K_SUBTAB = 'syl_study_subtab';
@@ -18,8 +17,8 @@ export default function StudyPage() {
   useEffect(() => {
     const saved = localStorage.getItem(K_SUBTAB) || 'syllabus';
     const valid = isNeet
-      ? ['syllabus', 'textbook', 'ncert']
-      : ['syllabus', 'textbook', 'ncert', 'books'];
+      ? ['syllabus', 'textbook']
+      : ['syllabus', 'textbook', 'books'];
     setActiveTabState(valid.includes(saved) ? saved : 'syllabus');
   }, [isNeet]);
 
@@ -31,9 +30,8 @@ export default function StudyPage() {
   const accentActive = isNeet ? 'bg-emerald-600 text-white' : 'bg-blue-600 text-white';
 
   const SUBTABS = [
-    { id: 'syllabus',  label: 'Syllabus',        icon: BookOpen  },
-    { id: 'textbook',  label: 'Textbook',         icon: Library   },
-    { id: 'ncert',     label: 'NCERT Solutions',  icon: Book      },
+    { id: 'syllabus',  label: 'Syllabus',   icon: BookOpen  },
+    { id: 'textbook',  label: 'Textbook',   icon: Library   },
     ...(!isNeet ? [{ id: 'books', label: 'Ref Books', icon: Sparkles }] : []),
   ];
 
@@ -71,7 +69,6 @@ export default function StudyPage() {
           </Suspense>
         )}
         {activeTab === 'textbook' && <TextbookPage />}
-        {activeTab === 'ncert'    && <NcertPage />}
         {activeTab === 'books'    && <BooksPage />}
       </div>
     </div>
