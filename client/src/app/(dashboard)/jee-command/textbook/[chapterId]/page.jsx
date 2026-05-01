@@ -473,25 +473,41 @@ export default function ChapterStudyPage() {
   const params    = useParams();
   const chapterId = params.chapterId;
 
-  const [chapter,      setChapter]      = useState(null);
-  const [topics,       setTopics]       = useState([]);
+  const [chapter,        setChapter]        = useState(null);
+  const [topics,         setTopics]         = useState([]);
   const [loadingChapter, setLoadingChapter] = useState(true);
+  const [buildingOutline,setBuildingOutline]= useState(false);
   const [selectedTopic,  setSelectedTopic]  = useState(null);
-  const [activeTab,    setActiveTab]    = useState('notes');
-  const [notes,        setNotes]        = useState(null);
-  const [generating,   setGenerating]   = useState(false);
-  const [notesError,   setNotesError]   = useState('');
-  const [sidebarOpen,  setSidebarOpen]  = useState(false);
+  const [activeTab,      setActiveTab]      = useState('notes');
+  const [notes,          setNotes]          = useState(null);
+  const [generating,     setGenerating]     = useState(false);
+  const [notesError,     setNotesError]     = useState('');
+  const [sidebarOpen,    setSidebarOpen]    = useState(false);
 
   // Guard against stale async results when user clicks a different topic mid-flight
   const currentTopicIdRef = useRef(null);
 
-  // Load chapter + topics on mount
+  // Load chapter + topics; auto-generate topic list if DB has none
   useEffect(() => {
     jeeAPI.getLibraryChapter(chapterId)
-      .then(r => {
+      .then(async r => {
         setChapter(r.data.chapter);
-        const ts = r.data.topics || [];
+        let ts = r.data.topics || [];
+
+        if (!ts.length) {
+          // Chapter exists but topics were never created — ask AI to build the outline
+          setBuildingOutline(true);
+          try {
+            const r2 = await jeeAPI.generateChapterTopics(chapterId);
+            ts = r2.data?.topics || [];
+          } catch {
+            // If topic generation fails, create a single fallback topic so the chapter is usable
+            ts = [{ id: null, title: r.data.chapter?.title || 'Chapter Overview', topic_order: 1, has_notes: 0 }];
+          } finally {
+            setBuildingOutline(false);
+          }
+        }
+
         setTopics(ts);
         if (ts.length) setSelectedTopic(ts[0]);
       })
@@ -501,7 +517,7 @@ export default function ChapterStudyPage() {
 
   // When topic changes: check cache → auto-generate if no notes
   useEffect(() => {
-    if (!selectedTopic) return;
+    if (!selectedTopic || !selectedTopic.id) return;
     const topicId = selectedTopic.id;
     currentTopicIdRef.current = topicId;
 
@@ -542,7 +558,7 @@ export default function ChapterStudyPage() {
 
   // Manual regenerate (refresh button)
   const regenerate = async () => {
-    if (!selectedTopic) return;
+    if (!selectedTopic || !selectedTopic.id) return;
     const topicId = selectedTopic.id;
     currentTopicIdRef.current = topicId;
     setGenerating(true);
@@ -562,9 +578,22 @@ export default function ChapterStudyPage() {
     }
   };
 
-  if (loadingChapter) return (
-    <div className="flex items-center justify-center min-h-[400px]">
-      <Loader2 size={28} className="text-blue-400 animate-spin" />
+  if (loadingChapter || buildingOutline) return (
+    <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 text-center">
+      <div className="relative w-14 h-14">
+        <div className="absolute inset-0 rounded-full border-4 border-blue-100 animate-spin border-t-blue-500" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          {buildingOutline ? <Sparkles size={20} className="text-blue-500" /> : <Loader2 size={20} className="text-blue-400 animate-spin" />}
+        </div>
+      </div>
+      <div>
+        <p className="text-[14px] font-bold text-gray-700">
+          {buildingOutline ? 'Building chapter outline…' : 'Loading chapter…'}
+        </p>
+        {buildingOutline && (
+          <p className="text-[12px] text-gray-400 mt-1">AI is fetching the NCERT section structure</p>
+        )}
+      </div>
     </div>
   );
 

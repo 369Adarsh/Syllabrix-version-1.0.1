@@ -92,11 +92,12 @@ router.get('/library/ncert', authenticate, contentService.getLibraryNCERT);
 
 // ── LIBRARY STUDY MODE ────────────────────────────────────────────────────────
 const studyService = require('./jee-library-study.service');
-router.get('/library/chapters',              authenticate, studyService.getLibraryChapters);
-router.get('/library/chapter/:id',           authenticate, studyService.getChapterWithTopics);
-router.get('/library/topic/:id/content',     authenticate, studyService.getTopicContent);
-router.post('/library/topic/:id/generate',   authenticate, studyService.generateTopicContent);
-router.post('/library/topic/:id/practice',   authenticate, studyService.generatePracticeQuestions);
+router.get('/library/chapters',                    authenticate, studyService.getLibraryChapters);
+router.get('/library/chapter/:id',                authenticate, studyService.getChapterWithTopics);
+router.post('/library/chapter/:id/generate-topics', authenticate, studyService.generateChapterTopics);
+router.get('/library/topic/:id/content',           authenticate, studyService.getTopicContent);
+router.post('/library/topic/:id/generate',         authenticate, studyService.generateTopicContent);
+router.post('/library/topic/:id/practice',         authenticate, studyService.generatePracticeQuestions);
 
 // ── YOUTUBE VIDEOS ────────────────────────────────────────────────────────────
 router.get('/videos', authenticate, videoService.getVideosForChapter);

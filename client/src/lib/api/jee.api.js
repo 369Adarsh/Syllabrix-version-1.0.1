@@ -29,8 +29,9 @@ export const jeeAPI = {
   getLibraryNCERT: (params) => api.get('/jee/library/ncert', { params }),
 
   // Library Study Mode
-  getLibraryChapters:       (params) => api.get('/jee/library/chapters', { params }),
-  getLibraryChapter:        (id)     => api.get(`/jee/library/chapter/${id}`),
+  getLibraryChapters:          (params) => api.get('/jee/library/chapters', { params }),
+  getLibraryChapter:           (id)     => api.get(`/jee/library/chapter/${id}`),
+  generateChapterTopics:       (id)     => api.post(`/jee/library/chapter/${id}/generate-topics`),
   getLibraryTopicContent:   (id)     => api.get(`/jee/library/topic/${id}/content`),
   generateLibraryTopicNotes:(id)     => api.post(`/jee/library/topic/${id}/generate`),
   generatePracticeQuestions:(id, params) => api.post(`/jee/library/topic/${id}/practice`, {}, { params }),

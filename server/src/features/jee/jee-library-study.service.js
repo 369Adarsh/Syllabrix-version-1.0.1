@@ -156,6 +156,94 @@ exports.getChapterWithTopics = async (req, res) => {
   }
 };
 
+// ── GENERATE CHAPTER TOPICS (when topics table is empty) ─────────────────────
+// POST /jee/library/chapter/:id/generate-topics
+exports.generateChapterTopics = async (req, res) => {
+  try {
+    const [rows] = await pool.query(`
+      SELECT ch.id, ch.chapter_number, ch.title,
+             bk.title AS book_title,
+             s.name   AS subject_name, cl.grade
+      FROM   chapters ch
+      JOIN   books    bk ON bk.id = ch.book_id
+      JOIN   subjects s  ON s.id  = bk.subject_id
+      JOIN   classes  cl ON cl.id = s.class_id
+      WHERE  ch.id = ?
+    `, [req.params.id]);
+
+    if (!rows.length) return res.status(404).json({ success: false, message: 'Chapter not found' });
+    const ch = rows[0];
+
+    // If topics already exist, return them (idempotent)
+    const [existing] = await pool.query(
+      `SELECT id, title, topic_order FROM topics WHERE chapter_id = ? ORDER BY topic_order ASC`,
+      [ch.id]
+    );
+    if (existing.length) {
+      return res.json({ success: true, topics: existing, source: 'existing' });
+    }
+
+    // Use Gemini + Google Search grounding to get the actual NCERT section structure
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model  = genAI.getGenerativeModel({
+      model:          'gemini-2.0-flash',
+      tools:          [{ googleSearch: {} }],
+      safetySettings: SAFETY,
+    });
+
+    let topicsRaw;
+    try {
+      const result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text:
+          `Look up the NCERT ${ch.subject_name} textbook for Class ${ch.grade}, Chapter ${ch.chapter_number}: "${ch.title}".
+List ALL the numbered sections (sub-topics) exactly as they appear in the NCERT book (e.g. ${ch.chapter_number}.1, ${ch.chapter_number}.2, ...).
+
+Return ONLY a JSON array — no markdown, no explanation:
+[
+  { "order": 1, "title": "Section title as in NCERT" },
+  { "order": 2, "title": "Section title as in NCERT" }
+]`
+        }] }],
+        generationConfig: { maxOutputTokens: 1500, temperature: 0.1 },
+      });
+      topicsRaw = parseAI(result.response.text());
+    } catch {
+      // Fallback: direct generation without web search
+      const direct = getGeminiModel('gemini-2.0-flash');
+      const result2 = await direct.generateContent({
+        contents: [{ role: 'user', parts: [{ text:
+          `List the numbered sections (sub-topics) of NCERT Class ${ch.grade} ${ch.subject_name}, Chapter ${ch.chapter_number}: "${ch.title}".
+Return ONLY a JSON array:
+[{"order":1,"title":"..."},{"order":2,"title":"..."}]`
+        }] }],
+        generationConfig: { maxOutputTokens: 1000, temperature: 0.2 },
+      });
+      topicsRaw = parseAI(result2.response.text());
+    }
+
+    if (!Array.isArray(topicsRaw) || !topicsRaw.length) {
+      return res.status(500).json({ success: false, message: 'AI could not determine chapter sections' });
+    }
+
+    // Insert into topics table
+    const insertValues = topicsRaw.map(t => [ch.id, String(t.title).trim(), t.order || 1]);
+    await pool.query(
+      `INSERT INTO topics (chapter_id, title, topic_order) VALUES ?`,
+      [insertValues]
+    );
+
+    const [created] = await pool.query(
+      `SELECT id, title, topic_order FROM topics WHERE chapter_id = ? ORDER BY topic_order ASC`,
+      [ch.id]
+    );
+
+    res.json({ success: true, topics: created, source: 'generated' });
+  } catch (e) {
+    console.error('[lib-study] generateChapterTopics:', e.message);
+    res.status(500).json({ success: false, message: e.message });
+  }
+};
+
 // ── GET CACHED NOTES ──────────────────────────────────────────────────────────
 exports.getTopicContent = async (req, res) => {
   try {
