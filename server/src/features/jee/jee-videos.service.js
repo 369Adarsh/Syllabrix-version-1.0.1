@@ -1,42 +1,85 @@
 const axios = require('axios');
 
-// In-memory cache: cacheKey → { data, expires }
 const CACHE = new Map();
 const CACHE_TTL = 48 * 60 * 60 * 1000; // 48 hours
 
-// Channels/brands to block (competitors, commercial coaching)
 const BLOCKED_CHANNELS = [
   'physics wallah', 'pw ', ' pw', 'byju', 'vedantu', 'unacademy',
   'allen', 'aakash', 'fiitjee', 'resonance', 'motion iit',
-  'career point', 'etoos', 'gradeup', 'toppr',
+  'career point', 'etoos', 'gradeup', 'toppr', 'doubtnut',
 ];
 
-// Search queries that naturally surface academic/safe content
-function buildQueries(chapter, subject, classLevel) {
+const PREFERRED_CHANNELS = [
+  'nptel', 'iit bombay', 'iit delhi', 'iit madras', 'iit kharagpur', 'iit ',
+  'namo kaul', 'physics galaxy', 'arvind academy', 'examfear',
+  'pradeep kshetrapal', 'vineet khatri', 'jh sir', 'maths by vijay',
+  'nirmal sir', 'khan academy india', 'letstute', 'concept builder',
+];
+
+function isBlocked(channel) {
+  const lower = channel.toLowerCase();
+  return BLOCKED_CHANNELS.some(b => lower.includes(b));
+}
+
+function isPreferred(channel) {
+  const lower = channel.toLowerCase();
+  return PREFERRED_CHANNELS.some(t => lower.includes(t));
+}
+
+// When source is NCERT: queries are pinned to the exact book, class, chapter and topic.
+// This ensures videos match exactly what the student has open in their NCERT book.
+function buildNCERTTopicQueries(topic, chapterName, chapterNum, subject, classLevel) {
+  const ref = `NCERT Class ${classLevel} ${subject}`;
   return [
-    `${chapter} ${subject} NPTEL lecture class ${classLevel}`,
-    `${chapter} ${subject} Khan Academy`,
-    `${chapter} ${subject} IIT lecture`,
-    `${chapter} ${subject} class ${classLevel} concept explained`,
+    `${ref} Chapter ${chapterNum} ${chapterName} ${topic} lecture India`,
+    `${topic} ${ref} NPTEL IIT explained India`,
+    `${ref} ${topic} Namo Kaul India tutorial`,
+    `${topic} ${chapterName} ${ref} ExamFear India`,
+    `${topic} ${subject} NCERT India class ${classLevel} concept explained`,
   ];
 }
 
-function isBlocked(channelName) {
-  const lower = channelName.toLowerCase();
-  return BLOCKED_CHANNELS.some(b => lower.includes(b));
+function buildNCERTChapterQueries(chapterName, chapterNum, subject, classLevel) {
+  const ref = `NCERT Class ${classLevel} ${subject}`;
+  return [
+    `${ref} Chapter ${chapterNum} ${chapterName} lecture India`,
+    `${chapterName} ${ref} NPTEL IIT India`,
+    `${chapterName} ${ref} Namo Kaul India`,
+    `${chapterName} ${ref} ExamFear Arvind Academy India`,
+  ];
+}
+
+// Generic fallback when no book source context is given
+function buildTopicQueries(topic, chapter, subject, classLevel) {
+  return [
+    `${topic} ${subject} NPTEL IIT India lecture`,
+    `${topic} ${chapter} ${subject} India class ${classLevel} explained`,
+    `${topic} ${subject} Namo Kaul India tutorial`,
+    `${topic} ${subject} Arvind Academy India lecture`,
+    `${topic} ${subject} ExamFear India class ${classLevel}`,
+  ];
+}
+
+function buildChapterQueries(chapter, subject, classLevel) {
+  return [
+    `${chapter} ${subject} NPTEL IIT India lecture class ${classLevel}`,
+    `${chapter} ${subject} India class ${classLevel} explained tutorial`,
+    `${chapter} ${subject} Namo Kaul India`,
+    `${chapter} ${subject} Arvind Academy India`,
+    `${chapter} ${subject} ExamFear India class ${classLevel}`,
+  ];
 }
 
 async function getVideosForChapter(req, res) {
   try {
-    const { chapter, subject, class: cls = 11 } = req.query;
+    const { chapter, subject, class: cls = 11, topic, chapter_num, source } = req.query;
 
     if (!chapter || !subject) {
       return res.status(400).json({ success: false, message: 'chapter and subject are required' });
     }
 
-    const cacheKey = `${subject}_${chapter}_${cls}`.toLowerCase().replace(/\s+/g, '_');
+    const cacheKey = `${source || 'g'}_${subject}_${topic || chapter}_${cls}`.toLowerCase().replace(/\s+/g, '_');
 
-    // Serve from cache if fresh
     if (CACHE.has(cacheKey)) {
       const entry = CACHE.get(cacheKey);
       if (Date.now() < entry.expires) {
@@ -49,12 +92,23 @@ async function getVideosForChapter(req, res) {
       return res.status(503).json({ success: false, message: 'YouTube API not configured' });
     }
 
-    const queries = buildQueries(chapter, subject, cls);
+    let queries;
+    if (source === 'ncert' && topic) {
+      queries = buildNCERTTopicQueries(topic, chapter, chapter_num || '', subject, cls);
+    } else if (source === 'ncert') {
+      queries = buildNCERTChapterQueries(chapter, chapter_num || '', subject, cls);
+    } else if (topic) {
+      queries = buildTopicQueries(topic, chapter, subject, cls);
+    } else {
+      queries = buildChapterQueries(chapter, subject, cls);
+    }
+
     const seen = new Set();
-    const videos = [];
+    const preferred = [];
+    const regular = [];
 
     for (const query of queries) {
-      if (videos.length >= 8) break;
+      if (preferred.length + regular.length >= 12) break;
       try {
         const { data } = await axios.get('https://www.googleapis.com/youtube/v3/search', {
           params: {
@@ -62,9 +116,10 @@ async function getVideosForChapter(req, res) {
             q: query,
             part: 'snippet',
             type: 'video',
-            maxResults: 6,
+            maxResults: 5,
             relevanceLanguage: 'en',
-            videoDuration: 'medium',
+            videoDuration: 'medium', // 4–20 min: excludes all Shorts
+            regionCode: 'IN',        // Prioritise Indian content
             order: 'relevance',
           },
           timeout: 6000,
@@ -75,18 +130,26 @@ async function getVideosForChapter(req, res) {
           if (!id || seen.has(id)) continue;
           if (isBlocked(item.snippet.channelTitle)) continue;
           seen.add(id);
-          videos.push({
+
+          const video = {
             videoId: id,
             title: item.snippet.title,
             channel: item.snippet.channelTitle,
             thumbnail: item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url,
             publishedAt: item.snippet.publishedAt,
-          });
+            preferred: isPreferred(item.snippet.channelTitle),
+          };
+
+          if (video.preferred) preferred.push(video);
+          else regular.push(video);
         }
       } catch {
-        // skip failed query, continue with next
+        // skip failed query
       }
     }
+
+    // NPTEL/IIT/known Indian teachers always shown first
+    const videos = [...preferred, ...regular].slice(0, 8);
 
     CACHE.set(cacheKey, { data: videos, expires: Date.now() + CACHE_TTL });
     return res.json({ success: true, data: videos });

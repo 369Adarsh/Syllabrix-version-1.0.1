@@ -127,6 +127,77 @@ exports.getBookSolutions = async (req, res) => {
   }
 };
 
+// ── LIBRARY NCERT BRIDGE ──────────────────────────────────────────────────────
+// Reads real NCERT chapters & topics from the admin library database.
+// Used by the Video Lectures page so videos map to the actual book content.
+exports.getLibraryNCERT = async (req, res) => {
+  try {
+    const { subject, class: classLevel } = req.query;
+    if (!subject || !classLevel) {
+      return res.status(400).json({ success: false, message: 'subject and class required' });
+    }
+
+    const grade = parseInt(classLevel);
+    // Accept 'maths' → match 'mathematics' too
+    const subjectLike = subject.toLowerCase() === 'maths' ? 'math%' : `%${subject.toLowerCase()}%`;
+
+    const [books] = await pool.query(`
+      SELECT bk.id, bk.title, bk.cover_image_url, bk.ncert_url, bk.is_official
+      FROM books bk
+      JOIN subjects s ON s.id = bk.subject_id AND s.is_active = 1
+      JOIN classes cl ON cl.id = s.class_id AND cl.grade = ?
+      JOIN boards b ON b.id = cl.board_id AND (b.type = 'national' OR UPPER(b.code) = 'CBSE')
+      WHERE LOWER(s.name) LIKE ?
+        AND (bk.is_official = 1 OR LOWER(bk.title) LIKE '%ncert%')
+      ORDER BY bk.is_official DESC, bk.priority_rank ASC
+      LIMIT 3
+    `, [grade, subjectLike]);
+
+    if (!books.length) {
+      return res.json({ success: true, data: [], source: 'library_empty' });
+    }
+
+    const primaryBook = books[0];
+    const [chapters] = await pool.query(`
+      SELECT id, chapter_number, title, key_concepts
+      FROM chapters
+      WHERE book_id = ?
+      ORDER BY chapter_number ASC
+    `, [primaryBook.id]);
+
+    if (!chapters.length) {
+      return res.json({ success: true, data: [], book: { id: primaryBook.id, title: primaryBook.title }, source: 'library_no_chapters' });
+    }
+
+    const chapterIds = chapters.map(c => c.id);
+    const [topicRows] = await pool.query(
+      `SELECT id, chapter_id, title, topic_order FROM topics WHERE chapter_id IN (?) ORDER BY topic_order ASC`,
+      [chapterIds]
+    );
+
+    const data = chapters.map((ch, idx) => {
+      const chTopics = topicRows.filter(t => t.chapter_id === ch.id);
+      let keyConcepts = [];
+      try { keyConcepts = JSON.parse(ch.key_concepts || '[]'); } catch (_) {}
+      return {
+        ch: ch.chapter_number || idx + 1,
+        id: ch.id,
+        name: ch.title,
+        topics: chTopics.length ? chTopics.map(t => t.title) : keyConcepts,
+      };
+    });
+
+    res.json({
+      success: true,
+      data,
+      book: { id: primaryBook.id, title: primaryBook.title, cover: primaryBook.cover_image_url },
+      source: 'library',
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+};
+
 exports.escalateToTeacher = async (req, res) => {
   try {
     const { doubt_text, ai_answer, subject, chapter, image_url } = req.body;

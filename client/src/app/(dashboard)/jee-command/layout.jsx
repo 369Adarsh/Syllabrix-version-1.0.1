@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   LayoutDashboard, BookOpen, ListChecks, ClipboardList,
-  MessageSquare, BarChart2, FlaskConical, CalendarDays, Zap, Video
+  MessageSquare, BarChart2, FlaskConical, CalendarDays, Zap, Video, Library
 } from 'lucide-react';
 
 export const JeeContext = createContext({
@@ -21,6 +21,7 @@ export const useJee = () => useContext(JeeContext);
 const TABS = [
   { id: 'dashboard',      label: 'Dashboard',      href: '/jee-command',                icon: LayoutDashboard },
   { id: 'syllabus',       label: 'Syllabus',        href: '/jee-command/syllabus',        icon: BookOpen        },
+  { id: 'textbook',       label: 'Textbook',        href: '/jee-command/textbook',        icon: Library         },
   { id: 'videos',         label: 'Video Lectures',  href: '/jee-command/videos',          icon: Video           },
   { id: 'ncert',          label: 'NCERT',           href: '/jee-command/ncert',           icon: BookOpen        },
   { id: 'books',          label: 'Ref Books',       href: '/jee-command/books',           icon: BookOpen        },

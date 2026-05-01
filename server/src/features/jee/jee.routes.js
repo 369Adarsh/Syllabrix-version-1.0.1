@@ -87,6 +87,17 @@ router.delete('/bookmarks/:id', authenticate, progressService.removeBookmark);
 router.get('/errors', authenticate, progressService.getErrors);
 router.put('/errors/:id/review', authenticate, progressService.reviewError);
 
+// ── LIBRARY NCERT BRIDGE (for video lectures) ─────────────────────────────────
+router.get('/library/ncert', authenticate, contentService.getLibraryNCERT);
+
+// ── LIBRARY STUDY MODE ────────────────────────────────────────────────────────
+const studyService = require('./jee-library-study.service');
+router.get('/library/chapters',              authenticate, studyService.getLibraryChapters);
+router.get('/library/chapter/:id',           authenticate, studyService.getChapterWithTopics);
+router.get('/library/topic/:id/content',     authenticate, studyService.getTopicContent);
+router.post('/library/topic/:id/generate',   authenticate, studyService.generateTopicContent);
+router.post('/library/topic/:id/practice',   authenticate, studyService.generatePracticeQuestions);
+
 // ── YOUTUBE VIDEOS ────────────────────────────────────────────────────────────
 router.get('/videos', authenticate, videoService.getVideosForChapter);
 

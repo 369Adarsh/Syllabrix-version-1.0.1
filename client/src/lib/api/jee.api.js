@@ -25,6 +25,15 @@ export const jeeAPI = {
 
   // Videos
   getVideos: (params) => api.get('/jee/videos', { params }),
+  // Reads real NCERT chapters & topics from the admin library database
+  getLibraryNCERT: (params) => api.get('/jee/library/ncert', { params }),
+
+  // Library Study Mode
+  getLibraryChapters:       (params) => api.get('/jee/library/chapters', { params }),
+  getLibraryChapter:        (id)     => api.get(`/jee/library/chapter/${id}`),
+  getLibraryTopicContent:   (id)     => api.get(`/jee/library/topic/${id}/content`),
+  generateLibraryTopicNotes:(id)     => api.post(`/jee/library/topic/${id}/generate`),
+  generatePracticeQuestions:(id, params) => api.post(`/jee/library/topic/${id}/practice`, {}, { params }),
 
   // Books
   getBooks: () => api.get('/jee/books'),
