@@ -1,5 +1,5 @@
 'use client';
-import { useState, createContext, useContext } from 'react';
+import { useState, useEffect, createContext, useContext } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,14 +11,19 @@ import {
 export const JeeContext = createContext({
   selectedClass: 11,
   setSelectedClass: () => {},
-  examType: 'jee',       // 'jee' | 'neet'
+  examType: 'jee',
   setExamType: () => {},
-  jeeMode: 'main',       // 'main' | 'advanced'  (only when examType === 'jee')
+  jeeMode: 'main',
   setJeeMode: () => {},
 });
 export const useJee = () => useContext(JeeContext);
 
-const TABS = [
+// Persist keys
+const K_EXAM  = 'syl_exam_type';
+const K_CLASS = 'syl_exam_class';
+const K_MODE  = 'syl_jee_mode';
+
+const JEE_TABS = [
   { id: 'dashboard',      label: 'Dashboard',      href: '/jee-command',                icon: LayoutDashboard },
   { id: 'syllabus',       label: 'Syllabus',        href: '/jee-command/syllabus',        icon: BookOpen        },
   { id: 'textbook',       label: 'Textbook',        href: '/jee-command/textbook',        icon: Library         },
@@ -33,12 +38,52 @@ const TABS = [
   { id: 'study-plan',     label: 'Study Plan',      href: '/jee-command/study-plan',      icon: CalendarDays    },
 ];
 
+const NEET_TABS = [
+  { id: 'dashboard',      label: 'Dashboard',      href: '/jee-command',                icon: LayoutDashboard },
+  { id: 'syllabus',       label: 'Syllabus',        href: '/jee-command/syllabus',        icon: BookOpen        },
+  { id: 'textbook',       label: 'Textbook',        href: '/jee-command/textbook',        icon: Library         },
+  { id: 'videos',         label: 'Video Lectures',  href: '/jee-command/videos',          icon: Video           },
+  { id: 'ncert',          label: 'NCERT',           href: '/jee-command/ncert',           icon: BookOpen        },
+  { id: 'pyq',            label: 'PYQ Bank',        href: '/jee-command/pyq',             icon: ListChecks      },
+  { id: 'mock-tests',     label: 'Mock Tests',      href: '/jee-command/mock-tests',      icon: ClipboardList   },
+  { id: 'ai-tutor',       label: 'AI Tutor',        href: '/jee-command/ai-tutor',        icon: MessageSquare   },
+  { id: 'analytics',      label: 'Analytics',       href: '/jee-command/analytics',       icon: BarChart2       },
+  { id: 'formula-sheets', label: 'Formulas',        href: '/jee-command/formula-sheets',  icon: FlaskConical    },
+  { id: 'study-plan',     label: 'Study Plan',      href: '/jee-command/study-plan',      icon: CalendarDays    },
+];
+
 export default function JeeCommandLayout({ children }) {
   const pathname = usePathname();
   const { user } = useAuth();
-  const [selectedClass, setSelectedClass] = useState(11);
-  const [examType, setExamType] = useState('jee');
-  const [jeeMode, setJeeMode] = useState('main');
+
+  // Initialise from localStorage so state survives layout remounts
+  // (remounts happen when user navigates away from /jee-command and returns)
+  const [examType,      setExamTypeState]    = useState('jee');
+  const [selectedClass, setSelectedClassState] = useState(11);
+  const [jeeMode,       setJeeModeState]     = useState('main');
+
+  useEffect(() => {
+    const t = localStorage.getItem(K_EXAM)  || 'jee';
+    const c = parseInt(localStorage.getItem(K_CLASS) || '11') || 11;
+    const m = localStorage.getItem(K_MODE)  || 'main';
+    setExamTypeState(t);
+    setSelectedClassState(c);
+    setJeeModeState(m);
+  }, []);
+
+  // Wrapped setters — update state AND persist immediately
+  const setExamType = (val) => {
+    localStorage.setItem(K_EXAM, val);
+    setExamTypeState(val);
+  };
+  const setSelectedClass = (val) => {
+    localStorage.setItem(K_CLASS, String(val));
+    setSelectedClassState(val);
+  };
+  const setJeeMode = (val) => {
+    localStorage.setItem(K_MODE, val);
+    setJeeModeState(val);
+  };
 
   const isExamPlayer = pathname.includes('/mock-tests/') && !pathname.endsWith('/mock-tests') && !pathname.includes('/result');
 
@@ -51,6 +96,7 @@ export default function JeeCommandLayout({ children }) {
   }
 
   const isNeet = examType === 'neet';
+  const TABS = isNeet ? NEET_TABS : JEE_TABS;
 
   return (
     <JeeContext.Provider value={{ selectedClass, setSelectedClass, examType, setExamType, jeeMode, setJeeMode }}>
