@@ -1,14 +1,5 @@
 const { pool } = require('../../database/connection');
 const { getGeminiModel } = require('../../utils/gemini-utils');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-
-// ── Shared safety settings ────────────────────────────────────────────────────
-const SAFETY = [
-  { category: 'HARM_CATEGORY_HARASSMENT',        threshold: 'BLOCK_NONE' },
-  { category: 'HARM_CATEGORY_HATE_SPEECH',        threshold: 'BLOCK_NONE' },
-  { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',  threshold: 'BLOCK_NONE' },
-  { category: 'HARM_CATEGORY_DANGEROUS_CONTENT',  threshold: 'BLOCK_NONE' },
-];
 
 async function ensureTable() {
   await pool.query(`
@@ -24,17 +15,12 @@ async function ensureTable() {
   `);
 }
 
-function parseAI(text) {
-  try {
-    const s = text.trim()
-      .replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
-    return JSON.parse(s);
-  } catch {
-    const m = text.match(/[\[{][\s\S]*[\]}]/);
-    if (m) return JSON.parse(m[0]);
-    throw new Error('Could not parse AI response');
-  }
-}
+// JSON mode: forces Gemini to return raw JSON — no markdown, no prose wrapper
+const JSON_CONFIG = {
+  responseMimeType: 'application/json',
+  maxOutputTokens: 8000,
+  temperature: 0.3,
+};
 
 // ── GET CHAPTERS FROM LIBRARY ─────────────────────────────────────────────────
 exports.getLibraryChapters = async (req, res) => {
@@ -49,13 +35,12 @@ exports.getLibraryChapters = async (req, res) => {
     const grade = parseInt(classLevel);
     const s = subject.toLowerCase();
 
-    // Build LIKE pattern — handle 'maths' → 'Mathematics'
     let subjectLike;
     if (s === 'maths' || s === 'math' || s === 'mathematics') subjectLike = 'math%';
     else if (s === 'biology' || s === 'bio')                   subjectLike = '%bio%';
     else                                                        subjectLike = `%${s}%`;
 
-    // Primary query — prefer science stream, no is_official restriction
+    // Primary: prefer science stream, no is_official restriction
     const [books] = await pool.query(`
       SELECT bk.id, bk.title, bk.cover_image_url,
              s.name AS subject_name, cl.grade, cl.stream
@@ -68,12 +53,11 @@ exports.getLibraryChapters = async (req, res) => {
         AND  cl.stream IN ('science','general','NA')
       ORDER BY
         CASE WHEN cl.stream = 'science' THEN 0 ELSE 1 END ASC,
-        bk.priority_rank ASC,
-        bk.id ASC
+        bk.priority_rank ASC, bk.id ASC
       LIMIT 5
     `, [grade, subjectLike]);
 
-    // Fallback — drop board/stream filters entirely (catches admin-uploaded books)
+    // Fallback: drop board/stream filters
     let chosen = books;
     if (!chosen.length) {
       const [fallback] = await pool.query(`
@@ -95,12 +79,11 @@ exports.getLibraryChapters = async (req, res) => {
 
     const book = chosen[0];
 
-    // Fetch chapters with topic count and how many already have AI notes
     const [chapters] = await pool.query(`
       SELECT ch.id, ch.chapter_number, ch.title, ch.description,
              ch.estimated_study_time_mins,
-             COUNT(t.id)                                                        AS topic_count,
-             SUM(CASE WHEN lc.id IS NOT NULL THEN 1 ELSE 0 END)                AS notes_count
+             COUNT(t.id)                                             AS topic_count,
+             SUM(CASE WHEN lc.id IS NOT NULL THEN 1 ELSE 0 END)     AS notes_count
       FROM   chapters ch
       LEFT JOIN topics            t  ON t.chapter_id  = ch.id
       LEFT JOIN lib_topic_content lc ON lc.topic_id   = t.id
@@ -112,9 +95,9 @@ exports.getLibraryChapters = async (req, res) => {
 
     res.json({
       success: true,
-      data:    chapters,
-      book:    { id: book.id, title: book.title, cover: book.cover_image_url,
-                 subject: book.subject_name, grade: book.grade },
+      data: chapters,
+      book: { id: book.id, title: book.title, cover: book.cover_image_url,
+              subject: book.subject_name, grade: book.grade },
     });
   } catch (e) {
     console.error('[lib-study] getLibraryChapters:', e.message);
@@ -156,14 +139,12 @@ exports.getChapterWithTopics = async (req, res) => {
   }
 };
 
-// ── GENERATE CHAPTER TOPICS (when topics table is empty) ─────────────────────
-// POST /jee/library/chapter/:id/generate-topics
+// ── GENERATE CHAPTER TOPICS ───────────────────────────────────────────────────
 exports.generateChapterTopics = async (req, res) => {
   try {
     const [rows] = await pool.query(`
       SELECT ch.id, ch.chapter_number, ch.title,
-             bk.title AS book_title,
-             s.name   AS subject_name, cl.grade
+             s.name AS subject_name, cl.grade
       FROM   chapters ch
       JOIN   books    bk ON bk.id = ch.book_id
       JOIN   subjects s  ON s.id  = bk.subject_id
@@ -174,66 +155,57 @@ exports.generateChapterTopics = async (req, res) => {
     if (!rows.length) return res.status(404).json({ success: false, message: 'Chapter not found' });
     const ch = rows[0];
 
-    // If topics already exist, return them (idempotent)
+    // Idempotent — return existing topics if already generated
     const [existing] = await pool.query(
-      `SELECT id, title, topic_order FROM topics WHERE chapter_id = ? ORDER BY topic_order ASC`,
+      `SELECT id, title, topic_order, 0 AS has_notes FROM topics WHERE chapter_id = ? ORDER BY topic_order ASC`,
       [ch.id]
     );
     if (existing.length) {
       return res.json({ success: true, topics: existing, source: 'existing' });
     }
 
-    // Use Gemini + Google Search grounding to get the actual NCERT section structure
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model  = genAI.getGenerativeModel({
-      model:          'gemini-2.0-flash',
-      tools:          [{ googleSearch: {} }],
-      safetySettings: SAFETY,
+    // Single Gemini call with JSON mode — no grounding needed, Gemini knows NCERT well
+    const model = getGeminiModel('gemini-2.0-flash');
+    const prompt = `You are an expert on NCERT textbooks. List every numbered section in:
+
+NCERT Class ${ch.grade} ${ch.subject_name} — Chapter ${ch.chapter_number}: "${ch.title}"
+
+Use the real NCERT section numbering (${ch.chapter_number}.1, ${ch.chapter_number}.2, ...).
+Include ALL sections, including introduction and summary sections.
+
+Return a JSON array. Each element has "order" (integer, 1-based) and "title" (string, exact NCERT name).
+Example: [{"order":1,"title":"Introduction"},{"order":2,"title":"Path Length"}]`;
+
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { ...JSON_CONFIG, maxOutputTokens: 1200 },
     });
 
     let topicsRaw;
     try {
-      const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text:
-          `Look up the NCERT ${ch.subject_name} textbook for Class ${ch.grade}, Chapter ${ch.chapter_number}: "${ch.title}".
-List ALL the numbered sections (sub-topics) exactly as they appear in the NCERT book (e.g. ${ch.chapter_number}.1, ${ch.chapter_number}.2, ...).
-
-Return ONLY a JSON array — no markdown, no explanation:
-[
-  { "order": 1, "title": "Section title as in NCERT" },
-  { "order": 2, "title": "Section title as in NCERT" }
-]`
-        }] }],
-        generationConfig: { maxOutputTokens: 1500, temperature: 0.1 },
-      });
-      topicsRaw = parseAI(result.response.text());
-    } catch {
-      // Fallback: direct generation without web search
-      const direct = getGeminiModel('gemini-2.0-flash');
-      const result2 = await direct.generateContent({
-        contents: [{ role: 'user', parts: [{ text:
-          `List the numbered sections (sub-topics) of NCERT Class ${ch.grade} ${ch.subject_name}, Chapter ${ch.chapter_number}: "${ch.title}".
-Return ONLY a JSON array:
-[{"order":1,"title":"..."},{"order":2,"title":"..."}]`
-        }] }],
-        generationConfig: { maxOutputTokens: 1000, temperature: 0.2 },
-      });
-      topicsRaw = parseAI(result2.response.text());
+      topicsRaw = JSON.parse(result.response.text());
+    } catch (parseErr) {
+      console.error('[lib-study] topics parse error:', result.response.text().slice(0, 200));
+      throw new Error('AI returned invalid JSON for topic list');
     }
 
     if (!Array.isArray(topicsRaw) || !topicsRaw.length) {
-      return res.status(500).json({ success: false, message: 'AI could not determine chapter sections' });
+      throw new Error('AI returned empty topic list');
     }
 
-    // Insert into topics table
-    const insertValues = topicsRaw.map(t => [ch.id, String(t.title).trim(), t.order || 1]);
-    await pool.query(
-      `INSERT INTO topics (chapter_id, title, topic_order) VALUES ?`,
-      [insertValues]
-    );
+    // Insert topics one by one (safest, avoids bulk-insert edge cases)
+    for (let i = 0; i < topicsRaw.length; i++) {
+      const title = String(topicsRaw[i].title || '').trim().slice(0, 290);
+      const order = parseInt(topicsRaw[i].order) || (i + 1);
+      if (!title) continue;
+      await pool.query(
+        `INSERT IGNORE INTO topics (chapter_id, title, topic_order) VALUES (?, ?, ?)`,
+        [ch.id, title, order]
+      );
+    }
 
     const [created] = await pool.query(
-      `SELECT id, title, topic_order FROM topics WHERE chapter_id = ? ORDER BY topic_order ASC`,
+      `SELECT id, title, topic_order, 0 AS has_notes FROM topics WHERE chapter_id = ? ORDER BY topic_order ASC`,
       [ch.id]
     );
 
@@ -261,135 +233,7 @@ exports.getTopicContent = async (req, res) => {
   }
 };
 
-// ── STEP 1 — Google Search grounded research ──────────────────────────────────
-async function groundedResearch(t, sectionNum) {
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-  const model  = genAI.getGenerativeModel({
-    model:          'gemini-2.0-flash',
-    tools:          [{ googleSearch: {} }],
-    safetySettings: SAFETY,
-  });
-
-  const query = `NCERT Class ${t.grade} ${t.subject_name} Chapter ${t.chapter_number} "${t.chapter_title}" Section ${sectionNum}: "${t.title}" — full explanation, derivations, formulas, solved examples, JEE NEET tricks`;
-
-  const result = await model.generateContent({
-    contents: [{ role: 'user', parts: [{ text:
-      `You are a senior NCERT educator. Use Google Search to retrieve accurate information about:
-
-${query}
-
-Write comprehensive study material covering:
-1. Complete conceptual explanation with real-life analogies
-2. All mathematical derivations — show every single step
-3. All key formulas with variables, units, and shortcuts
-4. Solved example from the NCERT textbook (Chapter ${t.chapter_number})
-5. Common mistakes students make in exams
-6. Memory tricks and JEE/NEET exam shortcuts
-
-Write in plain, simple English suitable for a Class ${t.grade} student preparing for competitive exams.`
-    }] }],
-    generationConfig: { maxOutputTokens: 4000, temperature: 0.2 },
-  });
-
-  return result.response.text();
-}
-
-// ── STEP 2 — Structure raw research into JSON ─────────────────────────────────
-async function structureIntoJSON(raw, t, sectionNum) {
-  const model = getGeminiModel('gemini-2.0-flash');
-
-  const prompt = `You are formatting verified educational content into a structured JSON object.
-
-Here is researched content about NCERT Class ${t.grade} ${t.subject_name} — Section ${sectionNum} "${t.title}":
-
----
-${raw}
----
-
-Convert the above into this EXACT JSON structure. Return ONLY valid JSON — no markdown, no extra text:
-{
-  "summary": "2–3 warm sentences: what this section is about and why it matters in real life",
-  "theory": "# ${t.title}\\n\\n[Full detailed explanation. Use ## sub-sections. Min 400 words. Use analogies. Use $math$ for inline equations, $$math$$ for displayed equations.]",
-  "key_points": ["🎯 point 1", "🎯 point 2", "🎯 point 3", "🎯 point 4", "🎯 point 5"],
-  "derivations": [
-    {
-      "name": "Name of derivation",
-      "why_we_derive": "One sentence: why this result matters",
-      "starting_point": "We start from [equation or observation]",
-      "steps": ["Step 1: [eq]. Because [reason]", "Step 2: [eq]. So [result]"],
-      "final_result": "$$final formula$$",
-      "remember_as": "30-second re-derivation trick"
-    }
-  ],
-  "formulas": [
-    {
-      "name": "Formula name",
-      "formula": "$$LaTeX$$",
-      "variables": "var1 = meaning (unit), var2 = meaning (unit)",
-      "trick": "🔥 Exam shortcut or quick-recall method",
-      "unit_check": "Result unit is [unit] — verify before writing final answer"
-    }
-  ],
-  "solved_example": {
-    "problem": "Full NCERT-style numerical problem with realistic numbers",
-    "given": "• datum 1\\n• datum 2",
-    "to_find": "What to calculate",
-    "solution": "Step 1: ...\\nStep 2: ...\\nStep 3: final calculation",
-    "answer": "✅ Final answer with units",
-    "key_insight": "The one idea that makes this problem click"
-  },
-  "common_mistakes": [
-    { "mistake": "What students wrongly do", "why_wrong": "Why incorrect", "correct_way": "Right approach" }
-  ],
-  "fun_fact": "Interesting real-world application or historical connection to this topic"
-}`;
-
-  const result = await model.generateContent({
-    contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    generationConfig: { maxOutputTokens: 6000, temperature: 0.2 },
-  });
-
-  return parseAI(result.response.text());
-}
-
-// ── DIRECT GENERATION (fallback) ──────────────────────────────────────────────
-async function directGenerate(t, sectionNum) {
-  const model = getGeminiModel('gemini-2.0-flash');
-
-  const prompt = `You are a brilliant, friendly NCERT teacher. Write complete study notes for:
-
-📚 Book: ${t.book_title}
-📖 Chapter ${t.chapter_number}: ${t.chapter_title}
-🔖 Section ${sectionNum}: ${t.title}
-📘 Subject: ${t.subject_name}, Class ${t.grade}
-
-RULES:
-- Explain like talking to a curious 16-year-old. Simple, warm, encouraging.
-- Use real-life analogies (cricket, smartphones, kitchen, cars, etc.)
-- Show EVERY derivation step — never skip. Explain each step in plain English.
-- Use $math$ inline, $$math$$ for block equations.
-
-Return ONLY valid JSON (no markdown wrapper):
-{
-  "summary": "2–3 warm sentences about this section and why it matters",
-  "theory": "# ${t.title}\\n\\n[Full explanation, ## sub-sections, analogies, $math$ inline, $$math$$ block. Min 400 words.]",
-  "key_points": ["🎯 point 1","🎯 point 2","🎯 point 3","🎯 point 4","🎯 point 5"],
-  "derivations": [{"name":"...","why_we_derive":"...","starting_point":"...","steps":["Step 1: ..."],"final_result":"$$...$$","remember_as":"..."}],
-  "formulas": [{"name":"...","formula":"$$...$$","variables":"...","trick":"🔥 ...","unit_check":"..."}],
-  "solved_example": {"problem":"...","given":"...","to_find":"...","solution":"...","answer":"✅ ...","key_insight":"..."},
-  "common_mistakes": [{"mistake":"...","why_wrong":"...","correct_way":"..."}],
-  "fun_fact": "..."
-}`;
-
-  const result = await model.generateContent({
-    contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    generationConfig: { maxOutputTokens: 6000, temperature: 0.35 },
-  });
-
-  return parseAI(result.response.text());
-}
-
-// ── GENERATE TOPIC NOTES (AI + web grounding) ─────────────────────────────────
+// ── GENERATE TOPIC NOTES ──────────────────────────────────────────────────────
 exports.generateTopicContent = async (req, res) => {
   try {
     await ensureTable();
@@ -411,17 +255,70 @@ exports.generateTopicContent = async (req, res) => {
     const t = rows[0];
     const sectionNum = `${t.chapter_number}.${t.topic_order}`;
 
-    let notes;
-    let method = 'grounded';
+    const model = getGeminiModel('gemini-2.0-flash');
 
+    const prompt = `You are a brilliant NCERT teacher. Write complete, detailed study notes for a Class ${t.grade} student preparing for JEE/NEET.
+
+Topic: Section ${sectionNum} — "${t.title}"
+Chapter ${t.chapter_number}: ${t.chapter_title}
+Subject: ${t.subject_name}, Class ${t.grade} (NCERT)
+
+RULES:
+- Explain like talking to a curious 16-year-old. Simple, warm, encouraging.
+- Use real-life examples (cricket, smartphones, kitchen, cars).
+- Show EVERY derivation step — never skip. Explain each step in plain English.
+- For every formula: where it comes from + trick to remember it.
+- Use $...$  for inline math and $$...$$ for displayed equations.
+
+Return a single JSON object matching this exact schema:
+{
+  "summary": "2-3 sentences: what this section covers and why it matters",
+  "theory": "Full explanation using ## headings for sub-sections. Min 400 words. Use analogies and $math$ inline, $$math$$ for block equations.",
+  "key_points": ["Point 1", "Point 2", "Point 3", "Point 4", "Point 5"],
+  "derivations": [
+    {
+      "name": "Name of what is being derived",
+      "why_we_derive": "One sentence: why this result matters",
+      "starting_point": "We start from [equation or observation]",
+      "steps": ["Step 1: equation. Because reason.", "Step 2: equation. So result."],
+      "final_result": "$$final formula$$",
+      "remember_as": "Quick 30-second re-derivation trick"
+    }
+  ],
+  "formulas": [
+    {
+      "name": "Formula name",
+      "formula": "$$LaTeX$$",
+      "variables": "var = meaning (unit), var2 = meaning (unit)",
+      "trick": "Exam shortcut or quick-recall tip",
+      "unit_check": "Result unit is [unit]"
+    }
+  ],
+  "solved_example": {
+    "problem": "A realistic NCERT-style numerical problem",
+    "given": "datum 1, datum 2",
+    "to_find": "What to calculate",
+    "solution": "Step 1: ...\\nStep 2: ...\\nStep 3: final answer",
+    "answer": "Final answer with units",
+    "key_insight": "The one idea that makes this problem click"
+  },
+  "common_mistakes": [
+    { "mistake": "What students do wrong", "why_wrong": "Why incorrect", "correct_way": "Right approach" }
+  ],
+  "fun_fact": "An interesting real-world application or fact about this topic"
+}`;
+
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: JSON_CONFIG,
+    });
+
+    let notes;
     try {
-      // Attempt two-step: web research → JSON structuring
-      const raw = await groundedResearch(t, sectionNum);
-      notes     = await structureIntoJSON(raw, t, sectionNum);
-    } catch (groundErr) {
-      console.warn(`[lib-study] Grounding failed (${groundErr.message}), falling back to direct generation`);
-      method = 'direct';
-      notes  = await directGenerate(t, sectionNum);
+      notes = JSON.parse(result.response.text());
+    } catch (parseErr) {
+      console.error('[lib-study] notes parse error:', result.response.text().slice(0, 300));
+      throw new Error('AI returned invalid JSON for notes');
     }
 
     await pool.query(
@@ -430,21 +327,14 @@ exports.generateTopicContent = async (req, res) => {
       [t.id, JSON.stringify(notes)]
     );
 
-    res.json({
-      success: true,
-      data:    notes,
-      cached:  false,
-      method,
-      section: sectionNum,
-      topic_title: t.title,
-    });
+    res.json({ success: true, data: notes, cached: false, section: sectionNum, topic_title: t.title });
   } catch (e) {
-    console.error('[lib-study] generate:', e.message);
+    console.error('[lib-study] generateTopicContent:', e.message);
     res.status(500).json({ success: false, message: e.message });
   }
 };
 
-// ── GENERATE PRACTICE QUESTIONS (always fresh) ───────────────────────────────
+// ── GENERATE PRACTICE QUESTIONS ───────────────────────────────────────────────
 exports.generatePracticeQuestions = async (req, res) => {
   try {
     const { count = 5, difficulty = 'mixed', offset = 0 } = req.query;
@@ -464,68 +354,65 @@ exports.generatePracticeQuestions = async (req, res) => {
     if (!rows.length) return res.status(404).json({ success: false, message: 'Topic not found' });
     const t = rows[0];
 
-    const n       = Math.min(parseInt(count)  || 5, 10);
+    const n       = Math.min(parseInt(count) || 5, 10);
     const off     = parseInt(offset) || 0;
-    const diffStr = difficulty === 'mixed'
-      ? '2 easy, 2 medium, 1 hard'
-      : `all ${difficulty}`;
+    const diffStr = difficulty === 'mixed' ? '2 easy, 2 medium, 1 hard' : `all ${difficulty}`;
 
     const TWISTS = [
-      'Use completely different scenarios than typical textbook examples.',
+      'Use completely different scenarios from typical textbook examples.',
       'Focus on application-based problems with real-world context.',
       'Combine multiple concepts in each problem.',
       'Include problems with surprising or counterintuitive answers.',
       'Include problems that appear simple but require careful analysis.',
     ];
     const twist     = TWISTS[Math.floor(Math.random() * TWISTS.length)];
-    const batchNote = off > 0
-      ? `IMPORTANT: This is batch #${Math.floor(off / n) + 1}. Generate COMPLETELY DIFFERENT problems from any previous batch.`
-      : '';
+    const batchNote = off > 0 ? `This is batch #${Math.floor(off / n) + 1}. Make problems COMPLETELY DIFFERENT from previous batches.` : '';
 
     const model  = getGeminiModel('gemini-2.0-flash');
-    const prompt = `You are an expert ${t.subject_name} teacher creating engaging practice problems.
+    const prompt = `You are an expert ${t.subject_name} teacher. ${batchNote}
 
-${batchNote}
-
-Topic: Section ${t.chapter_number}.${t.topic_order} — "${t.title}"
-Chapter: ${t.chapter_title}
+Create ${n} practice problems for:
+Section ${t.chapter_number}.${t.topic_order} — "${t.title}" (${t.chapter_title})
 Subject: ${t.subject_name}, Class ${t.grade} (NCERT)
-${twist}
+Difficulty mix: ${diffStr}
+Style: ${twist}
 
-Generate EXACTLY ${n} questions (difficulty: ${diffStr}).
-Mix types: MCQ (4 options), Numerical (calculation), Short Answer.
-
-RULES:
-- Each numerical must use DIFFERENT numbers and scenarios
-- MCQ wrong options must be plausible (not obviously wrong)
-- Solutions must show EVERY calculation step
+Rules:
+- Mix types: MCQ (4 options), Numerical, Short Answer
+- MCQ wrong options must be plausible
+- Show complete step-by-step solution for every question
 - Use $math$ inline and $$math$$ for block equations
-- Vary: some straightforward, some tricky, some real-world
 
-Return ONLY a strict JSON array (no markdown, no extra text):
+Return a JSON array:
 [
   {
-    "type": "mcq|numerical|short_answer",
-    "difficulty": "easy|medium|hard",
-    "question": "Full question text",
+    "type": "mcq or numerical or short_answer",
+    "difficulty": "easy or medium or hard",
+    "question": "question text with $math$ where needed",
     "options": ["A) ...", "B) ...", "C) ...", "D) ..."],
-    "hint": "A nudge without revealing the answer",
-    "solution": "Complete step-by-step solution with every line of working",
-    "answer": "For MCQ: 'C) text'. For numerical: 'value unit'. For short: brief answer",
-    "formula_used": "Key formula or concept applied"
+    "hint": "nudge without revealing the answer",
+    "solution": "full step-by-step working",
+    "answer": "final answer",
+    "formula_used": "key formula applied"
   }
 ]`;
 
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: { maxOutputTokens: 4000, temperature: 0.75 },
+      generationConfig: { ...JSON_CONFIG, maxOutputTokens: 4000, temperature: 0.75 },
     });
 
-    const questions = parseAI(result.response.text());
+    let questions;
+    try {
+      questions = JSON.parse(result.response.text());
+    } catch {
+      questions = [];
+    }
+
     res.json({
       success: true,
-      data:    Array.isArray(questions) ? questions : [],
-      topic:   { title: t.title, section: `${t.chapter_number}.${t.topic_order}`, subject: t.subject_name },
+      data: Array.isArray(questions) ? questions : [],
+      topic: { title: t.title, section: `${t.chapter_number}.${t.topic_order}`, subject: t.subject_name },
     });
   } catch (e) {
     console.error('[lib-study] practice:', e.message);
