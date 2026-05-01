@@ -5,22 +5,23 @@ import { useJee } from '../layout';
 import { jeeAPI } from '@/lib/api/jee.api';
 import { BOOKS, SUBJECT_META } from '@/data/jee-neet-chapters';
 import {
-  BookOpen, ChevronRight, Clock, Tag, AlertCircle, CheckCircle, Layers
+  BookOpen, ChevronRight, Clock, AlertCircle, CheckCircle2, Layers, Sparkles
 } from 'lucide-react';
 
 export default function TextbookPage() {
   const { examType, selectedClass } = useJee();
-  const examKey = examType === 'neet' ? 'neet' : 'jee';
+  const examKey  = examType === 'neet' ? 'neet' : 'jee';
   const subjects = Object.keys(BOOKS[examKey]);
 
-  const [subject, setSubject] = useState(subjects[0]);
+  const [subject,    setSubject]    = useState(subjects[0]);
   const [classOrVol, setClassOrVol] = useState(selectedClass ?? 11);
-  const [chapters, setChapters] = useState([]);
-  const [book, setBook] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [chapters,   setChapters]   = useState([]);
+  const [book,       setBook]       = useState(null);
+  const [loading,    setLoading]    = useState(false);
+  const [error,      setError]      = useState('');
 
   useEffect(() => { setClassOrVol(selectedClass ?? 11); }, [selectedClass]);
+
   useEffect(() => {
     const subs = Object.keys(BOOKS[examKey]);
     if (!subs.includes(subject)) setSubject(subs[0]);
@@ -37,17 +38,18 @@ export default function TextbookPage() {
           setChapters(r.data.data);
           setBook(r.data.book || null);
         } else {
-          setError('No NCERT chapters found in the library for this subject. Ask your administrator to upload the book content.');
+          setError('No chapters found in the library for this subject. Ask your administrator to upload the book content.');
         }
       })
       .catch(() => setError('Failed to load chapters. Please try again.'))
       .finally(() => setLoading(false));
   }, [subject, classOrVol]);
 
-  const isNeet = examType === 'neet';
-  const accentBg  = isNeet ? 'bg-emerald-600' : 'bg-blue-600';
-  const accentText= isNeet ? 'text-emerald-600' : 'text-blue-600';
-  const accentBg2 = isNeet ? 'bg-emerald-50'  : 'bg-blue-50';
+  const isNeet     = examType === 'neet';
+  const accentBg   = isNeet ? 'bg-emerald-600' : 'bg-blue-600';
+  const accentText = isNeet ? 'text-emerald-600' : 'text-blue-600';
+  const accentBg2  = isNeet ? 'bg-emerald-50'   : 'bg-blue-50';
+  const accentBorder = isNeet ? 'border-emerald-200' : 'border-blue-200';
 
   return (
     <div>
@@ -67,7 +69,7 @@ export default function TextbookPage() {
         })}
       </div>
 
-      {/* Class + book info */}
+      {/* Class selector + book badge */}
       <div className="flex items-center gap-3 mb-5 flex-wrap">
         <div className="flex bg-white border border-gray-200 rounded-full p-0.5">
           {[11, 12].map(v => (
@@ -79,10 +81,10 @@ export default function TextbookPage() {
           ))}
         </div>
         {book && (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-blue-100 rounded-full">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-100 rounded-full shadow-sm">
             <BookOpen size={12} className={accentText} />
             <span className="text-[11px] font-semibold text-gray-700">{book.title}</span>
-            <span className="text-[9px] px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded-full font-bold">Library</span>
+            <span className={`text-[9px] px-1.5 py-0.5 ${accentBg2} ${accentText} rounded-full font-bold border ${accentBorder}`}>Library</span>
           </div>
         )}
       </div>
@@ -91,51 +93,80 @@ export default function TextbookPage() {
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {Array(9).fill(0).map((_, i) => (
-            <div key={i} className="h-32 bg-white rounded-xl border border-gray-100 animate-pulse" />
+            <div key={i} className="h-36 bg-white rounded-2xl border border-gray-100 animate-pulse" />
           ))}
         </div>
       ) : error ? (
-        <div className="flex items-start gap-3 p-5 bg-amber-50 rounded-xl border border-amber-100">
+        <div className="flex items-start gap-3 p-5 bg-amber-50 rounded-2xl border border-amber-100">
           <AlertCircle size={18} className="text-amber-500 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-amber-800">{error}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {chapters.map((ch, idx) => (
-            <Link
-              key={ch.id}
-              href={`/jee-command/textbook/${ch.id}`}
-              className="group bg-white rounded-xl border border-gray-100 p-4 hover:border-blue-200 hover:shadow-md transition-all flex flex-col"
-            >
-              <div className="flex items-start justify-between gap-2 mb-3">
-                <div className={`w-10 h-10 rounded-xl ${accentBg2} flex items-center justify-center text-[13px] font-extrabold ${accentText} flex-shrink-0 group-hover:${accentBg} group-hover:text-white transition-colors`}>
-                  {ch.chapter_number || idx + 1}
+          {chapters.map((ch, idx) => {
+            const topicCount = ch.topic_count  || 0;
+            const notesCount = ch.notes_count  || 0;
+            const pct        = topicCount > 0 ? Math.round((notesCount / topicCount) * 100) : 0;
+            const allReady   = topicCount > 0 && notesCount === topicCount;
+
+            return (
+              <Link
+                key={ch.id}
+                href={`/jee-command/textbook/${ch.id}`}
+                className="group bg-white rounded-2xl border border-gray-100 p-4 hover:border-blue-200 hover:shadow-md transition-all flex flex-col shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <div className={`w-10 h-10 rounded-xl ${accentBg2} flex items-center justify-center text-[13px] font-extrabold ${accentText} flex-shrink-0`}>
+                    {ch.chapter_number || idx + 1}
+                  </div>
+                  <ChevronRight size={14} className="text-gray-300 group-hover:text-blue-500 transition-colors mt-1 flex-shrink-0" />
                 </div>
-                <ChevronRight size={14} className="text-gray-300 group-hover:text-blue-500 transition-colors mt-1 flex-shrink-0" />
-              </div>
 
-              <p className="text-[13px] font-bold text-gray-800 leading-snug group-hover:text-blue-700 transition-colors flex-1">
-                {ch.title}
-              </p>
+                <p className="text-[13px] font-bold text-gray-800 leading-snug group-hover:text-blue-700 transition-colors flex-1">
+                  {ch.title}
+                </p>
 
-              {ch.description && (
-                <p className="mt-1.5 text-[11px] text-gray-400 line-clamp-2 leading-relaxed">{ch.description}</p>
-              )}
-
-              <div className="mt-3 pt-3 border-t border-gray-50 flex items-center gap-3 text-[10px] text-gray-400">
-                {ch.topic_count > 0 && (
-                  <span className="flex items-center gap-1">
-                    <Layers size={9} /> {ch.topic_count} sections
-                  </span>
+                {ch.description && (
+                  <p className="mt-1.5 text-[11px] text-gray-400 line-clamp-2 leading-relaxed">{ch.description}</p>
                 )}
-                {ch.estimated_study_time_mins && (
-                  <span className="flex items-center gap-1">
-                    <Clock size={9} /> ~{ch.estimated_study_time_mins} min
-                  </span>
-                )}
-              </div>
-            </Link>
-          ))}
+
+                <div className="mt-3 pt-3 border-t border-gray-50 space-y-2">
+                  <div className="flex items-center gap-3 text-[10px] text-gray-400">
+                    {topicCount > 0 && (
+                      <span className="flex items-center gap-1">
+                        <Layers size={9} /> {topicCount} sections
+                      </span>
+                    )}
+                    {ch.estimated_study_time_mins > 0 && (
+                      <span className="flex items-center gap-1">
+                        <Clock size={9} /> ~{ch.estimated_study_time_mins} min
+                      </span>
+                    )}
+                    {allReady && (
+                      <span className="flex items-center gap-1 text-emerald-600 font-medium ml-auto">
+                        <CheckCircle2 size={9} /> All ready
+                      </span>
+                    )}
+                    {!allReady && notesCount > 0 && (
+                      <span className="flex items-center gap-1 text-blue-500 ml-auto">
+                        <Sparkles size={9} /> {notesCount}/{topicCount}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Progress bar */}
+                  {topicCount > 0 && (
+                    <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-1 rounded-full transition-all ${allReady ? 'bg-emerald-400' : 'bg-blue-400'}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>
