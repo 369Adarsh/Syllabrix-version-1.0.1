@@ -430,6 +430,11 @@ export default function SignUpPage() {
           </div>
         </div>
 
+        <label className="flex items-start gap-2.5 cursor-pointer">
+          <input type="checkbox" checked={agreedToTerms} onChange={e => setAgreedToTerms(e.target.checked)} className="mt-1" />
+          <span className="text-[12px] text-gray-500">I agree to the Terms and Privacy Policy</span>
+        </label>
+
         <button
           type="submit"
           disabled={loading}
@@ -437,11 +442,6 @@ export default function SignUpPage() {
         >
           {loading ? <Loader2 size={16} className="animate-spin" /> : <>Create Account <ArrowRight size={15} /></>}
         </button>
-
-        <label className="flex items-start gap-2.5 cursor-pointer">
-          <input type="checkbox" checked={agreedToTerms} onChange={e => setAgreedToTerms(e.target.checked)} className="mt-1" />
-          <span className="text-[12px] text-gray-500">I agree to the Terms and Privacy Policy</span>
-        </label>
       </form>
 
       <p className="text-center text-[13px] text-gray-500 mt-6">
