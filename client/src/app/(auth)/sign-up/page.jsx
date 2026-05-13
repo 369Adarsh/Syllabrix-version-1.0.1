@@ -25,15 +25,6 @@ const USER_TYPES = [
   { value: 'hr_professional', label: 'HR Professional', icon: UserCog, desc: 'Recruit & connect talent', color: 'teal' },
 ];
 
-const COLOR_MAP = {
-  blue: { bg: 'bg-blue-50', border: 'border-blue-500', text: 'text-blue-700', ring: 'ring-blue-500/20', dot: 'bg-blue-500' },
-  indigo: { bg: 'bg-indigo-50', border: 'border-indigo-500', text: 'text-indigo-700', ring: 'ring-indigo-500/20', dot: 'bg-indigo-500' },
-  emerald: { bg: 'bg-emerald-50', border: 'border-emerald-500', text: 'text-emerald-700', ring: 'ring-emerald-500/20', dot: 'bg-emerald-500' },
-  purple: { bg: 'bg-purple-50', border: 'border-purple-500', text: 'text-purple-700', ring: 'ring-purple-500/20', dot: 'bg-purple-500' },
-  amber: { bg: 'bg-amber-50', border: 'border-amber-500', text: 'text-amber-700', ring: 'ring-amber-500/20', dot: 'bg-amber-500' },
-  rose: { bg: 'bg-rose-50', border: 'border-rose-500', text: 'text-rose-700', ring: 'ring-rose-500/20', dot: 'bg-rose-500' },
-  teal: { bg: 'bg-teal-50', border: 'border-teal-500', text: 'text-teal-700', ring: 'ring-teal-500/20', dot: 'bg-teal-500' },
-};
 
 function InputField({ icon: Icon, label, type = 'text', value, onChange, placeholder, required, autoComplete, children }) {
   return (
@@ -302,26 +293,16 @@ export default function SignUpPage() {
         )}
 
         <div>
-          <label className="block text-[13px] font-semibold text-gray-700 mb-2">I am a</label>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-            {USER_TYPES.map(type => {
-              const selected = form.user_type === type.value;
-              const c = COLOR_MAP[type.color];
-              return (
-                <button
-                  key={type.value}
-                  type="button"
-                  onClick={() => update('user_type', type.value)}
-                  className={`relative flex flex-col items-center gap-1.5 p-3.5 rounded-xl border-2 text-center transition-all ${
-                    selected ? `${c.bg} ${c.border} ring-4 ${c.ring}` : 'bg-white border-gray-100 hover:bg-gray-50'
-                  }`}
-                >
-                  <type.icon size={20} className={selected ? c.text : 'text-gray-400'} />
-                  <span className={`text-[12px] font-bold ${selected ? c.text : 'text-gray-700'}`}>{type.label}</span>
-                </button>
-              );
-            })}
-          </div>
+          <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">I am a</label>
+          <select
+            value={form.user_type}
+            onChange={e => update('user_type', e.target.value)}
+            className="w-full pl-4 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-[14px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 focus:bg-white transition-all appearance-none"
+          >
+            {USER_TYPES.map(type => (
+              <option key={type.value} value={type.value}>{type.label} — {type.desc}</option>
+            ))}
+          </select>
         </div>
 
         {form.user_type === 'parent' && (
