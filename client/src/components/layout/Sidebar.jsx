@@ -125,6 +125,7 @@ function StudentSidebarContent({ onClose }) {
           <NavItem href="/my-world/post" icon={Plus}       label="Share Activity" {...p} />
 
           <Section label="Learn & Play" />
+          <NavItem href="/study-table"  icon={BookOpen}    label="Study Table"   {...p} />
           <NavItem href="/learn-play"   icon={Gamepad2}    label="Learn & Play"  {...p} />
           <NavItem href="/stories"      icon={BookOpen}    label="Story Library" {...p} />
           <NavItem href="/ai-buddy"     icon={Sparkles}    label="AI Buddy"      {...p} />
@@ -160,6 +161,7 @@ function StudentSidebarContent({ onClose }) {
           <NavItem href="/discover/skill-quiz" icon={Target}   label="Skill Quiz"     {...p} />
 
           <Section label="Learn" />
+          <NavItem href="/study-table"     icon={BookOpen}     label="Study Table"    {...p} />
           <NavItem href="/ai-buddy"        icon={Sparkles}     label="AI Buddy"       {...p} />
           <NavItem href="/prep"            icon={GraduationCap} label="PrepSmart"     {...p} />
           <NavItem href="/mindmap"         icon={Brain}        label="Mind Maps"      {...p} />
@@ -189,6 +191,7 @@ function StudentSidebarContent({ onClose }) {
           <NavItem href="/home"            icon={Home}          label="Dashboard"      {...p} />
 
           <Section label="Board Prep" />
+          <NavItem href="/study-table"            icon={BookOpen}  label="Study Table"     {...p} />
           <NavItem href="/boards"                 icon={Target}    label="Board Hub"       {...p} />
           <NavItem href="/boards/chapters"        icon={BookOpen}  label="Chapter Tracker" {...p} />
           <NavItem href="/boards/practice"        icon={Brain}     label="Practice Hub"    {...p} />
