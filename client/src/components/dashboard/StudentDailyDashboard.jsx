@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { getPlatformMode } from '@/utils/platformMode';
+import { resolveStudentCurriculum, getPrimaryExams } from '@/data/curriculum-map';
 import { postsAPI } from '@/lib/api/posts.api';
 import CreatePostBox from '@/components/feed/CreatePostBox';
 import PostCard from '@/components/feed/PostCard';
@@ -16,7 +17,7 @@ import apiClient from '@/lib/api-client';
 import {
   Flame, Loader2, ArrowRight, Sparkles, GraduationCap,
   Brain, Newspaper, Gamepad2, Zap, BookOpen, Target,
-  BarChart2, Users, CheckCircle2, Circle, Trophy, Map
+  BarChart2, Users, CheckCircle2, Circle, Trophy, Map, BookMarked, ChevronRight
 } from 'lucide-react';
 
 // ─── Per-mode config ──────────────────────────────────────────────────────────
@@ -143,6 +144,137 @@ const MODE_CONFIG = {
   },
 };
 
+// ─── Adaptive config builder ──────────────────────────────────────────────────
+// Overrides mode-level defaults with curriculum-specific values when available.
+
+function buildAdaptiveCfg(baseCfg, curriculum, mode) {
+  if (!curriculum || curriculum.tier === 'default') return baseCfg;
+
+  const tasks      = [...baseCfg.tasks];
+  const quickLinks = [...baseCfg.quickLinks];
+
+  // For exam-focused modes: point the primary exam task at the curriculum's command
+  if ((mode === 'exam_command' || mode === 'board_warrior') && curriculum.examCommandHref) {
+    tasks[0] = {
+      ...tasks[0],
+      label: curriculum.examCommandLabel,
+      href:  curriculum.examCommandHref,
+    };
+    // Update the first quickLink that points to /jee-command or /prep
+    const cmdIdx = quickLinks.findIndex(l => l.href === '/jee-command' || l.href === '/prep');
+    if (cmdIdx !== -1) {
+      quickLinks[cmdIdx] = { ...quickLinks[cmdIdx], label: 'Exam Command', href: curriculum.examCommandHref };
+    }
+  }
+
+  return {
+    ...baseCfg,
+    subtitle: curriculum.dashboardSubtitle || baseCfg.subtitle,
+    tasks,
+    quickLinks,
+  };
+}
+
+// ─── Curriculum Context Widget ────────────────────────────────────────────────
+// Shows the student's resolved class/board context, subjects, and top exams.
+
+const EXAM_TYPE_COLOR = {
+  board:       'bg-emerald-50 text-emerald-700 border-emerald-200',
+  entrance:    'bg-blue-50 text-blue-700 border-blue-200',
+  scholarship: 'bg-amber-50 text-amber-700 border-amber-200',
+  olympiad:    'bg-purple-50 text-purple-700 border-purple-200',
+  professional:'bg-teal-50 text-teal-700 border-teal-200',
+  government:  'bg-sky-50 text-sky-700 border-sky-200',
+  career:      'bg-violet-50 text-violet-700 border-violet-200',
+  preparation: 'bg-gray-50 text-gray-600 border-gray-200',
+  aspirational:'bg-rose-50 text-rose-700 border-rose-200',
+  school:      'bg-gray-50 text-gray-500 border-gray-200',
+  default:     'bg-gray-50 text-gray-600 border-gray-200',
+};
+
+function CurriculumContextWidget({ curriculum, theme }) {
+  const [showAll, setShowAll] = useState(false);
+  if (!curriculum || curriculum.tier === 'default') return null;
+
+  const primaryExams  = getPrimaryExams(curriculum, 3);
+  const allExams      = curriculum.exams || [];
+  const subjects      = curriculum.subjects || [];
+  const visibleExams  = showAll ? allExams : primaryExams;
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-gray-50 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <BookMarked size={14} style={{ color: theme.primaryColor }} />
+          <span className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Your Curriculum</span>
+        </div>
+        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full border"
+          style={{ color: theme.primaryColor, borderColor: `${theme.primaryColor}40`, background: `${theme.primaryColor}0D` }}>
+          {curriculum.label}
+        </span>
+      </div>
+
+      <div className="p-4 space-y-4">
+        {/* Subjects */}
+        {subjects.length > 0 && (
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Your Subjects</p>
+            <div className="flex flex-wrap gap-1.5">
+              {subjects.map(s => (
+                <span key={s} className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-gray-50 border border-gray-200 text-gray-700">
+                  {s}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Exams */}
+        {allExams.length > 0 && (
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Relevant Exams</p>
+            <div className="space-y-1.5">
+              {visibleExams.map((exam, i) => {
+                const colorCls = EXAM_TYPE_COLOR[exam.type] || EXAM_TYPE_COLOR.default;
+                return (
+                  <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-[12px] font-medium ${colorCls}`}>
+                    <span className="text-[14px] leading-none flex-shrink-0">{exam.badge}</span>
+                    <span className="flex-1 leading-tight">{exam.name}</span>
+                    {exam.critical && (
+                      <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 flex-shrink-0">Key</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {allExams.length > 3 && (
+              <button
+                onClick={() => setShowAll(v => !v)}
+                className="mt-2 text-[11px] font-semibold flex items-center gap-1 hover:opacity-80 transition-opacity"
+                style={{ color: theme.primaryColor }}
+              >
+                {showAll ? 'Show less' : `+${allExams.length - 3} more exams`}
+                <ChevronRight size={11} className={`transition-transform ${showAll ? 'rotate-90' : ''}`} />
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Exam Command CTA */}
+        <Link
+          href={curriculum.examCommandHref || '/prep'}
+          className="flex items-center justify-between w-full px-4 py-2.5 rounded-xl text-white text-[12px] font-bold transition-all hover:opacity-90 active:scale-[0.98]"
+          style={{ background: theme.gradient }}
+        >
+          <span>{curriculum.examCommandLabel}</span>
+          <ArrowRight size={13} />
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 // ─── Feed (shared between modes that show it) ─────────────────────────────────
 
 function CommunityFeed() {
@@ -217,10 +349,10 @@ function CommunityFeed() {
 // ─── Main dashboard ───────────────────────────────────────────────────────────
 
 export default function StudentDailyDashboard() {
-  const { user } = useAuth();
-  const theme    = useTheme();
-  const mode     = getPlatformMode(user);
-  const cfg      = MODE_CONFIG[mode] || MODE_CONFIG.default;
+  const { user }     = useAuth();
+  const theme        = useTheme();
+  const mode         = getPlatformMode(user);
+  const curriculum   = resolveStudentCurriculum(user?.profile);
   const [streak, setStreak] = useState(null);
   const [completedTasks, setCompleted] = useState([]);
 
@@ -231,6 +363,10 @@ export default function StudentDailyDashboard() {
   const hour = new Date().getHours();
   const timeGreeting = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
   const firstName = user?.profile?.full_name?.split(' ')[0] || user?.username || 'there';
+
+  // Build curriculum-aware config on top of the static MODE_CONFIG
+  const baseCfg = MODE_CONFIG[mode] || MODE_CONFIG.default;
+  const cfg = buildAdaptiveCfg(baseCfg, curriculum, mode);
 
   const toggleTask = (i) =>
     setCompleted(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i]);
@@ -257,6 +393,11 @@ export default function StudentDailyDashboard() {
                   {cfg.greeting(firstName)}
                 </h1>
                 <p className="text-white/60 text-[12px] mt-1">{cfg.subtitle}</p>
+                {curriculum?.tier !== 'default' && (
+                  <span className="inline-block mt-1.5 text-[10px] font-bold text-white/50 bg-white/10 px-2 py-0.5 rounded-full tracking-wide">
+                    {curriculum.label}
+                  </span>
+                )}
               </div>
 
               <div className="flex items-center gap-3 flex-shrink-0">
@@ -345,6 +486,7 @@ export default function StudentDailyDashboard() {
 
       {/* ═══ RIGHT WIDGET COLUMN ═══ */}
       <div className="hidden lg:flex w-[280px] flex-shrink-0 flex-col gap-3 sticky top-[72px] self-start max-h-[calc(100vh-88px)] overflow-y-auto pb-4" style={{ scrollbarWidth: 'none' }}>
+        <CurriculumContextWidget curriculum={curriculum} theme={theme} />
         <ScoreWidget />
         <NewsWidget />
         <DailyChallengeWidget />

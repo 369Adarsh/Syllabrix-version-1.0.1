@@ -435,6 +435,52 @@ export default function CompleteProfilePage() {
                   <Sel label="Board" name="board" form={form} set={set} options={BOARDS} required placeholder="Select board" />
                 </div>
                 <Sel label="Medium of Instruction" name="medium" form={form} set={set} options={MEDIUMS} />
+
+                {/* Stream selector — only for Class 11 & 12 */}
+                {(form.class_name === '11' || form.class_name === '12') && (
+                  <Field label="Stream / Subject Group" required>
+                    <div className="grid grid-cols-2 gap-2 mt-1">
+                      {[
+                        { v: 'Science - PCM',  icon: '⚙️', sub: 'Physics · Chemistry · Maths',        color: 'blue' },
+                        { v: 'Science - PCB',  icon: '🧬', sub: 'Physics · Chemistry · Biology',       color: 'emerald' },
+                        { v: 'Science - PCMB', icon: '🔬', sub: 'Physics · Chem · Maths + Bio',        color: 'violet' },
+                        { v: 'Commerce',       icon: '📊', sub: 'Accountancy · Economics · BST',        color: 'amber' },
+                        { v: 'Arts / Humanities', icon: '🎭', sub: 'History · Pol. Sci · Geography',   color: 'rose' },
+                      ].map(({ v, icon, sub, color }) => {
+                        const sel = form.subject_stream === v;
+                        const borderCls = sel
+                          ? color === 'blue'    ? 'border-blue-500 bg-blue-50 ring-4 ring-blue-500/15'
+                          : color === 'emerald' ? 'border-emerald-500 bg-emerald-50 ring-4 ring-emerald-500/15'
+                          : color === 'violet'  ? 'border-violet-500 bg-violet-50 ring-4 ring-violet-500/15'
+                          : color === 'amber'   ? 'border-amber-500 bg-amber-50 ring-4 ring-amber-500/15'
+                          : 'border-rose-500 bg-rose-50 ring-4 ring-rose-500/15'
+                          : 'border-gray-100 hover:border-gray-200';
+                        const textCls = sel
+                          ? color === 'blue'    ? 'text-blue-700'
+                          : color === 'emerald' ? 'text-emerald-700'
+                          : color === 'violet'  ? 'text-violet-700'
+                          : color === 'amber'   ? 'text-amber-700'
+                          : 'text-rose-700'
+                          : 'text-gray-700';
+                        const subCls = sel
+                          ? color === 'blue'    ? 'text-blue-500'
+                          : color === 'emerald' ? 'text-emerald-500'
+                          : color === 'violet'  ? 'text-violet-500'
+                          : color === 'amber'   ? 'text-amber-500'
+                          : 'text-rose-500'
+                          : 'text-gray-400';
+                        return (
+                          <button key={v} type="button" onClick={() => set('subject_stream', v)}
+                            className={`p-3 rounded-xl border-2 text-center transition-all ${borderCls}`}>
+                            <span className="text-xl block mb-0.5">{icon}</span>
+                            <p className={`text-[11px] font-bold ${textCls}`}>{v}</p>
+                            <p className={`text-[10px] mt-0.5 ${subCls}`}>{sub}</p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </Field>
+                )}
               </>)}
               {form.education_level === 'college' && (<>
                 <Inp label="College / Institute Name" name="college_name" form={form} set={set} placeholder="Name of your college" />

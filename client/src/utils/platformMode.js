@@ -1,33 +1,43 @@
 /**
  * Platform Mode Detection
- * Determines which adaptive persona/mode a user is in based on their profile.
+ *
+ * Determines which adaptive persona/mode a student is in.
+ * Priority order:
+ *   1. Curriculum map (class + board + stream) — most specific
+ *   2. Coaching exam target
+ *   3. Age-group fallback
  *
  * Modes: young_explorer | curious_mind | board_warrior | exam_command | upsc_aspirant | skill_builder | default
  */
+
+import { resolveStudentCurriculum } from '@/data/curriculum-map';
 
 const UPSC_EXAMS = ['upsc', 'psc', 'ias', 'ips', 'ssc', 'banking', 'ibps', 'rrb', 'defence', 'nda', 'cds', 'capf'];
 
 export function getPlatformMode(user) {
   if (!user) return 'default';
 
-  const ageGroup   = user.age_group || '18+';
-  const userType   = user.user_type || 'student';
-  const targetExam = (user.profile?.target_exam || '').toLowerCase();
-
-  // Non-student types use their own dashboards — no mode needed
+  const userType = user.user_type || 'student';
   if (userType !== 'student') return 'default';
 
-  // Target-exam overrides age_group for 18+ aspirants
+  // Curriculum map is the primary signal
+  const curriculum = resolveStudentCurriculum(user.profile);
+  if (curriculum && curriculum.platformMode && curriculum.platformMode !== 'default') {
+    return curriculum.platformMode;
+  }
+
+  // Fallback: target_exam string
+  const targetExam = (user.profile?.target_exam || '').toLowerCase();
   if (UPSC_EXAMS.some(k => targetExam.includes(k))) return 'upsc_aspirant';
   if (targetExam.includes('jee') || targetExam.includes('neet')) return 'exam_command';
 
-  // Age-group based routing
+  // Fallback: age_group
+  const ageGroup = user.age_group || '18+';
   if (ageGroup === '5-7' || ageGroup === '8-10') return 'young_explorer';
   if (ageGroup === '11-13') return 'curious_mind';
   if (ageGroup === '14-15') return 'board_warrior';
   if (ageGroup === '16-17') return 'exam_command';
 
-  // 18+ with no specific target exam
   return 'skill_builder';
 }
 
