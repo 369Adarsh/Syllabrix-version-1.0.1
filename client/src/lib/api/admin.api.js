@@ -11,6 +11,7 @@ const getHeaders = () => ({
 export const adminAPI = {
   // Users
   getUsers: (params = {}) => axios.get(`${BASE}/users`, { ...getHeaders(), params }),
+  getUserProfile: (id) => axios.get(`${BASE}/users/${id}/profile`, getHeaders()),
   getUserActivity: (id, params = {}) => axios.get(`${BASE}/users/${id}/activity`, { ...getHeaders(), params }),
   setUserStatus: (id, status, reason) =>
     axios.post(`${BASE}/users/${id}/status`, { status, reason }, getHeaders()),

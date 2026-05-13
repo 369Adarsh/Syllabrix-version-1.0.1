@@ -18,6 +18,7 @@ router.use(authenticateAdmin);
  * 1. USER MANAGEMENT (The "Workbench")
  */
 router.get('/users', requireAdminRole(['moderator', 'analyst']), AdminController.listUsers);
+router.get('/users/:id/profile', requireAdminRole(['moderator', 'analyst']), AdminController.getUserProfile);
 router.get('/users/:id/activity', requireAdminRole(['moderator', 'analyst']), AdminController.getUserActivity);
 router.post('/users/:id/status', requireAdminRole(['moderator']), AdminController.setUserStatus);
 router.post('/users/:id/verify-email', requireAdminRole(['moderator']), AdminController.verifyUserEmail);

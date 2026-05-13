@@ -45,6 +45,84 @@ class AdminService {
   }
 
   /**
+   * 1.5. FULL USER PROFILE (Admin detail view)
+   * Returns base user + type-specific profile + social stats + linked accounts.
+   */
+  async getUserProfile(userId) {
+    // Base user with aggregate stats
+    const [[user]] = await pool.query(`
+      SELECT
+        u.id, u.syllabrix_id, u.username, u.full_name, u.email, u.user_type, u.admin_role,
+        u.is_active, u.is_profile_complete, u.created_at, u.updated_at,
+        u.email_verified_at, u.phone_verified_at, u.profile_photo_url, u.cover_photo_url,
+        u.bio, u.gender, u.age_group, u.date_of_birth, u.phone,
+        u.city, u.state, u.country,
+        (SELECT COUNT(*) FROM reports r WHERE r.reported_user_id = u.id) AS report_count,
+        (SELECT MAX(created_at) FROM user_sessions s WHERE s.user_id = u.id) AS last_seen,
+        (SELECT COUNT(*) FROM user_sessions s WHERE s.user_id = u.id) AS session_count,
+        (SELECT COUNT(*) FROM posts p WHERE p.user_id = u.id AND p.is_deleted = 0) AS post_count,
+        (SELECT COUNT(*) FROM user_follows f WHERE f.following_id = u.id) AS follower_count,
+        (SELECT COUNT(*) FROM user_follows f WHERE f.follower_id = u.id) AS following_count
+      FROM users u WHERE u.id = ?
+    `, [userId]);
+
+    if (!user) throw new Error('User not found');
+
+    // Type-specific profile
+    let profile = null;
+    if (user.user_type === 'student') {
+      const [[sp]] = await pool.query('SELECT * FROM student_profiles WHERE user_id = ?', [userId]);
+      profile = sp || null;
+    } else if (user.user_type === 'parent') {
+      const [[pp]] = await pool.query('SELECT * FROM parent_profiles WHERE user_id = ?', [userId]);
+      profile = pp || null;
+    } else if (user.user_type === 'teacher') {
+      const [[tp]] = await pool.query('SELECT * FROM teacher_profiles WHERE user_id = ?', [userId]).catch(() => [[]]);
+      profile = tp || null;
+    } else if (user.user_type === 'professional_learner') {
+      const [[plp]] = await pool.query('SELECT * FROM professional_learner_profiles WHERE user_id = ?', [userId]).catch(() => [[]]);
+      profile = plp || null;
+    }
+
+    // For parents: linked children
+    let linkedChildren = [];
+    if (user.user_type === 'parent') {
+      const [rows] = await pool.query(`
+        SELECT u.id, u.syllabrix_id, u.full_name, u.username, u.email, u.is_active,
+               sp.class_name, sp.school_name, sp.board, sp.subject_stream, sp.target_exam
+        FROM parent_child_links pcl
+        JOIN users u ON u.id = pcl.child_user_id
+        LEFT JOIN student_profiles sp ON sp.user_id = u.id
+        WHERE pcl.parent_user_id = ?
+      `, [userId]).catch(() => [[]]);
+      linkedChildren = rows || [];
+    }
+
+    // For students: linked parent
+    let linkedParents = [];
+    if (user.user_type === 'student') {
+      const [rows] = await pool.query(`
+        SELECT u.id, u.syllabrix_id, u.full_name, u.username, u.email,
+               pp.guardian_id, pp.relationship, pp.occupation
+        FROM parent_child_links pcl
+        JOIN users u ON u.id = pcl.parent_user_id
+        LEFT JOIN parent_profiles pp ON pp.user_id = u.id
+        WHERE pcl.child_user_id = ?
+      `, [userId]).catch(() => [[]]);
+      linkedParents = rows || [];
+    }
+
+    // Recent sessions (last 5)
+    const [recentSessions] = await pool.query(`
+      SELECT user_agent, ip_address, created_at
+      FROM user_sessions WHERE user_id = ?
+      ORDER BY created_at DESC LIMIT 5
+    `, [userId]).catch(() => [[]]);
+
+    return { user, profile, linkedChildren, linkedParents, recentSessions: recentSessions || [] };
+  }
+
+  /**
    * 2. CONTENT MODERATION QUEUE
    * List all pending reports with reporter and target details.
    */

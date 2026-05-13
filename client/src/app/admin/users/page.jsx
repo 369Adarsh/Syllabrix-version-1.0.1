@@ -2,8 +2,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { adminAPI } from '@/lib/api/admin.api';
 import UserActivityPanel from '@/components/admin/UserActivityPanel';
-import { Search, Ban, CheckCircle, ShieldCheck, ChevronLeft, ChevronRight, Activity, MailCheck, Trash2 } from 'lucide-react';
+import { Search, Ban, CheckCircle, ShieldCheck, ChevronLeft, ChevronRight, Activity, MailCheck, Trash2, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
+import Link from 'next/link';
 
 const USER_TYPES = ['all', 'student', 'teacher', 'institute', 'parent', 'professional_learner', 'organization', 'hr_professional'];
 const STATUS_OPTIONS = ['all', 'active', 'banned'];
@@ -152,15 +153,15 @@ export default function AdminUsersPage() {
         ) : users.map(u => (
           <div key={u.id} className="rounded-2xl border border-gray-100 bg-white p-4 space-y-3 shadow-sm">
             <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
+              <Link href={`/admin/users/${u.id}`} className="flex items-center gap-3 min-w-0 group">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-sm font-bold shrink-0">
                   {u.full_name?.[0] || u.username?.[0] || '?'}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-gray-800 font-semibold text-sm truncate">{u.full_name || u.username}</p>
+                  <p className="text-gray-800 font-semibold text-sm truncate group-hover:text-indigo-600 transition-colors">{u.full_name || u.username}</p>
                   <p className="text-gray-400 text-xs">@{u.username}</p>
                 </div>
-              </div>
+              </Link>
               <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider shrink-0 border ${u.is_active ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-red-100 text-red-700 border-red-200'}`}>
                 {u.is_active ? 'Active' : 'Banned'}
               </span>
@@ -242,15 +243,18 @@ export default function AdminUsersPage() {
                     <span className="text-gray-400 font-mono text-[10px] tracking-wider bg-gray-100 py-1.5 px-2 rounded-md border border-gray-200">{formatUserId(u)}</span>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
+                    <Link href={`/admin/users/${u.id}`} className="flex items-center gap-3 group">
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
                         {u.full_name?.[0] || u.username?.[0] || '?'}
                       </div>
                       <div>
-                        <p className="text-gray-800 font-semibold leading-tight">{u.full_name || u.username}</p>
+                        <p className="text-gray-800 font-semibold leading-tight group-hover:text-indigo-600 transition-colors flex items-center gap-1">
+                          {u.full_name || u.username}
+                          <ExternalLink size={10} className="opacity-0 group-hover:opacity-60 transition-opacity text-indigo-400" />
+                        </p>
                         <p className="text-gray-400 text-xs">@{u.username}</p>
                       </div>
-                    </div>
+                    </Link>
                   </td>
                   <td className="px-4 py-3">
                     <span className={`text-[10px] font-bold px-2 py-1 rounded-full border uppercase tracking-wide ${TYPE_COLORS[u.user_type] || 'bg-gray-100 text-gray-500 border-gray-200'}`}>

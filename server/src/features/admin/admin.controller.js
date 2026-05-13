@@ -37,6 +37,19 @@ class AdminController {
   }
 
   /**
+   * Full user profile for admin detail view
+   */
+  async getUserProfile(req, res) {
+    try {
+      const result = await AdminService.getUserProfile(req.params.id);
+      res.json(result);
+    } catch (error) {
+      const status = error.message === 'User not found' ? 404 : 500;
+      res.status(status).json({ error: error.message });
+    }
+  }
+
+  /**
    * Content moderation reports
    */
   async getReports(req, res) {
