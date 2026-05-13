@@ -34,6 +34,12 @@ function subjStyle(name = '') {
   return key ? SMAP[key] : { c: '#6b7280', bg: '#f9fafb', abbr: name.slice(0, 2).toUpperCase() };
 }
 
+// Only treat a URL as embeddable if it's actually a PDF file
+function isPdfUrl(url) {
+  if (!url) return false;
+  return /\.pdf(\?.*)?$/i.test(url) || url.includes('res.cloudinary.com') || url.includes('cloudinary.com');
+}
+
 // ─── TTS hook ─────────────────────────────────────────────────────────────────
 
 function useTTS() {
@@ -256,7 +262,7 @@ export default function StudyTablePage() {
         setSubjects(data);
         if (data.length) {
           setSelSub(data[0]);
-          const b = data[0].books?.find(b => b.pdf_url || b.ncert_url) || data[0].books?.[0] || null;
+          const b = data[0].books?.find(b => b.pdf_url || isPdfUrl(b.ncert_url)) || data[0].books?.[0] || null;
           setSelBook(b);
         }
       })
@@ -276,7 +282,7 @@ export default function StudyTablePage() {
 
   const pickSubject = (sub) => {
     tts.stop(); setSelCh(null); setSelSub(sub);
-    const b = sub.books?.find(b => b.pdf_url || b.ncert_url) || sub.books?.[0] || null;
+    const b = sub.books?.find(b => b.pdf_url || isPdfUrl(b.ncert_url)) || sub.books?.[0] || null;
     setSelBook(b);
   };
 
@@ -309,10 +315,9 @@ export default function StudyTablePage() {
     }
   };
 
-  const pdfUrl = selBook?.pdf_url || selBook?.ncert_url || null;
-  const viewer = pdfUrl
-    ? `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`
-    : null;
+  // Only embed URLs that are actual PDF files; NCERT HTML pages get an external link instead
+  const pdfUrl   = selBook?.pdf_url || (isPdfUrl(selBook?.ncert_url) ? selBook?.ncert_url : null);
+  const ncertPage = selBook?.ncert_url && !isPdfUrl(selBook?.ncert_url) ? selBook?.ncert_url : null;
 
   // ── No class set ──
   if (!grade) return (
@@ -442,8 +447,11 @@ export default function StudyTablePage() {
                         {book.publisher && (
                           <p className="text-[9px] text-gray-400 mt-0.5">{book.publisher}</p>
                         )}
-                        {(book.pdf_url || book.ncert_url) && (
+                        {(book.pdf_url || isPdfUrl(book.ncert_url)) && (
                           <p className="text-[9px] font-bold text-green-600 mt-0.5">PDF available</p>
+                        )}
+                        {book.ncert_url && !isPdfUrl(book.ncert_url) && !book.pdf_url && (
+                          <p className="text-[9px] font-semibold text-blue-500 mt-0.5">NCERT link</p>
                         )}
                       </div>
                     </button>
@@ -477,7 +485,7 @@ export default function StudyTablePage() {
             </div>
           )}
 
-          {viewer ? (
+          {pdfUrl ? (
             <div className="flex-1 flex flex-col min-h-0">
               {/* PDF toolbar */}
               <div className="flex-shrink-0 flex items-center gap-2 bg-gray-800 px-3 py-1.5">
@@ -498,9 +506,10 @@ export default function StudyTablePage() {
                   <Download size={10} /> Save
                 </a>
               </div>
+              {/* Direct iframe — uses browser's native PDF renderer, no external service */}
               <iframe
-                key={viewer}
-                src={viewer}
+                key={pdfUrl}
+                src={pdfUrl}
                 className="flex-1 border-0 w-full"
                 title={selBook?.title || 'Textbook'}
               />
@@ -510,7 +519,7 @@ export default function StudyTablePage() {
               {loading ? (
                 <Loader2 size={24} className="text-blue-400 animate-spin" />
               ) : selBook ? (
-                /* Book found but no PDF */
+                /* Book found but no embeddable PDF */
                 <div className="text-center max-w-xs">
                   <div className="w-24 h-32 bg-white rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center mx-auto mb-4 shadow-sm overflow-hidden">
                     {selBook.cover_image_url
@@ -519,12 +528,30 @@ export default function StudyTablePage() {
                   </div>
                   <h3 className="text-[15px] font-bold text-gray-800 mb-0.5">{selBook.title}</h3>
                   {selBook.publisher && <p className="text-[12px] text-gray-400 mb-3">{selBook.publisher}</p>}
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-[11px] text-amber-700 font-semibold">
-                    <AlertCircle size={11} /> PDF not uploaded yet
-                  </div>
-                  <p className="text-[11px] text-gray-400 mt-3 leading-relaxed">
-                    Use the chapter list to listen via Text-to-Speech
-                  </p>
+
+                  {ncertPage ? (
+                    /* NCERT URL exists but is a web page, not a PDF */
+                    <div className="space-y-2">
+                      <a
+                        href={ncertPage} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-xl text-[12px] font-semibold hover:bg-blue-700 transition-colors"
+                      >
+                        <ExternalLink size={12} /> Open on NCERT Website
+                      </a>
+                      <p className="text-[11px] text-gray-400 leading-relaxed">
+                        Read online at NCERT, or use the chapter list below to listen via Text-to-Speech
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-[11px] text-amber-700 font-semibold">
+                        <AlertCircle size={11} /> PDF not uploaded yet
+                      </div>
+                      <p className="text-[11px] text-gray-400 mt-3 leading-relaxed">
+                        Use the chapter list to listen via Text-to-Speech
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : subjects.length === 0 ? (
                 <div className="text-center">
