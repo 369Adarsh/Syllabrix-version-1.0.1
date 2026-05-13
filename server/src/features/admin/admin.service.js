@@ -60,9 +60,9 @@ class AdminService {
         (SELECT COUNT(*) FROM reports r WHERE r.reported_user_id = u.id) AS report_count,
         (SELECT MAX(created_at) FROM user_sessions s WHERE s.user_id = u.id) AS last_seen,
         (SELECT COUNT(*) FROM user_sessions s WHERE s.user_id = u.id) AS session_count,
-        (SELECT COUNT(*) FROM posts p WHERE p.user_id = u.id AND p.is_deleted = 0) AS post_count,
-        (SELECT COUNT(*) FROM user_follows f WHERE f.following_id = u.id) AS follower_count,
-        (SELECT COUNT(*) FROM user_follows f WHERE f.follower_id = u.id) AS following_count
+        (SELECT COUNT(*) FROM posts p WHERE p.user_id = u.id AND p.is_active = 1) AS post_count,
+        (SELECT COUNT(*) FROM follows f WHERE f.following_id = u.id) AS follower_count,
+        (SELECT COUNT(*) FROM follows f WHERE f.follower_id = u.id) AS following_count
       FROM users u WHERE u.id = ?
     `, [userId]);
 
