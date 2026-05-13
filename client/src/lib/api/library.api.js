@@ -46,4 +46,10 @@ export const libraryAPI = {
   // POST /api/library/generate/chapter
   // { chapterId, board, grade, subject, chapterName, chapterNumber, topics[], syllabusVersion }
   generateChapter: (payload) => api.post('/library/generate/chapter', payload),
+
+  // ─── Student Textbook View ────────────────────────────────────────────────
+  // GET /api/library/student/textbooks?board=CBSE&grade=10
+  getStudentTextbooks: (board, grade) => api.get('/library/student/textbooks', { params: { board, grade } }),
+  // GET /api/library/books/:bookId/pdf
+  getBookPdf: (bookId) => api.get(`/library/books/${bookId}/pdf`),
 };

@@ -336,6 +336,24 @@ const generateChapter = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// ─── Student Textbook View ───────────────────────────────────────────────────
+
+const getStudentTextbooks = async (req, res, next) => {
+  try {
+    const { board = 'CBSE', grade } = req.query;
+    if (!grade) return res.status(400).json({ success: false, message: 'grade is required' });
+    const data = await service.getStudentTextbooks(board, Number(grade));
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
+const getBookPdf = async (req, res, next) => {
+  try {
+    const data = await service.getBookPdf(Number(req.params.bookId));
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
 module.exports = {
   getBoards, getBoardByCode, getSyllabusVersions, getClasses, getSubjects,
   getBooks, getChapters, getTopics,
@@ -354,4 +372,6 @@ module.exports = {
   getSmartChapters,
   askAI,
   generateChapter,
+  // student textbook view
+  getStudentTextbooks, getBookPdf,
 };

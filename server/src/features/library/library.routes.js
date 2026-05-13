@@ -27,6 +27,13 @@ router.get('/classes/:classId/subjects', controller.getSubjects);
 router.get('/subjects/:subjectId/books', controller.getBooks);
 
 // ─────────────────────────────────────────────────────────────────────────────
+// STUDENT TEXTBOOK VIEW — must come before dynamic /:bookId routes
+// GET /api/library/student/textbooks?board=CBSE&grade=10
+// ─────────────────────────────────────────────────────────────────────────────
+
+router.get('/student/textbooks', authenticate, controller.getStudentTextbooks);
+
+// ─────────────────────────────────────────────────────────────────────────────
 // IMPORTANT: static routes like /books/recommend MUST come before /:bookId
 // so Express doesn't treat "recommend" as a bookId param
 // ─────────────────────────────────────────────────────────────────────────────
@@ -36,6 +43,9 @@ router.get('/books/recommend', controller.recommendBooks);
 
 // GET /api/library/books/:bookId/chapters
 router.get('/books/:bookId/chapters', controller.getChapters);
+
+// GET /api/library/books/:bookId/pdf
+router.get('/books/:bookId/pdf', controller.getBookPdf);
 
 // GET /api/library/chapters/:chapterId/topics
 router.get('/chapters/:chapterId/topics', controller.getTopics);

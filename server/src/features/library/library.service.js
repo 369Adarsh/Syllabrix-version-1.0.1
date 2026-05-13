@@ -565,6 +565,70 @@ async function getTopicContext(topicId) {
   return rows[0] || null;
 }
 
+// ─── STUDENT TEXTBOOK VIEW ────────────────────────────────────────────────────
+
+async function getStudentTextbooks(boardCode, grade) {
+  const [[board]] = await pool.execute(
+    'SELECT id FROM boards WHERE code = ? AND is_active = 1 LIMIT 1',
+    [boardCode.toUpperCase()]
+  );
+  if (!board) return [];
+
+  const [[cls]] = await pool.execute(
+    'SELECT id FROM classes WHERE board_id = ? AND grade = ? LIMIT 1',
+    [board.id, Number(grade)]
+  );
+  if (!cls) return [];
+
+  const [subjects] = await pool.execute(
+    `SELECT id, name, code, subject_type
+     FROM subjects WHERE class_id = ? AND is_active = 1
+     ORDER BY subject_type ASC, name ASC`,
+    [cls.id]
+  );
+  if (!subjects.length) return [];
+
+  for (const sub of subjects) {
+    const [books] = await pool.execute(
+      `SELECT b.id, b.title, b.publisher, b.cover_image_url, b.ncert_url,
+              b.is_official, b.is_available_free, b.priority_rank
+       FROM books b WHERE b.subject_id = ?
+       ORDER BY b.is_official DESC, b.priority_rank ASC`,
+      [sub.id]
+    );
+    for (const book of books) {
+      try {
+        const [[pdf]] = await pool.execute(
+          `SELECT file_url FROM lib_uploads
+           WHERE entity_type = 'book' AND entity_id = ? AND file_type = 'textbook'
+           ORDER BY created_at DESC LIMIT 1`,
+          [book.id]
+        );
+        book.pdf_url = pdf?.file_url || null;
+      } catch (_) {
+        book.pdf_url = null;
+      }
+    }
+    sub.books = books;
+  }
+  return subjects;
+}
+
+async function getBookPdf(bookId) {
+  try {
+    const [[row]] = await pool.execute(
+      `SELECT id, file_url, file_name, description, created_at
+       FROM lib_uploads
+       WHERE entity_type = 'book' AND entity_id = ? AND file_type = 'textbook'
+       ORDER BY created_at DESC LIMIT 1`,
+      [bookId]
+    );
+    return row || null;
+  } catch (_) {
+    return null;
+  }
+}
+
 function safeParseJSON(val, fallback) {
   if (!val) return fallback;
   if (typeof val === 'object') return val;
@@ -590,4 +654,6 @@ module.exports = {
   // chapters + topics + TOC
   getSubjectChapters, getChapterTopics, getBookChapters, getChapterBooks,
   getTopicContext,
+  // student textbook view
+  getStudentTextbooks, getBookPdf,
 };
