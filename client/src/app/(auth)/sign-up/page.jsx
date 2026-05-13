@@ -287,7 +287,7 @@ export default function SignUpPage() {
             label={mainAge <= 13 ? 'Guardian ID (Mandatory for age <= 13)' : 'Guardian ID (Optional)'}
             value={form.guardian_id}
             onChange={e => update('guardian_id', e.target.value)}
-            placeholder="G-XXXXXXXXXX"
+            placeholder="Guardian ID or Parent's Syllabrix ID"
             required={mainAge <= 13}
           />
         )}

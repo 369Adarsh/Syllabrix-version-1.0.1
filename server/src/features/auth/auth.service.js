@@ -78,6 +78,28 @@ const generateGID = async () => {
   return gid;
 };
 
+// ======================== FIND PARENT BY GUARDIAN INPUT ========================
+// Accepts either the guardian_id (G-XXXXXXXXXX) stored in parent_profiles
+// or the parent's syllabrix_id (also G-... prefix) stored in users.
+// Returns the parent_profiles row or null.
+const findParentByGuardianInput = async (input) => {
+  // 1. Try guardian_id column in parent_profiles
+  const [byGid] = await pool.query(
+    'SELECT pp.user_id FROM parent_profiles pp WHERE pp.guardian_id = ? LIMIT 1',
+    [input]
+  );
+  if (byGid.length > 0) return byGid[0];
+
+  // 2. Fallback: treat input as the parent's syllabrix_id
+  const [bySyllabrixId] = await pool.query(
+    `SELECT pp.user_id FROM parent_profiles pp
+     JOIN users u ON u.id = pp.user_id
+     WHERE u.syllabrix_id = ? AND u.user_type = 'parent' LIMIT 1`,
+    [input]
+  );
+  return bySyllabrixId[0] || null;
+};
+
 // ======================== REGISTER ========================
 
 const register = async (userData) => {
@@ -111,14 +133,13 @@ const register = async (userData) => {
     generatedGID = await generateGID();
   }
 
-  // Student Validation: G-ID mandatory for 5-13, both emails mandatory
+  // Student Validation: Guardian ID mandatory for ages 5-13
   if (user_type === 'student' && age !== null && age >= 5 && age <= 13) {
     if (!userData.guardian_id) {
       throw ApiError.badRequest('Guardian ID is mandatory for students aged 5-13.');
     }
-    // Verify G-ID exists
-    const [parent] = await pool.query('SELECT user_id FROM parent_profiles WHERE guardian_id = ? LIMIT 1', [userData.guardian_id]);
-    if (parent.length === 0) {
+    const parentRow = await findParentByGuardianInput(userData.guardian_id);
+    if (!parentRow) {
       throw ApiError.badRequest('Invalid or non-existent Guardian ID.');
     }
   }
@@ -148,11 +169,11 @@ const register = async (userData) => {
       requires_guardian: age !== null && age <= 13
     });
 
-    // If G-ID provided, create the link in parent_child_links
+    // If Guardian input provided, create the parent-child link
     if (userData.guardian_id) {
-      const [parent] = await pool.query('SELECT user_id FROM parent_profiles WHERE guardian_id = ? LIMIT 1', [userData.guardian_id]);
-      if (parent.length > 0) {
-        await pool.query('INSERT INTO parent_child_links (parent_user_id, child_user_id, status) VALUES (?, ?, ?)', [parent[0].user_id, userId, 'active']);
+      const parentRow = await findParentByGuardianInput(userData.guardian_id);
+      if (parentRow) {
+        await pool.query('INSERT INTO parent_child_links (parent_user_id, child_user_id, status) VALUES (?, ?, ?)', [parentRow.user_id, userId, 'active']);
       }
     }
   }
