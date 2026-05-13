@@ -26,6 +26,16 @@ export function getPlatformMode(user) {
     return curriculum.platformMode;
   }
 
+  // Direct class-number guard — runs before age_group to prevent e.g. a 16yo Class 10
+  // student from being misclassified as exam_command just because of their age_group.
+  const rawClass = parseInt(user.profile?.class_name, 10);
+  if (!isNaN(rawClass)) {
+    if (rawClass <= 5)  return 'young_explorer';
+    if (rawClass <= 8)  return 'curious_mind';
+    if (rawClass <= 10) return 'board_warrior';
+    // Class 11-12: curriculum map already resolved above; fall through to exam fallbacks
+  }
+
   // Fallback: target_exam string
   const targetExam = (user.profile?.target_exam || '').toLowerCase();
   if (UPSC_EXAMS.some(k => targetExam.includes(k))) return 'upsc_aspirant';

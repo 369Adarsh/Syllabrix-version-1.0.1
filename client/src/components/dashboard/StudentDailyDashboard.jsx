@@ -163,7 +163,7 @@ function buildAdaptiveCfg(baseCfg, curriculum, mode) {
     // Update the first quickLink that points to /jee-command or /prep
     const cmdIdx = quickLinks.findIndex(l => l.href === '/jee-command' || l.href === '/prep');
     if (cmdIdx !== -1) {
-      quickLinks[cmdIdx] = { ...quickLinks[cmdIdx], label: 'Exam Command', href: curriculum.examCommandHref };
+      quickLinks[cmdIdx] = { ...quickLinks[cmdIdx], label: curriculum.examCommandLabel || 'Exam Command', href: curriculum.examCommandHref };
     }
   }
 
@@ -376,6 +376,35 @@ export default function StudentDailyDashboard() {
 
       {/* ═══ MAIN COLUMN ═══ */}
       <div className="flex-1 min-w-0 space-y-4">
+
+          {/* ── Profile Identity Strip ── */}
+        <div className="bg-white rounded-2xl border border-gray-100 px-4 py-3 flex items-center gap-3" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center text-[18px] flex-shrink-0" style={{ background: `${theme.primaryColor}18` }}>
+            {theme.emoji}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[14px] font-bold text-gray-800 truncate">
+                {user?.profile?.full_name || user?.username}
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100 flex-shrink-0">
+                Student
+              </span>
+              {curriculum?.tier !== 'default' && curriculum?.label && (
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
+                  style={{ background: `${theme.primaryColor}12`, color: theme.primaryColor, border: `1px solid ${theme.primaryColor}30` }}>
+                  {curriculum.label}
+                </span>
+              )}
+            </div>
+            {user?.syllabrix_id && (
+              <p className="text-[10px] text-gray-400 mt-0.5 font-mono tracking-wide">{user.syllabrix_id}</p>
+            )}
+          </div>
+          <Link href="/settings/profile" className="flex-shrink-0 text-[11px] font-semibold text-gray-400 hover:text-gray-600 transition-colors">
+            Edit
+          </Link>
+        </div>
 
         {/* ── Hero Banner ── */}
         <div className="rounded-2xl overflow-hidden" style={{ background: theme.gradient }}>
