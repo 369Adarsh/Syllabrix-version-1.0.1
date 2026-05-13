@@ -15,7 +15,7 @@ import {
   Building2, Heart, Network, BookOpen, Star, Award,
   Shield, Rss, BarChart2, Clock, FileText, ClipboardList, PlusCircle,
   Zap, Briefcase, ScanSearch, Target, TrendingUp,
-  Bot, BadgeCheck, CalendarDays, UserCircle2, Plus, Search, Globe2
+  Bot, BadgeCheck, CalendarDays, UserCircle2, Plus, Search, Globe2, Camera
 } from 'lucide-react';
 import { getPlatformMode, PLATFORM_MODES } from '@/utils/platformMode';
 import { parentAPI } from '@/lib/api/parent.api';
@@ -189,14 +189,17 @@ function StudentSidebarContent({ onClose }) {
           <NavItem href="/home"            icon={Home}          label="Dashboard"      {...p} />
 
           <Section label="Board Prep" />
-          <NavItem href="/boards"          icon={Target}        label="Board Hub"      {...p} />
-          <NavItem href="/boards/chapters" icon={BookOpen}      label="Chapter Tracker" {...p} />
-          <NavItem href="/prep/daily-quiz" icon={Brain}         label="Quiz Practice"  {...p} />
-          <NavItem href="/mindmap"         icon={Brain}         label="Mind Maps"      {...p} />
-          <NavItem href="/prep/my-stats"   icon={BarChart2}     label="My Stats"       {...p} />
+          <NavItem href="/boards"                 icon={Target}    label="Board Hub"       {...p} />
+          <NavItem href="/boards/chapters"        icon={BookOpen}  label="Chapter Tracker" {...p} />
+          <NavItem href="/boards/practice"        icon={Brain}     label="Practice Hub"    {...p} />
+          <NavItem href="/boards/test-generator"  icon={FileText}  label="Test Generator"  {...p} />
+          <NavItem href="/boards/answer-checker"  icon={Camera}    label="Answer Checker"  {...p} />
+          <NavItem href="/prep/daily-quiz"        icon={Zap}       label="Quiz Practice"   {...p} />
+          <NavItem href="/prep/my-stats"          icon={BarChart2} label="My Stats"        {...p} />
 
           <Section label="Study" />
           <NavItem href="/ai-buddy"        icon={Sparkles}      label="AI Buddy"       {...p} />
+          <NavItem href="/mindmap"         icon={Brain}         label="Mind Maps"      {...p} />
           <NavItem href="/newsroom"        icon={Newspaper}     label="Newsroom"       {...p} />
           <NavItem href="/virtual-lab"     icon={Beaker}        label="Virtual Lab"    {...p} />
 

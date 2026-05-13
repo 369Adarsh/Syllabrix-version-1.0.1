@@ -69,6 +69,9 @@ router.use('/ld/skills',  require('../features/corporate/ld-skills/ld-skills.rou
 router.use('/ld/content', require('../features/corporate/ld-content/ld-content.routes'));
 router.use('/ld/lms',     require('../features/corporate/ld-lms/ld-lms.routes'));
 
+// ═══ BOARDS — CBSE/Board Exam Study, Practice & Test Platform ═══
+router.use('/boards', require('../features/boards/boards.routes'));
+
 // ═══ JEE COMMAND — Complete JEE Preparation Platform ═══
 router.use('/jee', require('../features/jee/jee.routes'));
 
