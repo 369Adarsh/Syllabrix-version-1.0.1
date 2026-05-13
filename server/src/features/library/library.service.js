@@ -600,7 +600,7 @@ async function getStudentTextbooks(boardCode, grade) {
       try {
         const [[pdf]] = await pool.execute(
           `SELECT file_url FROM lib_uploads
-           WHERE entity_type = 'book' AND entity_id = ? AND file_type = 'textbook'
+           WHERE entity_type = 'book' AND entity_id = ?
            ORDER BY created_at DESC LIMIT 1`,
           [book.id]
         );
@@ -619,7 +619,7 @@ async function getBookPdf(bookId) {
     const [[row]] = await pool.execute(
       `SELECT id, file_url, file_name, description, created_at
        FROM lib_uploads
-       WHERE entity_type = 'book' AND entity_id = ? AND file_type = 'textbook'
+       WHERE entity_type = 'book' AND entity_id = ?
        ORDER BY created_at DESC LIMIT 1`,
       [bookId]
     );
