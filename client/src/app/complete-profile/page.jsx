@@ -651,6 +651,23 @@ export default function CompleteProfilePage() {
           {type === 'parent' && step === 1 && (
             <div className="space-y-4">
               <h2 className="text-[17px] font-extrabold text-gray-900">Basic Information</h2>
+
+              {/* Guardian ID — share this with your child so they can link to your account */}
+              {user?.profile?.guardian_id && (
+                <div className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-indigo-500 mb-1">Your Guardian ID</p>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[18px] font-extrabold tracking-widest text-indigo-700">{user.profile.guardian_id}</span>
+                    <button
+                      type="button"
+                      onClick={() => { navigator.clipboard.writeText(user.profile.guardian_id); toast.success('Guardian ID copied!'); }}
+                      className="text-[11px] font-bold text-indigo-600 border border-indigo-300 rounded-lg px-2.5 py-1 hover:bg-indigo-100 transition-all"
+                    >Copy</button>
+                  </div>
+                  <p className="text-[11px] text-indigo-400 mt-1">Share this ID with your child during their registration to link accounts.</p>
+                </div>
+              )}
+
               <FullNameField form={form} set={set} user={user} />
               <Inp label="Phone Number" name="phone" form={form} set={set} placeholder="+91 XXXXX XXXXX" type="tel" />
               <Sel label="Gender" name="gender" form={form} set={set} options={['Male','Female','Other','Prefer not to say']} />

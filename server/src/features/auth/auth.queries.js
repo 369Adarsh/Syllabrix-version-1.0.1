@@ -298,14 +298,21 @@ const createParentProfile = async (data) => {
     `INSERT INTO parent_profiles
       (user_id, full_name, guardian_id, occupation, relationship, notification_email,
        hobby_involvement, sports_involvement)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+       full_name = VALUES(full_name),
+       occupation = VALUES(occupation),
+       relationship = VALUES(relationship),
+       notification_email = VALUES(notification_email),
+       hobby_involvement = VALUES(hobby_involvement),
+       sports_involvement = VALUES(sports_involvement)`,
     [
       data.user_id, data.full_name, data.guardian_id || null, data.occupation || null,
       data.relationship, data.notification_email || null,
       data.hobby_involvement || null, data.sports_involvement || null,
     ]
   );
-  return result.insertId;
+  return result.insertId || result.affectedRows;
 };
 
 const createProfessionalLearnerProfile = async (data) => {
