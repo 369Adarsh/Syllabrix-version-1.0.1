@@ -524,6 +524,7 @@ export default function AdminLibraryPage() {
               onUpdateChapter={(cid, data, bid) => handleUpdateChapter(cid, data, bid)}
               onDeleteChapter={async (cid, bid) => { await adminAPI.deleteLibraryChapter(cid); adminAPI.getLibraryChapters(bid).then(r => setBookChapters(p => ({ ...p, [bid]: r.data || [] }))).catch(() => {}); }}
               onUploadFile={(bid) => setModal({ type: 'upload', book_id: bid, entity_type: 'book' })}
+              onUploadChapterFile={(cid) => setModal({ type: 'upload', book_id: cid, entity_type: 'chapter', defaultFileType: 'textbook' })}
               onDeleteBook={async (bid) => { if (!confirm('Delete?')) return; await adminAPI.deleteLibraryBook(bid); const r = await adminAPI.getLibraryBooks(schoolSel.id); setSchoolContent(r.data || []); }}
               onToggleAI={handleToggleAI} onDeleteUpload={handleDeleteUpload}
             />
@@ -686,7 +687,7 @@ function RealmSelector({ stats, onSelect }) {
 
 // ── School Content ────────────────────────────────────────────────────────────
 
-function SchoolContent({ sel, content, openBooks, bookChapters, bookUploads, onNav, onToggleBook, onAddChapter, onUpdateChapter, onDeleteChapter, onUploadFile, onDeleteBook, onToggleAI, onDeleteUpload }) {
+function SchoolContent({ sel, content, openBooks, bookChapters, bookUploads, onNav, onToggleBook, onAddChapter, onUpdateChapter, onDeleteChapter, onUploadFile, onUploadChapterFile, onDeleteBook, onToggleAI, onDeleteUpload }) {
   if (!sel) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -739,6 +740,7 @@ function SchoolContent({ sel, content, openBooks, bookChapters, bookUploads, onN
           onUpdateChapter={(cid, data) => onUpdateChapter(cid, data, book.id)}
           onDeleteChapter={(cid) => onDeleteChapter(cid, book.id)}
           onUploadFile={() => onUploadFile(book.id)}
+          onUploadChapterFile={(cid) => onUploadChapterFile && onUploadChapterFile(cid)}
           onToggleAI={(uid) => onToggleAI(uid, book.id)}
           onDeleteUpload={(uid) => onDeleteUpload(uid, book.id)}
         />
@@ -923,7 +925,7 @@ function EmptyBooks() {
 
 // ── BookCard ──────────────────────────────────────────────────────────────────
 
-function BookCard({ book, isOpen, chapters, uploads, entityType, onToggle, onDelete, onAddChapter, onUpdateChapter, onDeleteChapter, onUploadFile, onToggleAI, onDeleteUpload, isPrescribed }) {
+function BookCard({ book, isOpen, chapters, uploads, entityType, onToggle, onDelete, onAddChapter, onUpdateChapter, onDeleteChapter, onUploadFile, onUploadChapterFile, onToggleAI, onDeleteUpload, isPrescribed }) {
   const aiCount = uploads?.filter(u => u.ai_indexed).length || 0;
   const [editingChId, setEditingChId] = useState(null);
   const [editChVal, setEditChVal] = useState({ chapter_number: '', title: '' });
@@ -1007,6 +1009,7 @@ function BookCard({ book, isOpen, chapters, uploads, entityType, onToggle, onDel
                           <span className="text-gray-400 font-mono text-[10px] w-5 shrink-0 text-right">{ch.chapter_number || '–'}</span>
                           <span className="text-gray-600 text-xs flex-1 leading-tight">{ch.title}</span>
                           {ch.estimated_study_time_mins && <span className="text-gray-300 text-[9px] flex items-center gap-0.5"><Clock size={9} /> {ch.estimated_study_time_mins}m</span>}
+                          {onUploadChapterFile && <button onClick={() => onUploadChapterFile(ch.id)} title="Upload chapter PDF" className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-amber-50 text-amber-400 transition-all"><UploadCloud size={9} /></button>}
                           {onUpdateChapter && <button onClick={() => startEditCh(ch)} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-indigo-50 text-indigo-400 transition-all"><Pencil size={9} /></button>}
                           {onDeleteChapter && <button onClick={() => onDeleteChapter(ch.id)} className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 text-red-400 transition-all"><Trash2 size={9} /></button>}
                         </>

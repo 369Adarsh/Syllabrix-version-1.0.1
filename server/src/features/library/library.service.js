@@ -629,6 +629,21 @@ async function getBookPdf(bookId) {
   }
 }
 
+async function getChapterPdf(chapterId) {
+  try {
+    const [[row]] = await pool.execute(
+      `SELECT id, file_url, file_name, description, created_at
+       FROM lib_uploads
+       WHERE entity_type = 'chapter' AND entity_id = ?
+       ORDER BY created_at DESC LIMIT 1`,
+      [chapterId]
+    );
+    return row || null;
+  } catch (_) {
+    return null;
+  }
+}
+
 function safeParseJSON(val, fallback) {
   if (!val) return fallback;
   if (typeof val === 'object') return val;
@@ -655,5 +670,5 @@ module.exports = {
   getSubjectChapters, getChapterTopics, getBookChapters, getChapterBooks,
   getTopicContext,
   // student textbook view
-  getStudentTextbooks, getBookPdf,
+  getStudentTextbooks, getBookPdf, getChapterPdf,
 };

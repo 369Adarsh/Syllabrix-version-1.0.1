@@ -354,6 +354,13 @@ const getBookPdf = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+const getChapterPdf = async (req, res, next) => {
+  try {
+    const data = await service.getChapterPdf(Number(req.params.chapterId));
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+};
+
 module.exports = {
   getBoards, getBoardByCode, getSyllabusVersions, getClasses, getSubjects,
   getBooks, getChapters, getTopics,
@@ -373,5 +380,5 @@ module.exports = {
   askAI,
   generateChapter,
   // student textbook view
-  getStudentTextbooks, getBookPdf,
+  getStudentTextbooks, getBookPdf, getChapterPdf,
 };

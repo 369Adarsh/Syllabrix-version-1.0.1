@@ -47,6 +47,9 @@ router.get('/books/:bookId/chapters', controller.getChapters);
 // GET /api/library/books/:bookId/pdf
 router.get('/books/:bookId/pdf', controller.getBookPdf);
 
+// GET /api/library/chapters/:chapterId/pdf
+router.get('/chapters/:chapterId/pdf', controller.getChapterPdf);
+
 // GET /api/library/chapters/:chapterId/topics
 router.get('/chapters/:chapterId/topics', controller.getTopics);
 

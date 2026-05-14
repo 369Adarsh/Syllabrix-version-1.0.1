@@ -249,6 +249,7 @@ export default function StudyTablePage() {
   const [chapters,   setChapters]   = useState([]);
   const [chLoad,     setChLoad]     = useState(false);
   const [selCh,      setSelCh]      = useState(null);
+  const [chapterPdf, setChapterPdf] = useState(null);
   const [generating, setGenerating] = useState(false);
   const [chapOpen,   setChapOpen]   = useState(true);
   const tts = useTTS();
@@ -273,7 +274,7 @@ export default function StudyTablePage() {
   // Load chapters when book changes
   useEffect(() => {
     if (!selBook) { setChapters([]); return; }
-    setChLoad(true); setSelCh(null); tts.stop();
+    setChLoad(true); setSelCh(null); setChapterPdf(null); tts.stop();
     libraryAPI.getChapters(selBook.id)
       .then(r => setChapters(r.data?.data || []))
       .catch(() => setChapters([]))
@@ -281,13 +282,19 @@ export default function StudyTablePage() {
   }, [selBook?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pickSubject = (sub) => {
-    tts.stop(); setSelCh(null); setSelSub(sub);
+    tts.stop(); setSelCh(null); setChapterPdf(null); setSelSub(sub);
     const b = sub.books?.find(b => b.pdf_url || isPdfUrl(b.ncert_url)) || sub.books?.[0] || null;
     setSelBook(b);
   };
 
   const pickChapter = async (ch) => {
-    tts.stop(); setSelCh(ch);
+    tts.stop(); setSelCh(ch); setChapterPdf(null);
+
+    // Fetch chapter-specific PDF in parallel with TTS
+    libraryAPI.getChapterPdf(ch.id)
+      .then(r => { if (r.data?.data?.file_url) setChapterPdf(r.data.data.file_url); })
+      .catch(() => {});
+
     const hasContent = ch.description || ch.key_concepts?.length || ch.learning_outcomes?.length;
     if (hasContent) {
       tts.speak(buildScript(ch));
@@ -315,9 +322,9 @@ export default function StudyTablePage() {
     }
   };
 
-  // Only embed URLs that are actual PDF files; NCERT HTML pages get an external link instead
-  const pdfUrl   = selBook?.pdf_url || (isPdfUrl(selBook?.ncert_url) ? selBook?.ncert_url : null);
-  const ncertPage = selBook?.ncert_url && !isPdfUrl(selBook?.ncert_url) ? selBook?.ncert_url : null;
+  // Chapter PDF takes priority; fall back to book PDF, then NCERT
+  const pdfUrl   = chapterPdf || selBook?.pdf_url || (isPdfUrl(selBook?.ncert_url) ? selBook?.ncert_url : null);
+  const ncertPage = !pdfUrl && selBook?.ncert_url && !isPdfUrl(selBook?.ncert_url) ? selBook?.ncert_url : null;
 
   // ── No class set ──
   if (!grade) return (
@@ -491,7 +498,7 @@ export default function StudyTablePage() {
               <div className="flex-shrink-0 flex items-center gap-2 bg-gray-800 px-3 py-1.5">
                 <BookOpen size={11} className="text-gray-400 flex-shrink-0" />
                 <span className="text-[11px] text-gray-300 flex-1 min-w-0 truncate">
-                  {selBook?.title}{selSub ? ` — ${selSub.name}` : ''}
+                  {chapterPdf && selCh ? `Ch.${selCh.chapter_number}: ${selCh.title}` : `${selBook?.title}${selSub ? ` — ${selSub.name}` : ''}`}
                 </span>
                 <a
                   href={pdfUrl} target="_blank" rel="noopener noreferrer"

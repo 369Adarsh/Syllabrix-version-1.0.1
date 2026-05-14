@@ -52,4 +52,6 @@ export const libraryAPI = {
   getStudentTextbooks: (board, grade) => api.get('/library/student/textbooks', { params: { board, grade } }),
   // GET /api/library/books/:bookId/pdf
   getBookPdf: (bookId) => api.get(`/library/books/${bookId}/pdf`),
+  // GET /api/library/chapters/:chapterId/pdf
+  getChapterPdf: (chapterId) => api.get(`/library/chapters/${chapterId}/pdf`),
 };
