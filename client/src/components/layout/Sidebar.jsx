@@ -228,6 +228,9 @@ function StudentSidebarContent({ onClose }) {
           <Section label="Home" />
           <NavItem href="/home"            icon={Home}          label="Dashboard"      {...p} />
 
+          <Section label="Study" />
+          <NavItem href="/study-table"     icon={BookOpen}      label="Study Table"    {...p} />
+
           <Section label="Prepare" />
           <NavItem href="/jee-command"     icon={Zap}           label="Exam Command"   {...p} />
           <NavItem href="/prep"            icon={GraduationCap} label="PrepSmart"      {...p} />
